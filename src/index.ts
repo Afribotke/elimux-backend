@@ -39,6 +39,10 @@ app.get('/', (req, res) => {
   })
 })
 
-app.listen(PORT, () => {
-  console.log(`ElimuX API server running on port ${PORT}`)
-})
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`ElimuX API server running on port ${PORT}`)
+  })
+}
+
+export default app
