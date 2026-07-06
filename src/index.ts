@@ -1,12 +1,13 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 
 import institutionsRouter from './routes/institutions'
 import programsRouter from './routes/programs'
 import paymentsRouter from './routes/payments'
-
-dotenv.config()
+import aiSearchRouter from './routes/ai-search'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -24,6 +25,7 @@ app.get('/health', (req, res) => {
 app.use('/api/institutions', institutionsRouter)
 app.use('/api/programs', programsRouter)
 app.use('/api/payments', paymentsRouter)
+app.use('/api/ai-search', aiSearchRouter)
 
 // Root
 app.get('/', (req, res) => {
@@ -34,7 +36,8 @@ app.get('/', (req, res) => {
       '/health',
       '/api/institutions',
       '/api/programs',
-      '/api/payments'
+      '/api/payments',
+      '/api/ai-search'
     ]
   })
 })
