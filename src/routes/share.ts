@@ -49,11 +49,9 @@ router.get('/:id', async (req, res) => {
       .update({ click_count: (shareData.click_count || 0) + 1 })
       .eq('id', id)
 
-    // No per-item detail page exists yet in the static-export frontend
-    // (only /programs and /institutions list pages) - route there for now.
     const redirectUrl = shareData.item_type === 'program'
-      ? `${FRONTEND_URL.replace(/\/$/, '')}/programs/`
-      : `${FRONTEND_URL.replace(/\/$/, '')}/institutions/`
+      ? `${FRONTEND_URL.replace(/\/$/, '')}/programs/${shareData.item_id}/`
+      : `${FRONTEND_URL.replace(/\/$/, '')}/institutions/${shareData.item_id}/`
 
     res.redirect(redirectUrl)
   } catch (error: any) {
