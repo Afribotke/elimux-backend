@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 const router = Router()
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://v2.elimux.ke'
+const API_URL = process.env.API_URL || 'https://api.elimux.ke'
 
 router.post('/', async (req, res) => {
   try {
@@ -21,7 +22,7 @@ router.post('/', async (req, res) => {
 
     if (error) throw error
 
-    const shareUrl = `${FRONTEND_URL.replace(/\/$/, '')}/api/share/${data.id}`
+    const shareUrl = `${API_URL.replace(/\/$/, '')}/api/share/${data.id}`
 
     res.status(201).json({ success: true, data: { share_id: data.id, share_url: shareUrl } })
   } catch (error: any) {
