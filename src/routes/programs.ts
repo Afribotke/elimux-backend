@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
+import { adminMiddleware } from '../middleware/auth'
 
 const router = Router()
 
@@ -36,7 +37,7 @@ router.get('/institution/:institutionId', async (req, res) => {
 })
 
 // Create program (admin only)
-router.post('/', async (req, res) => {
+router.post('/', adminMiddleware, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('programs')
