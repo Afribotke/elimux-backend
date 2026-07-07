@@ -69,7 +69,7 @@ router.get('/institution/:institutionId', async (req, res) => {
 // POST /api/programs — create (admin only)
 router.post('/', adminMiddleware, async (req, res) => {
   try {
-    const { institution_id, category_id, name, description, duration_months, tuition_fees, currency, level, entry_requirements, application_deadline, intake_dates } = req.body;
+    const { institution_id, category_id, name, description, duration_months, tuition_fees, currency, level, mode, requirements, career_outcomes } = req.body;
 
     if (!institution_id || !category_id || !name || !duration_months || tuition_fees === undefined || !currency || !level) {
       return res.status(400).json({ error: 'Missing required fields', required: ['institution_id', 'category_id', 'name', 'duration_months', 'tuition_fees', 'currency', 'level'] });
@@ -86,9 +86,9 @@ router.post('/', adminMiddleware, async (req, res) => {
         tuition_fees: Number(tuition_fees),
         currency,
         level,
-        entry_requirements: entry_requirements || null,
-        application_deadline: application_deadline || null,
-        intake_dates: intake_dates || [],
+        mode: mode || null,
+        requirements: requirements || null,
+        career_outcomes: career_outcomes || null,
         is_active: true,
       })
       .select()
