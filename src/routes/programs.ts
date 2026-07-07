@@ -66,6 +66,31 @@ router.get('/institution/:institutionId', async (req, res) => {
   }
 });
 
+// GET /api/programs/:id — single program (public)
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('programs')
+      .select('*, institution:institutions(*), category:program_categories(*)')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Program not found' });
+      }
+      return res.status(500).json({ error: 'Failed to fetch program' });
+    }
+
+    return res.json({ data });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/programs — create (admin only)
 router.post('/', adminMiddleware, async (req, res) => {
   try {
