@@ -77,7 +77,7 @@ router.post('/', async (req, res) => {
 
     let programsQuery = supabase
       .from('programs')
-      .select('*, institution:institutions(name, city, country:countries(name)), category:program_categories(name, color, icon)')
+      .select('*, institution:institutions!inner(name, city, country:countries(name)), category:program_categories(name, color, icon)')
       .eq('is_active', true)
 
     if (categoryId) programsQuery = programsQuery.eq('category_id', categoryId)
