@@ -10,6 +10,7 @@ import paymentsRouter from './routes/payments'
 import aiSearchRouter from './routes/ai-search'
 import favoritesRouter from './routes/favorites'
 import shareRouter from './routes/share'
+import reviewsRouter from './routes/reviews'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -27,12 +28,13 @@ app.use('/api/payments', paymentsRouter)
 app.use('/api/ai-search', aiSearchRouter)
 app.use('/api/favorites', favoritesRouter)
 app.use('/api/share', shareRouter)
+app.use('/api/reviews', reviewsRouter)
 
 app.get('/', (req, res) => {
   res.json({
     name: 'ElimuX API',
     version: '1.0.0',
-    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share']
+    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews']
   })
 })
 
