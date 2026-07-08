@@ -14,18 +14,111 @@ interface AISearchBody {
   maxBudget?: number | null
 }
 
-async function resolveCountryId(name: string | null, explicitId: string | null | undefined) {
-  if (explicitId) return explicitId
-  if (!name) return null
-  const { data } = await supabase.from('countries').select('id').ilike('name', `%${name}%`).limit(1).maybeSingle()
-  return data?.id ?? null
+// The LLM returns natural phrasing ("USA", "UK") or a subject synonym ("Computer
+// Science") that often isn't a literal substring of our seeded name - these maps
+// and the tiered lookups below exist so those common cases still resolve instead
+// of silently dropping the filter.
+const COUNTRY_ALIASES: Record<string, string> = {
+  usa: 'United States',
+  us: 'United States',
+  'u.s.': 'United States',
+  'u.s.a.': 'United States',
+  america: 'United States',
+  uk: 'United Kingdom',
+  'u.k.': 'United Kingdom',
+  britain: 'United Kingdom',
+  'great britain': 'United Kingdom',
+  uae: 'United Arab Emirates',
 }
 
-async function resolveCategoryId(name: string | null, explicitId: string | null | undefined) {
-  if (explicitId) return explicitId
-  if (!name) return null
-  const { data } = await supabase.from('program_categories').select('id').ilike('name', `%${name}%`).limit(1).maybeSingle()
-  return data?.id ?? null
+const CATEGORY_SYNONYMS: Record<string, string> = {
+  'computer science': 'Information Technology',
+  cs: 'Information Technology',
+  medicine: 'Medicine & Health Sciences',
+  business: 'Business & Management',
+  engineering: 'Engineering & Technology',
+  law: 'Law & Legal Studies',
+  hospitality: 'Hospitality & Tourism',
+  agriculture: 'Agriculture & Environment',
+  media: 'Media & Communication',
+  trades: 'Trades & Vocational',
+  sports: 'Sports & Fitness',
+  'data science': 'Data & Analytics',
+  finance: 'Finance & Accounting',
+  nursing: 'Nursing & Caregiving',
+  'public policy': 'Public Policy & Governance',
+  science: 'Science & Mathematics',
+  'social science': 'Social Sciences',
+  education: 'Education & Teaching',
+  architecture: 'Architecture & Design',
+  aviation: 'Aviation & Maritime',
+}
+
+interface ResolveResult {
+  id: string | null
+  // Best-effort "did you mean" name when no tier matched confidently enough to filter on.
+  suggestion: string | null
+}
+
+async function resolveCountryId(name: string | null, explicitId: string | null | undefined): Promise<ResolveResult> {
+  if (explicitId) return { id: explicitId, suggestion: null }
+  if (!name) return { id: null, suggestion: null }
+
+  const trimmed = name.trim()
+  const key = trimmed.toLowerCase()
+
+  const { data: byName } = await supabase.from('countries').select('id').ilike('name', `%${trimmed}%`).limit(1).maybeSingle()
+  if (byName) return { id: byName.id, suggestion: null }
+
+  const { data: byCode } = await supabase.from('countries').select('id').ilike('iso_code', trimmed).limit(1).maybeSingle()
+  if (byCode) return { id: byCode.id, suggestion: null }
+
+  const alias = COUNTRY_ALIASES[key]
+  if (alias) {
+    const { data: byAlias } = await supabase.from('countries').select('id').ilike('name', `%${alias}%`).limit(1).maybeSingle()
+    if (byAlias) return { id: byAlias.id, suggestion: null }
+  }
+
+  const firstWord = trimmed.split(/\s+/)[0]
+  if (firstWord && firstWord.length >= 3) {
+    const { data: candidate } = await supabase.from('countries').select('name').ilike('name', `%${firstWord}%`).limit(1).maybeSingle()
+    if (candidate) return { id: null, suggestion: candidate.name }
+  }
+
+  return { id: null, suggestion: null }
+}
+
+async function resolveCategoryId(name: string | null, explicitId: string | null | undefined): Promise<ResolveResult> {
+  if (explicitId) return { id: explicitId, suggestion: null }
+  if (!name) return { id: null, suggestion: null }
+
+  const trimmed = name.trim()
+  const key = trimmed.toLowerCase()
+
+  const { data: byName } = await supabase.from('program_categories').select('id').ilike('name', `%${trimmed}%`).limit(1).maybeSingle()
+  if (byName) return { id: byName.id, suggestion: null }
+
+  const { data: byDescription } = await supabase
+    .from('program_categories')
+    .select('id')
+    .ilike('description', `%${trimmed}%`)
+    .limit(1)
+    .maybeSingle()
+  if (byDescription) return { id: byDescription.id, suggestion: null }
+
+  const synonym = CATEGORY_SYNONYMS[key]
+  if (synonym) {
+    const { data: bySynonym } = await supabase.from('program_categories').select('id').ilike('name', `%${synonym}%`).limit(1).maybeSingle()
+    if (bySynonym) return { id: bySynonym.id, suggestion: null }
+  }
+
+  const firstWord = trimmed.split(/\s+/)[0]
+  if (firstWord && firstWord.length >= 3) {
+    const { data: candidate } = await supabase.from('program_categories').select('name').ilike('name', `%${firstWord}%`).limit(1).maybeSingle()
+    if (candidate) return { id: null, suggestion: candidate.name }
+  }
+
+  return { id: null, suggestion: null }
 }
 
 function scoreProgram(program: any, keywords: string[], level: string | null, maxBudget: number | null): number {
@@ -69,8 +162,10 @@ router.post('/', async (req, res) => {
 
     const intent = await aiProvider.extractSearchIntent({ query, interests, careerGoal })
 
-    const countryId = await resolveCountryId(intent.country, body.countryId)
-    const categoryId = await resolveCategoryId(intent.category, body.categoryId)
+    const countryResolution = await resolveCountryId(intent.country, body.countryId)
+    const categoryResolution = await resolveCategoryId(intent.category, body.categoryId)
+    const countryId = countryResolution.id
+    const categoryId = categoryResolution.id
     const level = body.level || intent.level
     const maxBudget = body.maxBudget ?? intent.maxBudget
     const keywords = intent.keywords.length > 0 ? intent.keywords : query.split(/\s+/).filter(Boolean)
@@ -112,6 +207,10 @@ router.post('/', async (req, res) => {
       success: true,
       data: {
         intent,
+        suggestions: {
+          country: countryResolution.suggestion,
+          category: categoryResolution.suggestion,
+        },
         programs: rankedPrograms,
         institutions: rankedInstitutions,
       },
