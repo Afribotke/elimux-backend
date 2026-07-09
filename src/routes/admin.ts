@@ -138,4 +138,241 @@ router.delete('/plans/:id', adminMiddleware, async (req, res) => {
   }
 })
 
+// GET /api/admin/applications — list institution applications with their program applications
+router.get('/applications', adminMiddleware, async (req, res) => {
+  try {
+    const { status } = req.query
+
+    let query = supabase
+      .from('institution_applications')
+      .select('*, type:institution_types(name), country:countries(name), programs:program_applications(*)')
+      .order('submitted_at', { ascending: false })
+
+    if (status) query = query.eq('status', status as string)
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    res.json({ data: data || [] })
+  } catch (error: any) {
+    console.error('List applications error:', error)
+    res.status(500).json({ error: 'Failed to fetch applications' })
+  }
+})
+
+// POST /api/admin/applications/:id/approve — create the real institution (and any
+// pending programs submitted alongside it), then mark the application approved.
+router.post('/applications/:id/approve', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { admin_notes } = req.body
+
+    const { data: application, error: fetchError } = await supabase
+      .from('institution_applications')
+      .select('*, programs:program_applications(*)')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !application) {
+      return res.status(404).json({ error: 'Application not found' })
+    }
+
+    if (application.status === 'approved') {
+      return res.status(400).json({ error: 'Application already approved' })
+    }
+
+    const { data: institution, error: institutionError } = await supabase
+      .from('institutions')
+      .insert({
+        name: application.name,
+        type_id: application.type_id,
+        country_id: application.country_id,
+        city: application.city,
+        website_url: application.website,
+        email: application.email,
+        phone: application.phone,
+        description: application.description,
+        is_active: true,
+      })
+      .select()
+      .single()
+
+    if (institutionError) {
+      console.error('Error creating institution from application:', institutionError)
+      return res.status(500).json({ error: 'Failed to create institution', details: institutionError.message })
+    }
+
+    const pendingPrograms = (application.programs || []).filter((p: any) => p.status === 'pending')
+
+    if (pendingPrograms.length > 0) {
+      const { data: createdPrograms, error: programsError } = await supabase
+        .from('programs')
+        .insert(
+          pendingPrograms.map((p: any) => ({
+            institution_id: institution.id,
+            category_id: p.category_id,
+            name: p.name,
+            description: p.description,
+            duration_months: p.duration_months,
+            tuition_fees: p.tuition_fees,
+            currency: p.currency || 'USD',
+            level: p.level,
+            requirements: p.requirements,
+            is_active: true,
+          }))
+        )
+        .select()
+
+      if (programsError) {
+        console.error('Error creating programs from applications:', programsError)
+        return res.status(500).json({ error: 'Institution created, but failed to create programs', details: programsError.message })
+      }
+
+      await Promise.all(
+        pendingPrograms.map((p: any, index: number) =>
+          supabase
+            .from('program_applications')
+            .update({ status: 'approved', reviewed_at: new Date().toISOString(), created_program_id: createdPrograms?.[index]?.id })
+            .eq('id', p.id)
+        )
+      )
+    }
+
+    const { data: updatedApplication, error: updateError } = await supabase
+      .from('institution_applications')
+      .update({
+        status: 'approved',
+        admin_notes: admin_notes || null,
+        reviewed_at: new Date().toISOString(),
+        created_institution_id: institution.id,
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateError) throw updateError
+
+    res.json({ data: updatedApplication, institution, message: 'Application approved' })
+  } catch (error: any) {
+    console.error('Approve application error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/admin/applications/:id/reject
+router.post('/applications/:id/reject', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { admin_notes } = req.body
+
+    const { data, error } = await supabase
+      .from('institution_applications')
+      .update({ status: 'rejected', admin_notes: admin_notes || null, reviewed_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Application not found' })
+
+    // Programs submitted alongside a rejected institution can't stand alone.
+    await supabase
+      .from('program_applications')
+      .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+      .eq('institution_application_id', id)
+      .eq('status', 'pending')
+
+    res.json({ data, message: 'Application rejected' })
+  } catch (error: any) {
+    console.error('Reject application error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/admin/applications/programs/:id/approve — approve a single program
+// application against an institution that's already been approved (e.g. a
+// program submitted after the institution's initial onboarding batch).
+router.post('/applications/programs/:id/approve', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { admin_notes } = req.body
+
+    const { data: programApplication, error: fetchError } = await supabase
+      .from('program_applications')
+      .select('*, institution_application:institution_applications(created_institution_id)')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !programApplication) {
+      return res.status(404).json({ error: 'Program application not found' })
+    }
+
+    const institutionId = (programApplication as any).institution_application?.created_institution_id
+
+    if (!institutionId) {
+      return res.status(400).json({ error: 'Institution application has not been approved yet' })
+    }
+
+    const { data: program, error: programError } = await supabase
+      .from('programs')
+      .insert({
+        institution_id: institutionId,
+        category_id: programApplication.category_id,
+        name: programApplication.name,
+        description: programApplication.description,
+        duration_months: programApplication.duration_months,
+        tuition_fees: programApplication.tuition_fees,
+        currency: programApplication.currency || 'USD',
+        level: programApplication.level,
+        requirements: programApplication.requirements,
+        is_active: true,
+      })
+      .select()
+      .single()
+
+    if (programError) {
+      console.error('Error creating program from application:', programError)
+      return res.status(500).json({ error: 'Failed to create program', details: programError.message })
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('program_applications')
+      .update({ status: 'approved', admin_notes: admin_notes || null, reviewed_at: new Date().toISOString(), created_program_id: program.id })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateError) throw updateError
+
+    res.json({ data: updated, program, message: 'Program application approved' })
+  } catch (error: any) {
+    console.error('Approve program application error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/admin/applications/programs/:id/reject
+router.post('/applications/programs/:id/reject', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { admin_notes } = req.body
+
+    const { data, error } = await supabase
+      .from('program_applications')
+      .update({ status: 'rejected', admin_notes: admin_notes || null, reviewed_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Program application not found' })
+
+    res.json({ data, message: 'Program application rejected' })
+  } catch (error: any) {
+    console.error('Reject program application error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router

@@ -91,6 +91,53 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// POST /api/programs/apply — public: submit a program application linked to an institution application
+router.post('/apply', async (req, res) => {
+  try {
+    const { institution_application_id, name, category_id, level, duration_months, tuition_fees, currency, description, requirements } = req.body;
+
+    if (!institution_application_id || !name) {
+      return res.status(400).json({ error: 'Missing required fields', required: ['institution_application_id', 'name'] });
+    }
+
+    const { data: application, error: applicationError } = await supabase
+      .from('institution_applications')
+      .select('id')
+      .eq('id', institution_application_id)
+      .single();
+
+    if (applicationError || !application) {
+      return res.status(404).json({ error: 'Institution application not found' });
+    }
+
+    const { data, error } = await supabase
+      .from('program_applications')
+      .insert({
+        institution_application_id,
+        name,
+        category_id: category_id || null,
+        level: level || null,
+        duration_months: duration_months ? Number(duration_months) : null,
+        tuition_fees: tuition_fees !== undefined && tuition_fees !== null && tuition_fees !== '' ? Number(tuition_fees) : null,
+        currency: currency || null,
+        description: description || null,
+        requirements: requirements || null,
+      })
+      .select('id, status, submitted_at')
+      .single();
+
+    if (error) {
+      console.error('Error creating program application:', error);
+      return res.status(500).json({ error: 'Failed to submit application', details: error.message });
+    }
+
+    return res.status(201).json({ data, message: 'Application submitted successfully' });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/programs — create (admin only)
 router.post('/', adminMiddleware, async (req, res) => {
   try {

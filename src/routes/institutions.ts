@@ -64,6 +64,70 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// POST /api/institutions/apply — public: submit an institution application for review
+router.post('/apply', async (req, res) => {
+  try {
+    const { name, type_id, country_id, city, website, email, phone, description } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ error: 'Missing required fields', required: ['name', 'email'] });
+    }
+
+    const { data, error } = await supabase
+      .from('institution_applications')
+      .insert({
+        name,
+        type_id: type_id || null,
+        country_id: country_id || null,
+        city: city || null,
+        website: website || null,
+        email,
+        phone: phone || null,
+        description: description || null,
+      })
+      .select('id, access_token, status, submitted_at')
+      .single();
+
+    if (error) {
+      console.error('Error creating institution application:', error);
+      return res.status(500).json({ error: 'Failed to submit application', details: error.message });
+    }
+
+    return res.status(201).json({ data, message: 'Application submitted successfully' });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/institutions/apply/:token — public: check application status + its submitted programs
+router.get('/apply/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const { data: application, error } = await supabase
+      .from('institution_applications')
+      .select('id, name, type_id, country_id, city, website, email, phone, description, status, admin_notes, submitted_at, reviewed_at')
+      .eq('access_token', token)
+      .single();
+
+    if (error || !application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    const { data: programs } = await supabase
+      .from('program_applications')
+      .select('id, name, level, duration_months, tuition_fees, currency, status, admin_notes, submitted_at')
+      .eq('institution_application_id', application.id)
+      .order('submitted_at', { ascending: true });
+
+    return res.json({ data: { ...application, programs: programs || [] } });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/institutions — create (admin only)
 router.post('/', adminMiddleware, async (req, res) => {
   try {
