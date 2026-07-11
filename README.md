@@ -78,6 +78,41 @@ zero changes rather than filing a mix of good and fabricated rows. If only
 non-fatal note left in the job's `errors` field (`programs_found` in the
 response only counts what survived filtering).
 
+### Known limitation: outbound fetches from Railway can fail against real sites
+
+`POST /run`'s fetch step has failed against two different real university sites in
+production, with **two different, unrelated causes** — don't lump these together
+when debugging a fetch failure, they need different fixes:
+
+- **Timeout** (`scraper_jobs.errors` says `"The operation was aborted due to
+  timeout"`, job duration matches the fetch `AbortSignal` limit — currently 60s).
+  Observed against `uonbi.ac.ke`: a direct `curl` from outside Railway completed in
+  1.3–9s every time, while Railway's own fetch consistently hit the full timeout
+  across multiple retries (15s, then 30s, then 60s limits, all exhausted). Cause
+  unconfirmed — could be Railway's outbound network/routing to this specific host,
+  or the target site itself throttling/blocking Railway's IP after repeated
+  requests. **Not proven to be a general Railway outage** — no other host was
+  tested to isolate "Railway's network is broken" from "this one path is bad".
+- **Immediate `"fetch failed"`** with `[cause] Error: unable to verify the first
+  certificate, code: 'UNABLE_TO_VERIFY_LEAF_SIGNATURE'` (visible in Railway's
+  `railway logs`, not in the job's `errors` field — only the outer message is
+  stored there today). Observed against `jkuat.ac.ke`: this is a **TLS
+  certificate chain problem on the target server** (a missing intermediate
+  certificate), not a network or timeout issue. `curl` and browsers often tolerate
+  this via a fuller local CA trust store or AIA fetching; Node's `fetch` correctly
+  refuses it. Retrying does nothing — it fails identically every time until either
+  the target fixes their certificate chain, or this scraper adds a deliberate,
+  logged TLS exception for that specific fetch (not attempted — a real security
+  tradeoff that needs sign-off, not a default).
+
+**When a `/run` call fails with a fetch-level error** (as opposed to the
+extraction/validation logic further down, which is what §"Data scraper" above is
+about): check `railway logs` for the `[cause]` line before assuming it's
+connectivity. A timeout and a TLS chain error look similar from the API response
+alone (`{"error":"Scraper run failed","details":"..."}`) but mean different
+things. Workaround for either: retry later, or run the fetch step from a machine
+with direct network access and outside Railway's egress path.
+
 ## Environment variables
 
 | Variable | Used for |
