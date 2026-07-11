@@ -375,4 +375,51 @@ router.post('/applications/programs/:id/reject', adminMiddleware, async (req, re
   }
 })
 
+// GET /api/admin/reviews?status=pending — list reviews for moderation, defaults to pending
+router.get('/reviews', adminMiddleware, async (req, res) => {
+  try {
+    const { status = 'pending' } = req.query
+
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('*, program:programs(name), institution:institutions(name)')
+      .eq('status', status as string)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    res.json({ data: data || [] })
+  } catch (error: any) {
+    console.error('List admin reviews error:', error)
+    res.status(500).json({ error: 'Failed to fetch reviews' })
+  }
+})
+
+// PATCH /api/admin/reviews/:id — set status to approved/rejected
+router.patch('/reviews/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    if (status !== 'approved' && status !== 'rejected') {
+      return res.status(400).json({ error: 'status must be approved or rejected' })
+    }
+
+    const { data, error } = await supabase
+      .from('reviews')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Review not found' })
+
+    res.json({ data, message: `Review ${status}` })
+  } catch (error: any) {
+    console.error('Update review status error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router
