@@ -15,6 +15,7 @@ import adminRouter from './routes/admin'
 import gamificationRouter from './routes/gamification'
 import sponsorAdsRouter from './routes/sponsor-ads'
 import adminAnalyticsRouter from './routes/admin-analytics'
+import pwaRouter from './routes/pwa'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -43,12 +44,13 @@ app.use('/api/admin', adminRouter)
 app.use('/api/admin/analytics', adminAnalyticsRouter)
 app.use('/api/gamification', gamificationRouter)
 app.use('/api/sponsor-ads', sponsorAdsRouter)
+app.use('/api/pwa', pwaRouter)
 
 app.get('/', (req, res) => {
   res.json({
     name: 'ElimuX API',
     version: '1.0.0',
-    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/gamification', '/api/sponsor-ads']
+    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/gamification', '/api/sponsor-ads', '/api/pwa']
   })
 })
 
