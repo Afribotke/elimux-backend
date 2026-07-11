@@ -74,17 +74,22 @@ export const anthropicProvider: AIProvider = {
   async extractPrograms(pageText: string): Promise<ExtractedProgram[]> {
     // Truncate rather than reject - a long page is still worth scraping, we
     // just don't need every byte (nav/footer boilerplate repeated across a
-    // site isn't where program listings live). 4096 tokens, then 16384, both
-    // confirmed too tight with live tests against uonbi.ac.ke - a large
-    // public university's full catalog needs more room than either, so this
-    // also retries once with a smaller input if the model's output still
-    // doesn't fit at 40k chars in, rather than fail the whole scrape outright
-    // over a page that's just unusually large.
+    // site isn't where program listings live).
+    //
+    // Uses .stream() + .finalMessage() rather than .parse(): a large public
+    // university's full catalog (confirmed live against uonbi.ac.ke) needs
+    // enough output tokens that the SDK's own non-streaming path refuses to
+    // run at all - client.messages.parse() is non-streaming-only and the SDK
+    // throws "Streaming is required for operations that may take longer than
+    // 10 minutes" once max_tokens exceeds ~21,333 (see
+    // calculateNonstreamingTimeout in the SDK: throws when
+    // (60min * maxTokens / 128000) > 10min). .stream() has no such ceiling
+    // and still gets the same parsed_output convenience via output_config.format.
     for (const inputChars of [40_000, 15_000]) {
       try {
-        const response = await client.messages.parse({
+        const stream = client.messages.stream({
           model: 'claude-opus-4-8',
-          max_tokens: 32_000,
+          max_tokens: 64_000,
           thinking: { type: 'disabled' },
           system: EXTRACT_PROGRAMS_SYSTEM_PROMPT,
           messages: [{ role: 'user', content: pageText.slice(0, inputChars) }],
@@ -93,11 +98,13 @@ export const anthropicProvider: AIProvider = {
           },
         })
 
-        return response.parsed_output?.programs ?? []
+        const message = await stream.finalMessage()
+        return message.parsed_output?.programs ?? []
       } catch (err: any) {
         const isTruncatedJson = /Unterminated string|Expected .* after|Failed to parse structured output/i.test(err?.message || '')
         if (!isTruncatedJson || inputChars === 15_000) throw err
-        // else: output still didn't fit - loop to the smaller input size
+        // else: output still didn't fit even with streaming - loop to the
+        // smaller input size rather than fail the whole scrape outright.
       }
     }
 
