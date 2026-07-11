@@ -13,6 +13,33 @@ router.use(adminMiddleware) // every /api/admin/scraper/* route is admin-only
 const SOURCE_TYPES = ['api', 'website', 'rss']
 const CRAWL_FREQUENCIES = ['daily', 'weekly', 'monthly']
 
+// Deterministic gate, not just a prompt instruction - trusting the AI's own
+// "was I making this up" self-report is exactly what failed in production
+// (uonbi.ac.ke/programmes: a faculty directory with no real program titles,
+// where the model fabricated plausible-sounding degree names from bare
+// department names like "Psychiatry" despite being told not to invent
+// programs). A real degree title names its level somewhere in the string;
+// a department/subject name never does.
+const DEGREE_TITLE_PATTERN =
+  /\b(bachelor|master|doctor|phd|ph\.d|diploma|certificate|bsc|b\.sc|ba\b|b\.a\b|msc|m\.sc|ma\b|m\.a\b|llb|llm|mbchb|beng|b\.eng|meng|m\.eng|bcom|b\.com|mcom|m\.com|mba|postgraduate|undergraduate|associate degree|short course)\b/i
+
+function looksLikeDegreeTitle(name: string): boolean {
+  return DEGREE_TITLE_PATTERN.test(name)
+}
+
+// The stronger of the two checks. looksLikeDegreeTitle() only catches a bare
+// department name slipping through *untouched* - it does not catch the
+// actual failure mode observed in production, where the model wrapped a bare
+// name into a fabricated but degree-title-*shaped* string ("Psychiatry" ->
+// "Master of Medicine in Psychiatry (Mmed. Psych.)"), which still matches
+// the degree-keyword regex. A fabricated title is, by construction, text
+// that doesn't appear on the page it was supposedly read from - so require
+// the extracted name to actually occur verbatim (case-insensitive) in the
+// source text, not just look plausible.
+function isVerbatimInSource(name: string, pageText: string): boolean {
+  return pageText.toLowerCase().includes(name.trim().toLowerCase())
+}
+
 function stripHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -86,7 +113,30 @@ router.post('/run', async (req, res) => {
       return res.status(422).json({ error: 'No extractable content on this page', job_id: job.id })
     }
 
-    const extracted = await aiProvider.extractPrograms(pageText)
+    const { programs: rawExtracted, sourceLooksLikeDirectory } = await aiProvider.extractPrograms(pageText)
+
+    // Three independent signals that an entry isn't a real, actually-scraped
+    // program: the model's own self-report for the page as a whole, a
+    // deterministic degree-keyword check, and (the strongest of the three)
+    // whether the extracted name actually occurs verbatim in the source text
+    // - a fabricated title is by construction text that wasn't on the page.
+    // An entry must pass both per-entry checks to be trusted; if the whole
+    // page fails, refuse to file anything rather than "some good, some bad".
+    const plausible = rawExtracted.filter((p) => looksLikeDegreeTitle(p.name) && isVerbatimInSource(p.name, pageText))
+    const suspiciousCount = rawExtracted.length - plausible.length
+
+    if (rawExtracted.length > 0 && (sourceLooksLikeDirectory || plausible.length === 0)) {
+      const message =
+        `Extraction produced ${rawExtracted.length} entr${rawExtracted.length === 1 ? 'y' : 'ies'} that ${rawExtracted.length === 1 ? "doesn't" : "don't"} look like real programs ` +
+        `(no recognizable degree title, and/or not actually present verbatim on the source page) - this source URL looks like a faculty/department ` +
+        `directory, not a course catalog. Filed no changes. Point the source at a page that lists actual program titles instead.`
+      await failJob(message)
+      return res.status(422).json({ error: 'Source does not look like a course catalog', details: message, job_id: job.id })
+    }
+
+    // Some entries passed the degree-title check, some didn't (mixed page) -
+    // keep only the plausible ones rather than discard or keep everything.
+    const extracted: ExtractedProgram[] = plausible
 
     const { data: existingPrograms, error: existingError } = await supabase
       .from('programs')
@@ -162,6 +212,11 @@ router.post('/run', async (req, res) => {
       if (changesError) throw changesError
     }
 
+    // Non-fatal note, not a failure: some entries were plausible degree
+    // titles (kept, filed as changes above) and some weren't (dropped) - a
+    // mixed page, most likely one section is a real catalog and another is
+    // a directory/sidebar. Recorded on an otherwise-successful job so a
+    // reviewer can see the filtering happened without it blocking anything.
     const { data: updatedJob, error: updateJobError } = await supabase
       .from('scraper_jobs')
       .update({
@@ -170,6 +225,10 @@ router.post('/run', async (req, res) => {
         programs_found: extracted.length,
         programs_created: programsCreated,
         programs_updated: updatedProgramIds.size,
+        errors:
+          suspiciousCount > 0
+            ? [{ message: `Filtered ${suspiciousCount} extracted entr${suspiciousCount === 1 ? 'y' : 'ies'} with no recognizable degree title - kept only entries that look like real programs.` }]
+            : [],
       })
       .eq('id', job.id)
       .select()
@@ -177,7 +236,7 @@ router.post('/run', async (req, res) => {
 
     if (updateJobError) throw updateJobError
 
-    res.json({ data: { job: updatedJob, changes_filed: changeRows.length } })
+    res.json({ data: { job: updatedJob, changes_filed: changeRows.length, suspicious_entries_filtered: suspiciousCount } })
   } catch (error: any) {
     console.error('Scraper run error:', error)
     await failJob(error.message || 'Unknown error')

@@ -34,6 +34,16 @@ const ExtractedProgramSchema = z.object({
 
 const ExtractedProgramsSchema = z.object({
   programs: z.array(ExtractedProgramSchema),
+  // Self-reported, not authoritative - src/routes/scraper.ts's
+  // looksLikeDegreeTitle() deterministic check is the real gate, since
+  // trusting an LLM's own "was I making this up" assessment is exactly the
+  // kind of thing that just failed (see EXTRACT_PROGRAMS_SYSTEM_PROMPT's
+  // history: uonbi.ac.ke/programmes is a faculty directory with no actual
+  // program titles, and the model fabricated plausible-sounding ones from
+  // department names anyway, despite an earlier "do not invent" instruction).
+  // This field is a second, independent signal, not a replacement for
+  // code-level validation.
+  source_looks_like_directory: z.boolean(),
 })
 
 const EXTRACT_PROGRAMS_SYSTEM_PROMPT = `You extract education program listings (degrees, diplomas, certificates, courses) from a scraped institution web page's text content.
@@ -45,7 +55,11 @@ const EXTRACT_PROGRAMS_SYSTEM_PROMPT = `You extract education program listings (
 - currency: the ISO-ish currency code or symbol context implies (e.g. "KES", "USD"), else null
 - description: a short 1-2 sentence description if the page provides one, else null
 
-Only extract programs actually described on the page - do not invent programs, and do not extract unrelated content (news items, staff bios, generic marketing copy) as if it were a program. If the page lists no identifiable programs, return an empty array.`
+Only extract programs actually described on the page - do not invent programs, and do not extract unrelated content (news items, staff bios, generic marketing copy) as if it were a program.
+
+If the page contains only faculty/department/subject names (e.g. "School of Medicine", "Faculty of Engineering", "Psychiatry", "Human Anatomy") without specific degree programs (e.g. "Bachelor of Medicine and Bachelor of Surgery", "Master of Medicine in Psychiatry"), that is a directory or org-chart page, not a course catalog - do not synthesize plausible-sounding degree titles from those names. Return an empty programs array and set source_looks_like_directory to true. A bare subject or department name is never itself a program name.
+
+If the page lists no identifiable programs for any other reason, return an empty array and set source_looks_like_directory to false.`
 
 export const anthropicProvider: AIProvider = {
   async extractSearchIntent({ query, interests, careerGoal }): Promise<SearchIntent> {
@@ -71,7 +85,7 @@ export const anthropicProvider: AIProvider = {
     return response.parsed_output
   },
 
-  async extractPrograms(pageText: string): Promise<ExtractedProgram[]> {
+  async extractPrograms(pageText: string): Promise<{ programs: ExtractedProgram[]; sourceLooksLikeDirectory: boolean }> {
     // Truncate rather than reject - a long page is still worth scraping, we
     // just don't need every byte (nav/footer boilerplate repeated across a
     // site isn't where program listings live).
@@ -99,7 +113,10 @@ export const anthropicProvider: AIProvider = {
         })
 
         const message = await stream.finalMessage()
-        return message.parsed_output?.programs ?? []
+        return {
+          programs: message.parsed_output?.programs ?? [],
+          sourceLooksLikeDirectory: message.parsed_output?.source_looks_like_directory ?? false,
+        }
       } catch (err: any) {
         const isTruncatedJson = /Unterminated string|Expected .* after|Failed to parse structured output/i.test(err?.message || '')
         if (!isTruncatedJson || inputChars === 15_000) throw err
@@ -108,6 +125,6 @@ export const anthropicProvider: AIProvider = {
       }
     }
 
-    return []
+    return { programs: [], sourceLooksLikeDirectory: false }
   },
 }

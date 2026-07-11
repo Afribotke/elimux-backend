@@ -23,6 +23,9 @@ requires it.
 | `/api/admin` | `admin.ts` | Admin-only: `/verify` (key check), subscription plan CRUD, institution/program application moderation (`approve`/`reject`), review moderation. |
 | `/api/gamification` | `gamification.ts` | Device-scoped points/badges/leaderboard, referral codes. |
 | `/api/sponsor-ads` | `sponsor-ads.ts` | Public placement-scoped ad listing + click tracking; admin create/update/toggle and full listing (`/admin`). |
+| `/api/admin/analytics` | `admin-analytics.ts` | Admin dashboards (overview/revenue/users/searches/institutions) reading from `analytics_events`; `POST /track` is the one public route in this file (see file for why). |
+| `/api/pwa` | `pwa.ts` | Push subscribe/unsubscribe, admin `/notify` (web-push), offline `/cache` read/write, `/queue`+`/sync` for background-synced actions. |
+| `/api/admin/scraper` | `scraper.ts` | Admin-only (router-level `adminMiddleware`, not per-route). Fetches an admin-supplied URL, AI-extracts program listings, diffs against `programs`, files `program_changes` for review (`/run`, `/jobs`, `/changes`, `/changes/:id/approve\|reject`, `/sources` CRUD). See "Data scraper" below before pointing it at a new URL. |
 
 `GET /health` and `GET /` (endpoint index) are defined directly in `src/index.ts`, unauthenticated.
 
@@ -34,6 +37,46 @@ There is no login system. Two identity mechanisms are used depending on the feat
   chars. Used by favorites, gamification points/badges, and ad click tracking.
   `getDeviceFingerprint()` is the single source of truth — don't reimplement it inline.
 - **Email**: subscriptions/payments and referrals are keyed by email, not a user ID.
+
+## Data scraper
+
+`POST /api/admin/scraper/run` fetches a URL and asks Claude to extract program
+listings from the page text — it does **not** use the CSS `selectors` stored
+on a `scraping_sources` row (that field is accepted and saved for a possible
+future selector-based path, but nothing reads it today).
+
+**Source URLs must point to an actual course catalog page — one that lists
+specific degree titles ("Bachelor of Medicine and Bachelor of Surgery",
+"Diploma in Nursing") — not a faculty/department directory or org chart page**
+(e.g. a page that just lists "Faculty of Engineering" → "Civil Engineering",
+"Psychiatry", "Human Anatomy" with no degree-level titles attached). This
+matters because a directory page doesn't just produce *no* results — a live
+test against `uonbi.ac.ke/programmes` (a department directory) showed the
+model **fabricate** plausible-sounding degree titles from bare department
+names ("Psychiatry" → "Master of Medicine in Psychiatry (Mmed. Psych.)")
+despite an explicit "do not invent programs" instruction in the prompt. 293
+fabricated `program_changes` rows got filed and had to be manually rejected.
+
+Three layers now guard against this in `scraper.ts`, in order of how much
+they're trusted:
+1. **`isVerbatimInSource()`** (strongest) — the extracted name must literally
+   occur in the fetched page text. A fabricated title is, by construction,
+   text that wasn't on the page it supposedly came from.
+2. **`looksLikeDegreeTitle()`** — a regex requiring a degree-level keyword
+   (Bachelor/Master/PhD/Diploma/...). Weaker alone: it only catches a bare
+   department name slipping through *untouched* — it does **not** catch a
+   fabricated title dressed up to look real (which is exactly what happened
+   in production and is why check #1 exists).
+3. **`source_looks_like_directory`** — the model's own self-report. Not
+   authoritative on its own (trusting an LLM's self-assessment of whether it
+   just hallucinated is circular), but a useful independent signal when it
+   agrees with #1/#2.
+
+If **every** extracted entry fails #1 or #2, the job fails outright and files
+zero changes rather than filing a mix of good and fabricated rows. If only
+*some* entries fail, those are dropped and the rest proceed, with a
+non-fatal note left in the job's `errors` field (`programs_found` in the
+response only counts what survived filtering).
 
 ## Environment variables
 

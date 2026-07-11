@@ -22,5 +22,5 @@ export interface AIProvider {
     careerGoal: string | null
   }): Promise<SearchIntent>
 
-  extractPrograms(pageText: string): Promise<ExtractedProgram[]>
+  extractPrograms(pageText: string): Promise<{ programs: ExtractedProgram[]; sourceLooksLikeDirectory: boolean }>
 }
