@@ -5,9 +5,12 @@ import { adminMiddleware } from '../middleware/auth';
 const router = Router();
 
 // GET /api/institutions — list all (public)
+// GET /api/institutions?featured=true — only currently-featured institutions,
+// featured ones first (all rows match the filter, so this is really just
+// "most-recently-featured first" via featured_until)
 router.get('/', async (req, res) => {
   try {
-    const { country_id, type_id, search, page = 1, limit = 20 } = req.query;
+    const { country_id, type_id, search, featured, page = 1, limit = 20 } = req.query;
 
     let query = supabase
       .from('institutions')
@@ -20,7 +23,16 @@ router.get('/', async (req, res) => {
     const from = (Number(page) - 1) * Number(limit);
     const to = from + Number(limit) - 1;
 
-    query = query.range(from, to).order('name', { ascending: true });
+    if (featured === 'true') {
+      query = query
+        .eq('is_featured', true)
+        .gt('featured_until', new Date().toISOString())
+        .order('featured_until', { ascending: false });
+    } else {
+      query = query.order('is_featured', { ascending: false }).order('name', { ascending: true });
+    }
+
+    query = query.range(from, to);
 
     const { data, error, count } = await query;
 
