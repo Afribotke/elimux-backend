@@ -63,7 +63,7 @@ router.get('/:id', async (req, res) => {
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if (error.code === 'PGRST116' || error.code === '22P02') {
         return res.status(404).json({ error: 'Institution not found' });
       }
       return res.status(500).json({ error: 'Failed to fetch institution' });

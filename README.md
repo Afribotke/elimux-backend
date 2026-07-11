@@ -119,11 +119,24 @@ with direct network access and outside Railway's egress path.
 |---|---|
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | DB access (`src/lib/supabase.ts`) — service role, so RLS is bypassed everywhere in this codebase. |
 | `ADMIN_KEY` | `adminMiddleware` (`X-Admin-Key` header) |
-| `API_KEY` | `authMiddleware` (`X-Api-Key` header, currently unused by any mounted route) |
-| `ANTHROPIC_API_KEY` | AI search provider |
-| `PAYSTACK_SECRET_KEY` | Payments |
-| `FRONTEND_URL` | Builds the Paystack callback URL |
-| `PORT` | Server port (Railway sets this) |
+| `ANTHROPIC_API_KEY` | AI search provider and the data scraper's extraction step |
+| `PAYSTACK_SECRET_KEY` | Payments (`src/lib/paystack.ts`) |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Web push (`src/lib/webpush.ts`) — `POST /api/pwa/notify` |
+
+Optional (each has a working default or is otherwise non-essential):
+
+| Variable | Used for | Default if unset |
+|---|---|---|
+| `FRONTEND_URL` | Builds the Paystack callback URL and share links | `https://v2.elimux.ke` (`payments.ts` itself defaults to `https://www.elimux.ke` — set this explicitly to avoid the mismatch) |
+| `API_URL` | Share link generation (`src/routes/share.ts`) | `https://api.elimux.ke` |
+| `VAPID_SUBJECT` | Web push sender contact (`src/lib/webpush.ts`) | `mailto:admin@elimux.ke` |
+| `SCRAPER_ALLOWED_DOMAINS` | Optional comma-separated domain allowlist on top of `ssrfGuard.ts`'s IP checks | unset = IP/protocol checks only, any non-private domain fetchable |
+| `API_KEY` | `authMiddleware` (`X-Api-Key` header) | n/a — currently unused by any mounted route |
+| `PORT` | Server port | Railway sets this |
+
+`PAYSTACK_PUBLIC_KEY` is currently set on Railway but not read by any backend code — no backend
+route needs it. Leave it if a frontend inline-checkout flow is planned, otherwise it can be removed
+from the Railway service without effect.
 
 Set these in the Railway service, not in a committed `.env` — `.env.local` here is dev-only and
 gitignored.
