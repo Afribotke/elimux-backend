@@ -79,7 +79,11 @@ export const anthropicProvider: AIProvider = {
 
     const response = await client.messages.parse({
       model: 'claude-opus-4-8',
-      max_tokens: 4096,
+      // 4096 wasn't enough for a real target (uonbi.ac.ke) - a large public
+      // university's page lists enough programs that the JSON output got cut
+      // off mid-string, breaking the parse entirely. Confirmed with a live
+      // test, not a guess.
+      max_tokens: 16_384,
       thinking: { type: 'disabled' },
       system: EXTRACT_PROGRAMS_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: truncated }],
