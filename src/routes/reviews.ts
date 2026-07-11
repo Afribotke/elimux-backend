@@ -18,6 +18,7 @@ router.get('/', async (req, res) => {
     .from('reviews')
     .select('*', { count: 'exact' })
     .eq('is_active', true)
+    .eq('status', 'approved')
     .order('created_at', { ascending: false })
 
   if (program_id) query = query.eq('program_id', program_id as string)
@@ -38,10 +39,14 @@ router.get('/', async (req, res) => {
 
 // POST /api/reviews
 router.post('/', async (req, res) => {
-  const { program_id, institution_id, reviewer_name, reviewer_email, rating, title, content, pros, cons, would_recommend } = req.body
+  const { program_id, institution_id, reviewer_name, reviewer_email, rating, title, content, pros, cons, would_recommend, is_anonymous } = req.body
 
   if (!rating || rating < 1 || rating > 5) {
     return res.status(400).json({ error: 'Rating must be 1-5' })
+  }
+
+  if (!content || String(content).trim().length < 10) {
+    return res.status(400).json({ error: 'Review content must be at least 10 characters' })
   }
 
   if (!program_id && !institution_id) {
@@ -53,14 +58,16 @@ router.post('/', async (req, res) => {
     .insert({
       program_id,
       institution_id,
-      reviewer_name,
-      reviewer_email,
+      user_id: null, // no login flow exists yet - all reviews are anonymous
+      reviewer_name: reviewer_name || null,
+      reviewer_email: reviewer_email || null,
       rating,
-      title,
+      title: title || null,
       content,
-      pros: pros || [],
-      cons: cons || [],
-      would_recommend,
+      pros: pros || null, // column is `text`, not `text[]` - stored as a plain (comma-separated) string
+      cons: cons || null,
+      would_recommend: would_recommend ?? null,
+      is_anonymous: !!is_anonymous,
       is_active: true,
     })
     .select()
