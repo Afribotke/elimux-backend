@@ -243,6 +243,8 @@ router.post('/webhook', async (req, res) => {
       if (payment && payment.status !== 'success') {
         await applySuccessfulPayment(payment, event.data.id.toString())
       }
+
+      console.log(`[WEBHOOK] charge.success for ${reference} — payment verified`)
     }
 
     res.json({ received: true })
