@@ -12,6 +12,7 @@ import favoritesRouter from './routes/favorites'
 import shareRouter from './routes/share'
 import reviewsRouter from './routes/reviews'
 import adminRouter from './routes/admin'
+import gamificationRouter from './routes/gamification'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -37,12 +38,13 @@ app.use('/api/favorites', favoritesRouter)
 app.use('/api/share', shareRouter)
 app.use('/api/reviews', reviewsRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/gamification', gamificationRouter)
 
 app.get('/', (req, res) => {
   res.json({
     name: 'ElimuX API',
     version: '1.0.0',
-    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin']
+    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/gamification']
   })
 })
 
