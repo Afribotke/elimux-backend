@@ -65,7 +65,11 @@ router.post('/run', async (req, res) => {
 
   try {
     const response = await fetch(source_url, {
-      signal: AbortSignal.timeout(15_000),
+      // 15s wasn't enough for a real target (uonbi.ac.ke took ~9s just for
+      // the raw fetch over a good connection, and Railway's network path was
+      // evidently slower still) - confirmed by a live test that hit the
+      // abort, not a guess.
+      signal: AbortSignal.timeout(30_000),
       headers: { 'User-Agent': 'ElimuxScraperBot/1.0 (+https://elimux.ke)' },
     })
 
