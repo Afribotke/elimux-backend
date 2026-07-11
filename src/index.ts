@@ -14,6 +14,7 @@ import reviewsRouter from './routes/reviews'
 import adminRouter from './routes/admin'
 import gamificationRouter from './routes/gamification'
 import sponsorAdsRouter from './routes/sponsor-ads'
+import adminAnalyticsRouter from './routes/admin-analytics'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -39,6 +40,7 @@ app.use('/api/favorites', favoritesRouter)
 app.use('/api/share', shareRouter)
 app.use('/api/reviews', reviewsRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/admin/analytics', adminAnalyticsRouter)
 app.use('/api/gamification', gamificationRouter)
 app.use('/api/sponsor-ads', sponsorAdsRouter)
 
@@ -46,7 +48,7 @@ app.get('/', (req, res) => {
   res.json({
     name: 'ElimuX API',
     version: '1.0.0',
-    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/gamification', '/api/sponsor-ads']
+    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/gamification', '/api/sponsor-ads']
   })
 })
 

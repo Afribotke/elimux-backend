@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
 import { aiProvider } from '../lib/ai'
+import { getDeviceFingerprint } from '../lib/deviceFingerprint'
 
 const router = Router()
 
@@ -299,6 +300,23 @@ router.post('/', async (req, res) => {
     }
 
     const topProgram = rankedPrograms[0]
+    const resultCount = rankedPrograms.length + rankedInstitutions.length
+
+    // Fire-and-forget: powers GET /api/admin/analytics/searches (popular terms,
+    // zero-result searches, trend) - never let tracking failure affect the response.
+    if (query) {
+      ;(async () => {
+        try {
+          await supabase.from('analytics_events').insert({
+            event_type: 'search',
+            user_device_id: getDeviceFingerprint(req),
+            metadata: { query, result_count: resultCount, source: 'ai-search' },
+          })
+        } catch (err) {
+          console.error('Failed to track search event:', err)
+        }
+      })()
+    }
 
     res.json({
       success: true,
