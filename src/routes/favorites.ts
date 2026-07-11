@@ -1,17 +1,8 @@
 import { Router } from 'express'
-import crypto from 'crypto'
 import { supabase } from '../lib/supabase'
+import { getDeviceFingerprint } from '../lib/deviceFingerprint'
 
 const router = Router()
-
-function getDeviceFingerprint(req: any): string {
-  const forwardedFor = req.headers['x-forwarded-for']
-  const ip = typeof forwardedFor === 'string'
-    ? forwardedFor.split(',')[0].trim()
-    : req.socket.remoteAddress || 'unknown'
-  const ua = req.headers['user-agent'] || 'unknown'
-  return crypto.createHash('sha256').update(`${ip}:${ua}`).digest('hex').substring(0, 32)
-}
 
 router.post('/', async (req, res) => {
   try {
