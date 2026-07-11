@@ -74,24 +74,33 @@ export const anthropicProvider: AIProvider = {
   async extractPrograms(pageText: string): Promise<ExtractedProgram[]> {
     // Truncate rather than reject - a long page is still worth scraping, we
     // just don't need every byte (nav/footer boilerplate repeated across a
-    // site isn't where program listings live).
-    const truncated = pageText.slice(0, 40_000)
+    // site isn't where program listings live). 4096 tokens, then 16384, both
+    // confirmed too tight with live tests against uonbi.ac.ke - a large
+    // public university's full catalog needs more room than either, so this
+    // also retries once with a smaller input if the model's output still
+    // doesn't fit at 40k chars in, rather than fail the whole scrape outright
+    // over a page that's just unusually large.
+    for (const inputChars of [40_000, 15_000]) {
+      try {
+        const response = await client.messages.parse({
+          model: 'claude-opus-4-8',
+          max_tokens: 32_000,
+          thinking: { type: 'disabled' },
+          system: EXTRACT_PROGRAMS_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: pageText.slice(0, inputChars) }],
+          output_config: {
+            format: zodOutputFormat(ExtractedProgramsSchema),
+          },
+        })
 
-    const response = await client.messages.parse({
-      model: 'claude-opus-4-8',
-      // 4096 wasn't enough for a real target (uonbi.ac.ke) - a large public
-      // university's page lists enough programs that the JSON output got cut
-      // off mid-string, breaking the parse entirely. Confirmed with a live
-      // test, not a guess.
-      max_tokens: 16_384,
-      thinking: { type: 'disabled' },
-      system: EXTRACT_PROGRAMS_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: truncated }],
-      output_config: {
-        format: zodOutputFormat(ExtractedProgramsSchema),
-      },
-    })
+        return response.parsed_output?.programs ?? []
+      } catch (err: any) {
+        const isTruncatedJson = /Unterminated string|Expected .* after|Failed to parse structured output/i.test(err?.message || '')
+        if (!isTruncatedJson || inputChars === 15_000) throw err
+        // else: output still didn't fit - loop to the smaller input size
+      }
+    }
 
-    return response.parsed_output?.programs ?? []
+    return []
   },
 }
