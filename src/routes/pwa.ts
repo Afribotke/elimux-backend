@@ -5,6 +5,12 @@ import webpush from '../lib/webpush'
 
 const router = Router()
 
+// Matches queued_actions' DB check constraint (queued_actions_action_type_check),
+// which PostgREST doesn't reflect in its schema - found empirically by probing.
+// Keep in sync if the constraint changes (elimux-sql migration would be the
+// place to look for the authoritative definition, if one ever gets added there).
+const QUEUEABLE_ACTION_TYPES = ['favorite', 'review', 'application', 'share']
+
 // POST /api/pwa/subscribe - upsert a push subscription (public: called by any
 // visitor's browser once they grant notification permission)
 router.post('/subscribe', async (req, res) => {
@@ -166,6 +172,9 @@ router.post('/queue', async (req, res) => {
 
     if (!device_id || !action_type) {
       return res.status(400).json({ error: 'device_id and action_type are required' })
+    }
+    if (!QUEUEABLE_ACTION_TYPES.includes(action_type)) {
+      return res.status(400).json({ error: 'Invalid action_type', allowed: QUEUEABLE_ACTION_TYPES })
     }
 
     const { data, error } = await supabase
