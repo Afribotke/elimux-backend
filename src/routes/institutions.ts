@@ -8,14 +8,37 @@ const router = Router();
 // GET /api/institutions?featured=true — only currently-featured institutions,
 // featured ones first (all rows match the filter, so this is really just
 // "most-recently-featured first" via featured_until)
+// GET /api/institutions?accreditation_body_id=... — only institutions accredited by that body
 router.get('/', async (req, res) => {
   try {
-    const { country_id, type_id, search, featured, page = 1, limit = 20 } = req.query;
+    const { country_id, type_id, search, featured, accreditation_body_id, page = 1, limit = 20 } = req.query;
+
+    let institutionIds: string[] | null = null;
+    if (accreditation_body_id) {
+      const { data: links, error: linksError } = await supabase
+        .from('institution_accreditations')
+        .select('institution_id')
+        .eq('body_id', accreditation_body_id as string);
+
+      if (linksError) {
+        console.error('Error fetching accreditation links:', linksError);
+        return res.status(500).json({ error: 'Failed to fetch institutions' });
+      }
+
+      institutionIds = Array.from(new Set((links || []).map((l) => l.institution_id)));
+      if (institutionIds.length === 0) {
+        return res.json({ data: [], meta: { page: Number(page), limit: Number(limit), total: 0, totalPages: 0 } });
+      }
+    }
 
     let query = supabase
       .from('institutions')
-      .select('*, type:institution_types(name, icon), country:countries(name, flag_emoji)', { count: 'exact' });
+      .select(
+        '*, type:institution_types(name, icon), country:countries(name, flag_emoji), accreditations:institution_accreditations(accreditation_status, body:accreditation_bodies(name, code, logo_url))',
+        { count: 'exact' }
+      );
 
+    if (institutionIds) query = query.in('id', institutionIds);
     if (country_id) query = query.eq('country_id', country_id);
     if (type_id) query = query.eq('type_id', type_id);
     if (search) query = query.ilike('name', `%${search}%`);
