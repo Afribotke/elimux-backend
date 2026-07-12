@@ -8,7 +8,9 @@ router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('major_sponsors')
-      .select('organization_name, logo_url, tagline, website_url, sponsorship_tier')
+      .select(
+        'organization_name, logo_url, tagline, website_url, sponsorship_tier, show_in_header, show_in_footer, show_in_loading, show_in_email'
+      )
       .eq('is_active', true)
       .maybeSingle();
 
@@ -28,6 +30,10 @@ router.get('/', async (req, res) => {
         tagline: data.tagline,
         website_url: data.website_url,
         tier: data.sponsorship_tier,
+        show_in_header: data.show_in_header,
+        show_in_footer: data.show_in_footer,
+        show_in_loading: data.show_in_loading,
+        show_in_email: data.show_in_email,
       },
     });
   } catch (error) {
