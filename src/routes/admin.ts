@@ -584,4 +584,159 @@ router.post('/institution-accreditations', adminMiddleware, async (req, res) => 
   }
 })
 
+const SPONSORSHIP_TIERS = ['platinum', 'gold', 'silver', 'bronze']
+
+// GET /api/admin/major-sponsors — list all sponsors, active and inactive
+router.get('/major-sponsors', adminMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('major_sponsors')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    res.json({ data: data || [] })
+  } catch (error: any) {
+    console.error('List major sponsors error:', error)
+    res.status(500).json({ error: 'Failed to fetch major sponsors' })
+  }
+})
+
+// POST /api/admin/major-sponsors — create a new major sponsor (starts inactive;
+// use PATCH /:id/activate to make it the live "Powered by" sponsor)
+router.post('/major-sponsors', adminMiddleware, async (req, res) => {
+  try {
+    const {
+      organization_name, logo_url, tagline, website_url, sponsorship_tier,
+      start_date, end_date, show_in_header, show_in_footer, show_in_loading, show_in_email,
+    } = req.body
+
+    if (!organization_name || !sponsorship_tier) {
+      return res.status(400).json({ error: 'Missing required fields', required: ['organization_name', 'sponsorship_tier'] })
+    }
+
+    if (!SPONSORSHIP_TIERS.includes(sponsorship_tier)) {
+      return res.status(400).json({ error: 'Invalid sponsorship_tier', allowed: SPONSORSHIP_TIERS })
+    }
+
+    const { data, error } = await supabase
+      .from('major_sponsors')
+      .insert({
+        organization_name,
+        logo_url: logo_url || null,
+        tagline: tagline || null,
+        website_url: website_url || null,
+        sponsorship_tier,
+        start_date: start_date || null,
+        end_date: end_date || null,
+        show_in_header: show_in_header ?? true,
+        show_in_footer: show_in_footer ?? true,
+        show_in_loading: show_in_loading ?? true,
+        show_in_email: show_in_email ?? true,
+        is_active: false,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating major sponsor:', error)
+      return res.status(500).json({ error: 'Failed to create major sponsor', details: error.message })
+    }
+
+    res.status(201).json({ data, message: 'Major sponsor created successfully' })
+  } catch (error: any) {
+    console.error('Create major sponsor error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// PATCH /api/admin/major-sponsors/:id — update sponsor details
+router.patch('/major-sponsors/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const {
+      organization_name, logo_url, tagline, website_url, sponsorship_tier,
+      start_date, end_date, show_in_header, show_in_footer, show_in_loading, show_in_email, is_active,
+    } = req.body
+
+    if (sponsorship_tier !== undefined && !SPONSORSHIP_TIERS.includes(sponsorship_tier)) {
+      return res.status(400).json({ error: 'Invalid sponsorship_tier', allowed: SPONSORSHIP_TIERS })
+    }
+
+    const updates: Record<string, unknown> = {}
+    if (organization_name !== undefined) updates.organization_name = organization_name
+    if (logo_url !== undefined) updates.logo_url = logo_url
+    if (tagline !== undefined) updates.tagline = tagline
+    if (website_url !== undefined) updates.website_url = website_url
+    if (sponsorship_tier !== undefined) updates.sponsorship_tier = sponsorship_tier
+    if (start_date !== undefined) updates.start_date = start_date
+    if (end_date !== undefined) updates.end_date = end_date
+    if (show_in_header !== undefined) updates.show_in_header = show_in_header
+    if (show_in_footer !== undefined) updates.show_in_footer = show_in_footer
+    if (show_in_loading !== undefined) updates.show_in_loading = show_in_loading
+    if (show_in_email !== undefined) updates.show_in_email = show_in_email
+    if (is_active !== undefined) updates.is_active = is_active
+
+    const { data, error } = await supabase
+      .from('major_sponsors')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116' || error.code === '22P02') {
+        return res.status(404).json({ error: 'Major sponsor not found' })
+      }
+      console.error('Error updating major sponsor:', error)
+      return res.status(500).json({ error: 'Failed to update major sponsor', details: error.message })
+    }
+
+    res.json({ data, message: 'Major sponsor updated successfully' })
+  } catch (error: any) {
+    console.error('Update major sponsor error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// PATCH /api/admin/major-sponsors/:id/activate — make this the sole active
+// sponsor, deactivating whichever one was previously active
+router.patch('/major-sponsors/:id/activate', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const { error: deactivateError } = await supabase
+      .from('major_sponsors')
+      .update({ is_active: false })
+      .neq('id', id)
+      .eq('is_active', true)
+
+    if (deactivateError) {
+      console.error('Error deactivating previous major sponsor:', deactivateError)
+      return res.status(500).json({ error: 'Failed to deactivate previous sponsor', details: deactivateError.message })
+    }
+
+    const { data, error } = await supabase
+      .from('major_sponsors')
+      .update({ is_active: true })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116' || error.code === '22P02') {
+        return res.status(404).json({ error: 'Major sponsor not found' })
+      }
+      console.error('Error activating major sponsor:', error)
+      return res.status(500).json({ error: 'Failed to activate major sponsor', details: error.message })
+    }
+
+    res.json({ data, message: 'Major sponsor activated successfully' })
+  } catch (error: any) {
+    console.error('Activate major sponsor error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router
