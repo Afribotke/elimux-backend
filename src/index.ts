@@ -18,6 +18,7 @@ import adminAnalyticsRouter from './routes/admin-analytics'
 import pwaRouter from './routes/pwa'
 import scraperRouter from './routes/scraper'
 import scholarshipsRouter from './routes/scholarships'
+import accreditationBodiesRouter from './routes/accreditation-bodies'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -49,12 +50,13 @@ app.use('/api/sponsor-ads', sponsorAdsRouter)
 app.use('/api/pwa', pwaRouter)
 app.use('/api/admin/scraper', scraperRouter)
 app.use('/api/scholarships', scholarshipsRouter)
+app.use('/api/accreditation-bodies', accreditationBodiesRouter)
 
 app.get('/', (req, res) => {
   res.json({
     name: 'ElimuX API',
     version: '1.0.0',
-    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/gamification', '/api/sponsor-ads', '/api/pwa', '/api/admin/scraper', '/api/scholarships']
+    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/gamification', '/api/sponsor-ads', '/api/pwa', '/api/admin/scraper', '/api/scholarships', '/api/accreditation-bodies']
   })
 })
 

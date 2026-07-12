@@ -507,4 +507,81 @@ router.patch('/scholarships/:id', adminMiddleware, async (req, res) => {
   }
 })
 
+const ACCREDITATION_BODY_TYPES = ['university', 'tvet', 'secondary', 'professional']
+
+// POST /api/admin/accreditation-bodies — create a new accreditation body
+router.post('/accreditation-bodies', adminMiddleware, async (req, res) => {
+  try {
+    const { name, code, description, logo_url, website_url, country_id, body_type, is_active } = req.body
+
+    if (!name || !body_type) {
+      return res.status(400).json({ error: 'Missing required fields', required: ['name', 'body_type'] })
+    }
+
+    if (!ACCREDITATION_BODY_TYPES.includes(body_type)) {
+      return res.status(400).json({ error: 'Invalid body_type', allowed: ACCREDITATION_BODY_TYPES })
+    }
+
+    const { data, error } = await supabase
+      .from('accreditation_bodies')
+      .insert({
+        name,
+        code: code || null,
+        description: description || null,
+        logo_url: logo_url || null,
+        website_url: website_url || null,
+        country_id: country_id || null,
+        body_type,
+        is_active: is_active ?? true,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating accreditation body:', error)
+      return res.status(500).json({ error: 'Failed to create accreditation body', details: error.message })
+    }
+
+    res.status(201).json({ data, message: 'Accreditation body created successfully' })
+  } catch (error: any) {
+    console.error('Create accreditation body error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/admin/institution-accreditations — link an institution to an accreditation body
+router.post('/institution-accreditations', adminMiddleware, async (req, res) => {
+  try {
+    const { institution_id, body_id, accreditation_number, accreditation_status, valid_from, valid_until, document_url } = req.body
+
+    if (!institution_id || !body_id) {
+      return res.status(400).json({ error: 'Missing required fields', required: ['institution_id', 'body_id'] })
+    }
+
+    const { data, error } = await supabase
+      .from('institution_accreditations')
+      .insert({
+        institution_id,
+        body_id,
+        accreditation_number: accreditation_number || null,
+        accreditation_status: accreditation_status || 'active',
+        valid_from: valid_from || null,
+        valid_until: valid_until || null,
+        document_url: document_url || null,
+      })
+      .select('*, institution:institutions(name), body:accreditation_bodies(name, code)')
+      .single()
+
+    if (error) {
+      console.error('Error creating institution accreditation:', error)
+      return res.status(500).json({ error: 'Failed to link accreditation', details: error.message })
+    }
+
+    res.status(201).json({ data, message: 'Institution accreditation created successfully' })
+  } catch (error: any) {
+    console.error('Create institution accreditation error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router

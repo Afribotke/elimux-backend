@@ -76,6 +76,31 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// GET /api/institutions/:id/accreditations — institution's accreditations (public)
+router.get('/:id/accreditations', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('institution_accreditations')
+      .select(
+        'id, accreditation_number, accreditation_status, valid_from, valid_until, document_url, created_at, body:accreditation_bodies(id, name, code, logo_url, body_type)'
+      )
+      .eq('institution_id', id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching institution accreditations:', error);
+      return res.status(500).json({ error: 'Failed to fetch accreditations' });
+    }
+
+    return res.json({ data: data || [] });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/institutions/apply — public: submit an institution application for review
 router.post('/apply', async (req, res) => {
   try {
