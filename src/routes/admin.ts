@@ -422,4 +422,89 @@ router.patch('/reviews/:id', adminMiddleware, async (req, res) => {
   }
 })
 
+// POST /api/admin/scholarships — create a scholarship
+router.post('/scholarships', adminMiddleware, async (req, res) => {
+  try {
+    const {
+      title, provider, provider_logo_url, description, eligibility, benefits,
+      amount, currency, coverage_type, institution_id, country_id,
+      study_levels, disciplines, target_groups, application_opens, application_deadline,
+      notification_date, application_url, application_process, required_documents,
+      status, is_featured, source_url,
+    } = req.body
+
+    if (!title || !provider || !application_deadline) {
+      return res.status(400).json({ error: 'Missing required fields', required: ['title', 'provider', 'application_deadline'] })
+    }
+
+    const { data, error } = await supabase
+      .from('scholarships')
+      .insert({
+        title,
+        provider,
+        provider_logo_url: provider_logo_url || null,
+        description: description || null,
+        eligibility: eligibility || null,
+        benefits: benefits || null,
+        amount: amount || null,
+        currency: currency || 'KES',
+        coverage_type: coverage_type || null,
+        institution_id: institution_id || null,
+        country_id: country_id || null,
+        study_levels: study_levels || null,
+        disciplines: disciplines || null,
+        target_groups: target_groups || null,
+        application_opens: application_opens || null,
+        application_deadline,
+        notification_date: notification_date || null,
+        application_url: application_url || null,
+        application_process: application_process || null,
+        required_documents: required_documents || null,
+        status: status || 'active',
+        is_featured: is_featured ?? false,
+        source_url: source_url || null,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating scholarship:', error)
+      return res.status(500).json({ error: 'Failed to create scholarship', details: error.message })
+    }
+
+    res.status(201).json({ data, message: 'Scholarship created successfully' })
+  } catch (error: any) {
+    console.error('Create scholarship error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// PATCH /api/admin/scholarships/:id — update scholarship fields
+router.patch('/scholarships/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const updates = req.body
+
+    const { data, error } = await supabase
+      .from('scholarships')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116' || error.code === '22P02') {
+        return res.status(404).json({ error: 'Scholarship not found' })
+      }
+      console.error('Error updating scholarship:', error)
+      return res.status(500).json({ error: 'Failed to update scholarship', details: error.message })
+    }
+
+    res.json({ data, message: 'Scholarship updated successfully' })
+  } catch (error: any) {
+    console.error('Update scholarship error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router
