@@ -351,7 +351,8 @@ router.post('/', async (req, res) => {
       },
     })
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message })
+    console.error('AI search failed:', error)
+    res.status(500).json({ success: false, error: 'Search failed. Please try again.' })
   }
 })
 
