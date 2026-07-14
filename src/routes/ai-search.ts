@@ -53,6 +53,8 @@ const CATEGORY_SYNONYMS: Record<string, string> = {
   education: 'Education & Teaching',
   architecture: 'Architecture & Design',
   aviation: 'Aviation & Maritime',
+  design: 'Architecture & Design',
+  'graphic design': 'Architecture & Design',
 }
 
 interface ResolveResult {
