@@ -37,8 +37,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
             company_phone,
             company_website,
             industry_type,
-            tax_id,
-            billing_address
+            logo_url,
+            business_registration_number,
+            business_certificate_url
         } = req.body;
 
         if (!company_name || !company_email || !industry_type) {
@@ -61,13 +62,14 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
             .from('advertisers')
             .insert({
                 user_id: user.id,
-                company_name,
-                company_email,
-                company_phone,
-                company_website,
+                organization_name: company_name,
+                email: company_email,
+                phone: company_phone,
+                website_url: company_website,
                 organization_type: industry_type,
-                tax_id,
-                billing_address,
+                logo_url,
+                business_registration_number,
+                business_certificate_url,
                 status: 'pending',
                 balance: 0,
                 total_spent: 0,
@@ -122,19 +124,21 @@ router.put('/profile', advertiserAuth, async (req: AdvertiserAuthRequest, res: R
             company_email,
             company_phone,
             company_website,
-            tax_id,
-            billing_address
+            logo_url,
+            business_registration_number,
+            business_certificate_url
         } = req.body;
 
         const { data: advertiser, error } = await supabaseAdmin
             .from('advertisers')
             .update({
-                company_name,
-                company_email,
-                company_phone,
-                company_website,
-                tax_id,
-                billing_address,
+                organization_name: company_name,
+                email: company_email,
+                phone: company_phone,
+                website_url: company_website,
+                logo_url,
+                business_registration_number,
+                business_certificate_url,
                 updated_at: new Date().toISOString()
             })
             .eq('user_id', req.userId)
@@ -169,7 +173,7 @@ router.get('/stats', advertiserAuth, async (req: AdvertiserAuthRequest, res: Res
 
         const { data: campaigns } = await supabaseAdmin
             .from('ad_campaigns')
-            .select('status, total_impressions, total_clicks, total_spent')
+            .select('status, impressions, clicks')
             .eq('advertiser_id', advertiser.id);
 
         const stats = {
@@ -177,11 +181,11 @@ router.get('/stats', advertiserAuth, async (req: AdvertiserAuthRequest, res: Res
             total_spent: advertiser.total_spent,
             total_campaigns: campaigns?.length || 0,
             active_campaigns: campaigns?.filter((c: any) => c.status === 'active').length || 0,
-            total_impressions: campaigns?.reduce((sum: number, c: any) => sum + (c.total_impressions || 0), 0) || 0,
-            total_clicks: campaigns?.reduce((sum: number, c: any) => sum + (c.total_clicks || 0), 0) || 0,
+            total_impressions: campaigns?.reduce((sum: number, c: any) => sum + (c.impressions || 0), 0) || 0,
+            total_clicks: campaigns?.reduce((sum: number, c: any) => sum + (c.clicks || 0), 0) || 0,
             total_ctr: campaigns && campaigns.length > 0
-                ? ((campaigns.reduce((sum: number, c: any) => sum + (c.total_clicks || 0), 0) /
-                    Math.max(campaigns.reduce((sum: number, c: any) => sum + (c.total_impressions || 0), 0), 1)) * 100).toFixed(2)
+                ? ((campaigns.reduce((sum: number, c: any) => sum + (c.clicks || 0), 0) /
+                    Math.max(campaigns.reduce((sum: number, c: any) => sum + (c.impressions || 0), 0), 1)) * 100).toFixed(2)
                 : '0.00'
         };
 
@@ -229,11 +233,7 @@ router.put('/:id/approve', advertiserAuth, async (req: AdvertiserAuthRequest, re
 
         const { data: advertiser, error } = await supabaseAdmin
             .from('advertisers')
-            .update({
-                status: 'approved',
-                approved_at: new Date().toISOString(),
-                approved_by: req.userId
-            })
+            .update({ status: 'approved' })
             .eq('id', id)
             .select()
             .single();
@@ -259,14 +259,10 @@ router.put('/:id/reject', advertiserAuth, async (req: AdvertiserAuthRequest, res
         }
 
         const { id } = req.params;
-        const { review_notes } = req.body;
 
         const { data: advertiser, error } = await supabaseAdmin
             .from('advertisers')
-            .update({
-                status: 'rejected',
-                review_notes
-            })
+            .update({ status: 'rejected' })
             .eq('id', id)
             .select()
             .single();

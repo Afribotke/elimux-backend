@@ -43,7 +43,7 @@ router.post('/serve', async (req: Request, res: Response): Promise<void> => {
             .eq('status', 'active')
             .lte('start_date', today)
             .gte('end_date', today)
-            .eq('campaign_type', mapSlotTypeToCampaignType(slot.slot_type))
+            .eq('placement', slot.slot_type)
             .limit(slot.max_ads);
 
         if (!campaigns || campaigns.length === 0) {
@@ -51,26 +51,18 @@ router.post('/serve', async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        let eligibleCampaigns = campaigns;
-
-        if (body.country_code && campaigns.some((c: any) => c.target_countries && c.target_countries.length > 0)) {
-            eligibleCampaigns = campaigns.filter((c: any) =>
-                !c.target_countries ||
-                c.target_countries.length === 0 ||
-                c.target_countries.includes(body.country_code!)
-            );
-        }
-
-        const shuffled = eligibleCampaigns.sort(() => Math.random() - 0.5);
+        // No per-campaign targeting columns in the actual schema (country/
+        // institution-type/category/audience) - every active campaign for
+        // this placement is eligible, randomized for fair rotation.
+        const shuffled = [...campaigns].sort(() => Math.random() - 0.5);
         const selected = shuffled.slice(0, slot.max_ads);
 
         const servedAds: ServedAd[] = selected.map((campaign: any) => ({
             campaign_id: campaign.id,
             title: campaign.title,
-            subtitle: campaign.subtitle,
+            headline: campaign.headline,
             image_url: campaign.image_url,
-            destination_url: campaign.destination_url,
-            cta_text: campaign.cta_text,
+            target_url: campaign.target_url,
             slot_name: body.slot_name,
             tracking_url: `${process.env.NEXT_PUBLIC_API_URL || ''}/api/ads/click?ad_id=${campaign.id}&slot=${body.slot_name}&page=${encodeURIComponent(body.page_url)}`
         }));
@@ -120,51 +112,36 @@ router.get('/click', async (req: Request, res: Response): Promise<void> => {
         }
 
         const sessionId = req.headers['x-session-id'] as string || generateSessionId();
-        const userAgent = req.headers['user-agent'] || '';
         const ipAddress = req.ip || req.socket.remoteAddress || '';
-        const deviceType = getDeviceType(userAgent);
 
+        // ad_clicks only has ad_id/user_device_id/ip_address(/clicked_at) in
+        // the actual schema - no user_agent/country_code/device_type/
+        // page_url/referrer columns to record those in.
         await supabaseAdmin.from('ad_clicks').insert({
             ad_id: ad_id as string,
-            user_id: (req as any).userId || null,
             user_device_id: sessionId,
-            ip_address: ipAddress,
-            user_agent: userAgent,
-            country_code: req.query.country as string,
-            device_type: deviceType,
-            page_url: page as string,
-            referrer: req.headers.referer || ''
+            ip_address: ipAddress
         });
 
+        // No billing_model/cpc_rate columns in the actual schema - campaigns
+        // run for their date range/budget window, not per-click spend, so
+        // this just counts the click.
         const { data: campaign } = await supabaseAdmin
             .from('ad_campaigns')
-            .select('billing_model, cpc_rate, cpm_rate, total_spent, total_clicks, budget')
+            .select('clicks, target_url')
             .eq('id', ad_id as string)
             .single();
 
-        if (campaign && campaign.billing_model === 'cpc') {
-            const newSpend = (campaign.total_spent || 0) + (campaign.cpc_rate || 0.50);
+        if (campaign) {
             await supabaseAdmin
                 .from('ad_campaigns')
-                .update({
-                    total_spent: newSpend,
-                    total_clicks: (campaign.total_clicks || 0) + 1,
-                    status: newSpend >= campaign.budget ? 'completed' : 'active'
-                })
+                .update({ clicks: (campaign.clicks || 0) + 1 })
                 .eq('id', ad_id as string);
         }
 
-        if (redirect === 'true') {
-            const { data: campaignData } = await supabaseAdmin
-                .from('ad_campaigns')
-                .select('destination_url')
-                .eq('id', ad_id as string)
-                .single();
-
-            if (campaignData?.destination_url) {
-                res.redirect(campaignData.destination_url);
-                return;
-            }
+        if (redirect === 'true' && campaign?.target_url) {
+            res.redirect(campaign.target_url);
+            return;
         }
 
         res.json({ success: true, message: 'Click tracked' });
@@ -218,7 +195,7 @@ router.get('/slots/:name', async (req: Request, res: Response): Promise<void> =>
             .eq('status', 'active')
             .lte('start_date', today)
             .gte('end_date', today)
-            .eq('campaign_type', mapSlotTypeToCampaignType(slot.slot_type));
+            .eq('placement', slot.slot_type);
 
         res.json({
             success: true,
@@ -233,17 +210,6 @@ router.get('/slots/:name', async (req: Request, res: Response): Promise<void> =>
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-
-function mapSlotTypeToCampaignType(slotType: string): string {
-    const mapping: Record<string, string> = {
-        'hero': 'homepage_hero',
-        'banner': 'banner',
-        'featured': 'featured_listing',
-        'sponsored': 'sponsored_program',
-        'search': 'search_sponsored'
-    };
-    return mapping[slotType] || 'banner';
-}
 
 function generateSessionId(): string {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);

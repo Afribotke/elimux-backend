@@ -1,60 +1,52 @@
 // ============================================
 // ELIMUX AD PORTAL - TYPE DEFINITIONS
-// Matches existing Supabase schema
+// Matches actual Supabase schema (verified against information_schema,
+// not the original design doc - the tables as built are simpler than
+// what earlier drafts of this feature assumed, see elimux-sql/18_*.sql)
 // ============================================
 
 export interface Advertiser {
     id: string;
-    user_id?: string;
-    company_name: string;
-    company_email: string;
-    company_phone?: string;
-    company_website?: string;
+    user_id: string;
+    organization_name: string;
     organization_type: string;
-    tax_id?: string;
-    billing_address?: Record<string, any>;
+    email: string;
+    phone?: string;
+    password_hash?: string;
+    logo_url?: string;
+    website_url?: string;
+    business_registration_number?: string;
+    business_certificate_url?: string;
+    is_email_verified: boolean;
+    is_business_verified: boolean;
+    is_trusted: boolean;
     status: 'pending' | 'approved' | 'rejected' | 'suspended';
     balance: number;
     total_spent: number;
     created_at: string;
     updated_at: string;
-    approved_at?: string;
-    approved_by?: string;
-    password_hash?: string;
 }
 
 export interface AdCampaign {
     id: string;
     advertiser_id: string;
-    name: string;
-    description?: string;
-    campaign_type: 'banner' | 'featured_listing' | 'sponsored_program' | 'search_sponsored' | 'homepage_hero';
-    status: 'draft' | 'pending_review' | 'approved' | 'active' | 'paused' | 'completed' | 'rejected';
-    target_countries?: string[];
-    target_institution_types?: string[];
-    target_categories?: string[];
-    target_audience: 'all' | 'students' | 'parents' | 'agents';
     title: string;
-    subtitle?: string;
+    description?: string;
+    headline?: string;
     image_url?: string;
-    destination_url: string;
-    cta_text: string;
+    image_dimensions?: string;
+    target_url: string;
+    placement: string;
+    is_powered_by: boolean;
+    status: 'draft' | 'pending_review' | 'approved' | 'active' | 'paused' | 'completed' | 'rejected';
     budget: number;
-    daily_budget?: number;
     duration_days?: number;
     start_date?: string;
     end_date?: string;
-    billing_model: 'cpc' | 'cpm' | 'flat_fee';
-    cpc_rate: number;
-    cpm_rate: number;
-    total_impressions: number;
-    total_clicks: number;
-    total_conversions: number;
-    total_spent: number;
-    is_powered_by?: boolean;
-    review_notes?: string;
-    reviewed_at?: string;
-    reviewed_by?: string;
+    auto_renew: boolean;
+    impressions: number;
+    clicks: number;
+    rejection_reason?: string;
     created_at: string;
     updated_at: string;
 }
@@ -90,71 +82,46 @@ export interface AdImpression {
 export interface AdClick {
     id: string;
     ad_id: string;
-    user_id?: string;
     user_device_id?: string;
     ip_address?: string;
-    user_agent?: string;
-    country_code?: string;
-    device_type?: string;
-    page_url?: string;
-    referrer?: string;
-    created_at: string;
+    clicked_at: string;
 }
 
 export interface AdPayment {
     id: string;
-    advertiser_id: string;
-    campaign_id?: string;
+    campaign_id: string;
     amount: number;
-    currency: string;
-    payment_method: 'paystack' | 'mpesa' | 'bank_transfer';
-    payment_status: 'pending' | 'completed' | 'failed' | 'refunded';
-    transaction_id?: string;
     paystack_reference?: string;
-    mpesa_checkout_request_id?: string;
     paystack_status?: string;
-    metadata?: Record<string, any>;
+    status: 'pending' | 'completed' | 'failed' | 'refunded';
+    paid_at?: string;
     created_at: string;
-    updated_at: string;
 }
 
 export interface CreateCampaignRequest {
-    name: string;
-    description?: string;
-    campaign_type: AdCampaign['campaign_type'];
-    target_countries?: string[];
-    target_institution_types?: string[];
-    target_categories?: string[];
-    target_audience?: AdCampaign['target_audience'];
     title: string;
-    subtitle?: string;
+    description?: string;
+    headline?: string;
     image_url?: string;
-    destination_url: string;
-    cta_text?: string;
+    image_dimensions?: string;
+    target_url: string;
+    placement: string;
     budget: number;
-    daily_budget?: number;
+    duration_days?: number;
     start_date?: string;
     end_date?: string;
-    duration_days?: number;
-    billing_model?: AdCampaign['billing_model'];
-    cpc_rate?: number;
-    cpm_rate?: number;
+    auto_renew?: boolean;
 }
 
 export interface CampaignAnalytics {
     campaign_id: string;
-    total_impressions: number;
-    total_clicks: number;
-    total_conversions: number;
-    total_spent: number;
+    impressions: number;
+    clicks: number;
     ctr: number;
-    cpc: number;
     daily_stats: {
         date: string;
         impressions: number;
         clicks: number;
-        conversions: number;
-        spend: number;
     }[];
 }
 
@@ -168,22 +135,14 @@ export interface ServeAdRequest {
 export interface ServedAd {
     campaign_id: string;
     title: string;
-    subtitle?: string;
+    headline?: string;
     image_url?: string;
-    destination_url: string;
-    cta_text: string;
+    target_url: string;
     slot_name: string;
     tracking_url: string;
 }
 
 export interface CreatePaymentRequest {
     amount: number;
-    currency?: string;
-    campaign_id?: string;
-}
-
-export interface MpesaPaymentRequest {
-    amount: number;
-    phone_number: string;
-    campaign_id?: string;
+    campaign_id: string;
 }

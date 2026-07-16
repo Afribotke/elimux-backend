@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { initializeTransaction, verifyTransaction, verifyWebhookSignature, toSubunit } from '../lib/paystack';
 import { advertiserAuth, AdvertiserAuthRequest } from '../middleware/advertiser-auth';
-import { CreatePaymentRequest, MpesaPaymentRequest } from '../types/advertiser';
+import { CreatePaymentRequest } from '../types/advertiser';
 
 const router = express.Router();
 
@@ -19,30 +19,57 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://www.elimux.ke';
 
-async function applySuccessfulTopup(payment: any, transactionId: string): Promise<void> {
+// ad_payments has no advertiser_id column - campaign_id is the only link,
+// so every payment funds a specific campaign directly (no separate wallet
+// balance top-up). Marking it paid also credits the owning advertiser's
+// total_spent for reporting.
+async function applySuccessfulPayment(payment: any, paystackStatus: string): Promise<void> {
     await supabaseAdmin
         .from('ad_payments')
         .update({
-            payment_status: 'completed',
-            transaction_id: transactionId,
-            updated_at: new Date().toISOString()
+            status: 'completed',
+            paystack_status: paystackStatus,
+            paid_at: new Date().toISOString()
         })
         .eq('id', payment.id);
+
+    const { data: campaign } = await supabaseAdmin
+        .from('ad_campaigns')
+        .select('advertiser_id')
+        .eq('id', payment.campaign_id)
+        .single();
+
+    if (campaign?.advertiser_id) {
+        const { data: advertiser } = await supabaseAdmin
+            .from('advertisers')
+            .select('total_spent')
+            .eq('id', campaign.advertiser_id)
+            .single();
+
+        await supabaseAdmin
+            .from('advertisers')
+            .update({ total_spent: (advertiser?.total_spent || 0) + payment.amount })
+            .eq('id', campaign.advertiser_id);
+    }
 }
 
-// POST /api/advertiser/payments/paystack/create - Initialize Paystack top-up
+// POST /api/advertiser/payments/paystack/create - Initialize Paystack payment for a campaign
 router.post('/paystack/create', advertiserAuth, async (req: AdvertiserAuthRequest, res: Response): Promise<void> => {
     try {
-        const { amount, currency = 'KES', campaign_id }: CreatePaymentRequest = req.body;
+        const { amount, campaign_id }: CreatePaymentRequest = req.body;
 
         if (!amount || amount < 10) {
-            res.status(400).json({ error: 'Minimum top-up amount is 10' });
+            res.status(400).json({ error: 'Minimum payment amount is 10' });
+            return;
+        }
+        if (!campaign_id) {
+            res.status(400).json({ error: 'campaign_id is required' });
             return;
         }
 
         const { data: advertiser } = await supabaseAdmin
             .from('advertisers')
-            .select('id, company_name, company_email')
+            .select('id, email')
             .eq('user_id', req.userId)
             .single();
 
@@ -51,17 +78,25 @@ router.post('/paystack/create', advertiserAuth, async (req: AdvertiserAuthReques
             return;
         }
 
+        const { data: campaign } = await supabaseAdmin
+            .from('ad_campaigns')
+            .select('id, advertiser_id')
+            .eq('id', campaign_id)
+            .single();
+
+        if (!campaign || campaign.advertiser_id !== advertiser.id) {
+            res.status(403).json({ error: 'Campaign not found or not owned by this advertiser' });
+            return;
+        }
+
         const reference = `ELXAD_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 
         const { data: payment, error } = await supabaseAdmin
             .from('ad_payments')
             .insert({
-                advertiser_id: advertiser.id,
-                campaign_id: campaign_id || null,
-                amount: amount,
-                currency: currency.toUpperCase(),
-                payment_method: 'paystack',
-                payment_status: 'pending',
+                campaign_id,
+                amount,
+                status: 'pending',
                 paystack_reference: reference
             })
             .select()
@@ -73,15 +108,15 @@ router.post('/paystack/create', advertiserAuth, async (req: AdvertiserAuthReques
         }
 
         const paystackData = await initializeTransaction({
-            email: advertiser.company_email,
+            email: advertiser.email,
             amountSubunit: toSubunit(amount),
-            currency: currency.toUpperCase(),
+            currency: 'KES',
             reference,
             callbackUrl: `${FRONTEND_URL}/advertiser/billing/callback`,
             metadata: {
                 advertiser_id: advertiser.id,
-                payment_id: payment.id,
-                type: 'ad_topup'
+                campaign_id,
+                payment_id: payment.id
             }
         });
 
@@ -91,8 +126,7 @@ router.post('/paystack/create', advertiserAuth, async (req: AdvertiserAuthReques
                 payment_id: payment.id,
                 authorization_url: paystackData.authorization_url,
                 reference,
-                amount: amount,
-                currency: currency.toUpperCase()
+                amount
             }
         });
     } catch (error: any) {
@@ -101,7 +135,7 @@ router.post('/paystack/create', advertiserAuth, async (req: AdvertiserAuthReques
     }
 });
 
-// GET /api/advertiser/payments/paystack/verify/:reference - Verify Paystack top-up
+// GET /api/advertiser/payments/paystack/verify/:reference - Verify Paystack payment
 router.get('/paystack/verify/:reference', async (req: Request, res: Response): Promise<void> => {
     try {
         const { reference } = req.params;
@@ -117,7 +151,7 @@ router.get('/paystack/verify/:reference', async (req: Request, res: Response): P
             return;
         }
 
-        if (payment.payment_status === 'completed') {
+        if (payment.status === 'completed') {
             res.json({ success: true, data: { status: 'completed', payment } });
             return;
         }
@@ -125,11 +159,11 @@ router.get('/paystack/verify/:reference', async (req: Request, res: Response): P
         const result = await verifyTransaction(reference as string);
 
         if (result.status === 'success') {
-            await applySuccessfulTopup(payment, result.id.toString());
+            await applySuccessfulPayment(payment, result.status);
         } else if (result.status === 'failed' || result.status === 'abandoned') {
             await supabaseAdmin
                 .from('ad_payments')
-                .update({ payment_status: 'failed', updated_at: new Date().toISOString() })
+                .update({ status: 'failed', paystack_status: result.status })
                 .eq('id', payment.id);
         }
 
@@ -168,11 +202,11 @@ router.post('/paystack/webhook', async (req: Request, res: Response): Promise<vo
                 .eq('paystack_reference', reference)
                 .single();
 
-            if (payment && payment.payment_status !== 'completed') {
-                await applySuccessfulTopup(payment, event.data.id.toString());
+            if (payment && payment.status !== 'completed') {
+                await applySuccessfulPayment(payment, 'success');
             }
 
-            console.log(`[WEBHOOK] charge.success for ${reference} — ad top-up verified`);
+            console.log(`[WEBHOOK] charge.success for ${reference} — ad payment verified`);
         }
 
         res.json({ received: true });
@@ -182,120 +216,7 @@ router.post('/paystack/webhook', async (req: Request, res: Response): Promise<vo
     }
 });
 
-// POST /api/advertiser/payments/mpesa/create - Create M-Pesa payment
-router.post('/mpesa/create', advertiserAuth, async (req: AdvertiserAuthRequest, res: Response): Promise<void> => {
-    try {
-        const { amount, phone_number, campaign_id }: MpesaPaymentRequest = req.body;
-
-        if (!amount || amount < 100) {
-            res.status(400).json({ error: 'Minimum top-up amount is KES 100' });
-            return;
-        }
-
-        if (!phone_number) {
-            res.status(400).json({ error: 'phone_number is required for M-Pesa' });
-            return;
-        }
-
-        const { data: advertiser } = await supabaseAdmin
-            .from('advertisers')
-            .select('id')
-            .eq('user_id', req.userId)
-            .single();
-
-        if (!advertiser) {
-            res.status(404).json({ error: 'Advertiser profile not found' });
-            return;
-        }
-
-        const { data: payment, error } = await supabaseAdmin
-            .from('ad_payments')
-            .insert({
-                advertiser_id: advertiser.id,
-                campaign_id: campaign_id || null,
-                amount: amount,
-                currency: 'KES',
-                payment_method: 'mpesa',
-                payment_status: 'pending',
-                metadata: {
-                    mpesa_phone: phone_number
-                }
-            })
-            .select()
-            .single();
-
-        if (error) {
-            res.status(500).json({ error: 'Failed to create M-Pesa payment', details: error.message });
-            return;
-        }
-
-        res.json({
-            success: true,
-            message: 'M-Pesa payment initiated. Check your phone for STK push.',
-            data: {
-                payment_id: payment.id,
-                amount_kes: amount,
-                phone_number,
-                instructions: 'Pay via M-Pesa STK Push or send to business number. Then confirm with payment_id.'
-            }
-        });
-    } catch (error: any) {
-        console.error('M-Pesa create error:', error);
-        res.status(500).json({ error: 'Failed to create M-Pesa payment', details: error.message });
-    }
-});
-
-// POST /api/advertiser/payments/mpesa/confirm - Confirm M-Pesa payment
-router.post('/mpesa/confirm', async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { payment_id, transaction_id } = req.body;
-
-        if (!payment_id) {
-            res.status(400).json({ error: 'payment_id is required' });
-            return;
-        }
-
-        const { data: payment, error } = await supabaseAdmin
-            .from('ad_payments')
-            .select('*')
-            .eq('id', payment_id)
-            .eq('payment_method', 'mpesa')
-            .eq('payment_status', 'pending')
-            .single();
-
-        if (error || !payment) {
-            res.status(404).json({ error: 'Payment not found or already processed' });
-            return;
-        }
-
-        const { data: updatedPayment, error: updateError } = await supabaseAdmin
-            .from('ad_payments')
-            .update({
-                payment_status: 'completed',
-                transaction_id: transaction_id || `MPESA-${Date.now()}`,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', payment.id)
-            .select()
-            .single();
-
-        if (updateError) {
-            res.status(500).json({ error: 'Failed to confirm M-Pesa payment', details: updateError.message });
-            return;
-        }
-
-        res.json({
-            success: true,
-            message: 'M-Pesa payment confirmed',
-            data: updatedPayment
-        });
-    } catch (error: any) {
-        console.error('M-Pesa confirm error:', error);
-        res.status(500).json({ error: 'Failed to confirm M-Pesa payment', details: error.message });
-    }
-});
-
-// GET /api/advertiser/payments/history - Get payment history
+// GET /api/advertiser/payments/history - Get payment history across this advertiser's campaigns
 router.get('/history', advertiserAuth, async (req: AdvertiserAuthRequest, res: Response): Promise<void> => {
     try {
         const { page = '1', limit = '10' } = req.query;
@@ -303,21 +224,21 @@ router.get('/history', advertiserAuth, async (req: AdvertiserAuthRequest, res: R
         const limitNum = parseInt(limit as string, 10);
         const offset = (pageNum - 1) * limitNum;
 
-        const { data: advertiser } = await supabaseAdmin
-            .from('advertisers')
+        const { data: campaigns } = await supabaseAdmin
+            .from('ad_campaigns')
             .select('id')
-            .eq('user_id', req.userId)
-            .single();
+            .eq('advertiser_id', req.advertiserId);
 
-        if (!advertiser) {
-            res.status(404).json({ error: 'Profile not found' });
+        const campaignIds = (campaigns || []).map((c: any) => c.id);
+        if (campaignIds.length === 0) {
+            res.json({ success: true, data: [], pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 } });
             return;
         }
 
         const { data: payments, error, count } = await supabaseAdmin
             .from('ad_payments')
             .select('*', { count: 'exact' })
-            .eq('advertiser_id', advertiser.id)
+            .in('campaign_id', campaignIds)
             .order('created_at', { ascending: false })
             .range(offset, offset + limitNum - 1);
 

@@ -20,9 +20,9 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
     try {
         const body: CreateCampaignRequest = req.body;
 
-        if (!body.name || !body.campaign_type || !body.title || !body.destination_url || !body.budget) {
+        if (!body.title || !body.target_url || !body.placement || !body.budget) {
             res.status(400).json({
-                error: 'Missing required fields: name, campaign_type, title, destination_url, budget'
+                error: 'Missing required fields: title, target_url, placement, budget'
             });
             return;
         }
@@ -38,7 +38,7 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
             return;
         }
 
-        if (body.billing_model !== 'flat_fee' && body.budget > advertiser.balance) {
+        if (body.budget > advertiser.balance) {
             res.status(400).json({
                 error: 'Insufficient balance',
                 balance: advertiser.balance,
@@ -49,28 +49,18 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
 
         const insertData: any = {
             advertiser_id: req.advertiserId,
-            name: body.name,
-            description: body.description,
-            campaign_type: body.campaign_type,
-            target_countries: body.target_countries || [],
-            target_institution_types: body.target_institution_types || [],
-            target_categories: body.target_categories || [],
-            target_audience: body.target_audience || 'all',
             title: body.title,
-            subtitle: body.subtitle,
+            description: body.description,
+            headline: body.headline,
             image_url: body.image_url,
-            destination_url: body.destination_url,
-            cta_text: body.cta_text || 'Learn More',
+            image_dimensions: body.image_dimensions,
+            target_url: body.target_url,
+            placement: body.placement,
             budget: body.budget,
-            daily_budget: body.daily_budget,
-            billing_model: body.billing_model || 'cpc',
-            cpc_rate: body.cpc_rate || 0.50,
-            cpm_rate: body.cpm_rate || 5.00,
+            auto_renew: body.auto_renew || false,
             status: 'draft',
-            total_impressions: 0,
-            total_clicks: 0,
-            total_conversions: 0,
-            total_spent: 0
+            impressions: 0,
+            clicks: 0
         };
 
         if (body.start_date && body.end_date) {
@@ -390,16 +380,16 @@ router.get('/:id/analytics', advertiserAuth, async (req: AdvertiserAuthRequest, 
 
         const { data: clicks } = await supabaseAdmin
             .from('ad_clicks')
-            .select('created_at')
+            .select('clicked_at')
             .eq('ad_id', id)
-            .gte('created_at', startDate.toISOString());
+            .gte('clicked_at', startDate.toISOString());
 
         const dailyStats: Record<string, any> = {};
         for (let i = 0; i < daysNum; i++) {
             const d = new Date();
             d.setDate(d.getDate() - i);
             const dateStr = d.toISOString().split('T')[0];
-            dailyStats[dateStr] = { date: dateStr, impressions: 0, clicks: 0, conversions: 0, spend: 0 };
+            dailyStats[dateStr] = { date: dateStr, impressions: 0, clicks: 0 };
         }
 
         impressions?.forEach((imp: any) => {
@@ -408,21 +398,16 @@ router.get('/:id/analytics', advertiserAuth, async (req: AdvertiserAuthRequest, 
         });
 
         clicks?.forEach((click: any) => {
-            const dateStr = click.created_at.split('T')[0];
+            const dateStr = click.clicked_at.split('T')[0];
             if (dailyStats[dateStr]) dailyStats[dateStr].clicks++;
         });
 
         const analytics: CampaignAnalytics = {
             campaign_id: id as string,
-            total_impressions: campaign.total_impressions || 0,
-            total_clicks: campaign.total_clicks || 0,
-            total_conversions: campaign.total_conversions || 0,
-            total_spent: campaign.total_spent || 0,
-            ctr: (campaign.total_impressions || 0) > 0
-                ? ((campaign.total_clicks || 0) / campaign.total_impressions) * 100
-                : 0,
-            cpc: (campaign.total_clicks || 0) > 0
-                ? (campaign.total_spent || 0) / campaign.total_clicks
+            impressions: campaign.impressions || 0,
+            clicks: campaign.clicks || 0,
+            ctr: (campaign.impressions || 0) > 0
+                ? ((campaign.clicks || 0) / campaign.impressions) * 100
                 : 0,
             daily_stats: Object.values(dailyStats).reverse() as any
         };

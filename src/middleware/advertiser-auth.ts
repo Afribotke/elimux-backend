@@ -55,7 +55,7 @@ export const advertiserAuth = async (req: AdvertiserAuthRequest, res: Response, 
         }
 
         if (advertiser.status !== 'approved') {
-            res.status(403).json({ error: 'Forbidden - Advertiser not approved' });
+            res.status(403).json({ error: 'Forbidden - Advertiser not approved', status: advertiser.status });
             return;
         }
 
