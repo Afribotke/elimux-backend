@@ -5,7 +5,7 @@
 import express, { Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { advertiserAuth, AdvertiserAuthRequest } from '../middleware/advertiser-auth';
-import { CreateCampaignRequest, CampaignAnalytics } from '../types/advertiser';
+import { CreateCampaignRequest, CampaignAnalytics, CampaignPlacement } from '../types/advertiser';
 
 const router = express.Router();
 
@@ -15,15 +15,24 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
     auth: { autoRefreshToken: false, persistSession: false }
 });
 
+const VALID_PLACEMENTS: CampaignPlacement[] = ['ribbon', 'homepage_hero', 'search_inline', 'institution_sidebar', 'scholarship_banner'];
+
 // POST /api/campaigns - Create new campaign
 router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Response): Promise<void> => {
     try {
         const body: CreateCampaignRequest = req.body;
 
-        if (!body.title || !body.target_url || !body.placement || !body.budget) {
+        // title/image_url/target_url/placement/budget/duration_days are all
+        // NOT NULL with no default on ad_campaigns - all six are mandatory.
+        if (!body.title || !body.image_url || !body.target_url || !body.placement || !body.budget || !body.duration_days) {
             res.status(400).json({
-                error: 'Missing required fields: title, target_url, placement, budget'
+                error: 'Missing required fields: title, image_url, target_url, placement, budget, duration_days'
             });
+            return;
+        }
+
+        if (!VALID_PLACEMENTS.includes(body.placement)) {
+            res.status(400).json({ error: `Invalid placement. Must be one of: ${VALID_PLACEMENTS.join(', ')}` });
             return;
         }
 
@@ -33,7 +42,7 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
             .eq('id', req.advertiserId)
             .single();
 
-        if (!advertiser || advertiser.status !== 'approved') {
+        if (!advertiser || advertiser.status !== 'active') {
             res.status(403).json({ error: 'Advertiser not approved' });
             return;
         }
@@ -57,6 +66,7 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
             target_url: body.target_url,
             placement: body.placement,
             budget: body.budget,
+            duration_days: body.duration_days,
             auto_renew: body.auto_renew || false,
             status: 'draft',
             impressions: 0,
@@ -66,9 +76,6 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
         if (body.start_date && body.end_date) {
             insertData.start_date = body.start_date;
             insertData.end_date = body.end_date;
-        }
-        if (body.duration_days) {
-            insertData.duration_days = body.duration_days;
         }
 
         const { data: campaign, error } = await supabaseAdmin

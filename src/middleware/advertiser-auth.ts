@@ -54,7 +54,7 @@ export const advertiserAuth = async (req: AdvertiserAuthRequest, res: Response, 
             return;
         }
 
-        if (advertiser.status !== 'approved') {
+        if (advertiser.status !== 'active') {
             res.status(403).json({ error: 'Forbidden - Advertiser not approved', status: advertiser.status });
             return;
         }
@@ -83,7 +83,7 @@ export const optionalAuth = async (req: AdvertiserAuthRequest, res: Response, ne
                     .eq('user_id', user.id)
                     .single();
 
-                if (advertiser && advertiser.status === 'approved') {
+                if (advertiser && advertiser.status === 'active') {
                     req.advertiserId = advertiser.id;
                 }
             }

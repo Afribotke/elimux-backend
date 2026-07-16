@@ -233,7 +233,7 @@ router.put('/:id/approve', advertiserAuth, async (req: AdvertiserAuthRequest, re
 
         const { data: advertiser, error } = await supabaseAdmin
             .from('advertisers')
-            .update({ status: 'approved' })
+            .update({ status: 'active' })
             .eq('id', id)
             .select()
             .single();
@@ -251,6 +251,9 @@ router.put('/:id/approve', advertiserAuth, async (req: AdvertiserAuthRequest, re
 });
 
 // PUT /api/advertiser/:id/reject - Admin only: Reject advertiser
+// (advertisers.status only allows pending/active/suspended - no dedicated
+// "rejected" value exists in the actual constraint, so a rejection is
+// recorded as suspended.)
 router.put('/:id/reject', advertiserAuth, async (req: AdvertiserAuthRequest, res: Response): Promise<void> => {
     try {
         if (!req.isAdmin) {
@@ -262,7 +265,7 @@ router.put('/:id/reject', advertiserAuth, async (req: AdvertiserAuthRequest, res
 
         const { data: advertiser, error } = await supabaseAdmin
             .from('advertisers')
-            .update({ status: 'rejected' })
+            .update({ status: 'suspended' })
             .eq('id', id)
             .select()
             .single();

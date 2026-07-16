@@ -20,7 +20,9 @@ export interface Advertiser {
     is_email_verified: boolean;
     is_business_verified: boolean;
     is_trusted: boolean;
-    status: 'pending' | 'approved' | 'rejected' | 'suspended';
+    // Verified exhaustively against the actual CHECK constraint - no
+    // 'approved'/'rejected' values exist, only these three.
+    status: 'pending' | 'active' | 'suspended';
     balance: number;
     total_spent: number;
     created_at: string;
@@ -36,7 +38,7 @@ export interface AdCampaign {
     image_url?: string;
     image_dimensions?: string;
     target_url: string;
-    placement: string;
+    placement: CampaignPlacement;
     is_powered_by: boolean;
     status: 'draft' | 'pending_review' | 'approved' | 'active' | 'paused' | 'completed' | 'rejected';
     budget: number;
@@ -98,16 +100,22 @@ export interface AdPayment {
     created_at: string;
 }
 
+// Verified exhaustively against the actual CHECK constraint
+// (ad_campaigns_placement_check) - unrelated to ad_slots.slot_type/name,
+// which use a different vocabulary entirely ('banner', 'hero', 'search', ...
+// vs these). Only 'homepage_hero' happens to overlap between the two.
+export type CampaignPlacement = 'ribbon' | 'homepage_hero' | 'search_inline' | 'institution_sidebar' | 'scholarship_banner';
+
 export interface CreateCampaignRequest {
     title: string;
     description?: string;
     headline?: string;
-    image_url?: string;
+    image_url: string;
     image_dimensions?: string;
     target_url: string;
-    placement: string;
+    placement: CampaignPlacement;
     budget: number;
-    duration_days?: number;
+    duration_days: number;
     start_date?: string;
     end_date?: string;
     auto_renew?: boolean;
