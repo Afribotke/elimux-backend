@@ -400,8 +400,9 @@ router.get('/:id/analytics', advertiserAuth, async (req: AdvertiserAuthRequest, 
             .eq('ad_id', id)
             .gte('created_at', startDate.toISOString());
 
+        // campaign_clicks, not ad_clicks - see 20_campaign_clicks.sql.
         const { data: clicks } = await supabaseAdmin
-            .from('ad_clicks')
+            .from('campaign_clicks')
             .select('clicked_at')
             .eq('ad_id', id)
             .gte('clicked_at', startDate.toISOString());

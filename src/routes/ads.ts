@@ -114,10 +114,10 @@ router.get('/click', async (req: Request, res: Response): Promise<void> => {
         const sessionId = req.headers['x-session-id'] as string || generateSessionId();
         const ipAddress = req.ip || req.socket.remoteAddress || '';
 
-        // ad_clicks only has ad_id/user_device_id/ip_address(/clicked_at) in
-        // the actual schema - no user_agent/country_code/device_type/
-        // page_url/referrer columns to record those in.
-        await supabaseAdmin.from('ad_clicks').insert({
+        // campaign_clicks, not ad_clicks - ad_clicks.ad_id FKs to
+        // sponsor_ads(id) and is owned by the separate sponsor-ads feature.
+        // See 20_campaign_clicks.sql.
+        await supabaseAdmin.from('campaign_clicks').insert({
             ad_id: ad_id as string,
             user_device_id: sessionId,
             ip_address: ipAddress
