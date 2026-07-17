@@ -97,6 +97,14 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
             return;
         }
 
+        // Reserve the budget against the wallet now that the campaign
+        // actually exists - the earlier check only confirmed it *could*
+        // afford it, it didn't deduct anything.
+        await supabaseAdmin
+            .from('advertisers')
+            .update({ balance: advertiser.balance - body.budget })
+            .eq('id', req.advertiserId);
+
         res.status(201).json({
             success: true,
             message: 'Campaign created successfully',
