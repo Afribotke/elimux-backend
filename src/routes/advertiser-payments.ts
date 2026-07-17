@@ -54,8 +54,8 @@ router.post('/paystack/create', advertiserAuth, async (req: AdvertiserAuthReques
     try {
         const { amount, campaign_id }: CreatePaymentRequest = req.body;
 
-        if (!amount || amount < 10) {
-            res.status(400).json({ error: 'Minimum payment amount is 10' });
+        if (!amount || amount < 100) {
+            res.status(400).json({ error: 'Minimum payment amount is KES 100' });
             return;
         }
 
