@@ -739,4 +739,217 @@ router.patch('/major-sponsors/:id/activate', adminMiddleware, async (req, res) =
   }
 })
 
+// ============================================================
+// AD CAMPAIGN MODERATION (advertiser-portal campaigns)
+// ============================================================
+
+// GET /api/admin/campaigns — list ALL campaigns across advertisers, filterable by status
+router.get('/campaigns', adminMiddleware, async (req, res) => {
+  try {
+    const { status } = req.query
+
+    let query = supabase
+      .from('ad_campaigns')
+      .select('*, advertiser:advertisers(organization_name, email, status)')
+      .order('created_at', { ascending: false })
+
+    if (status && status !== 'all') query = query.eq('status', status as string)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    res.json({ data: data || [] })
+  } catch (error: any) {
+    console.error('List admin campaigns error:', error)
+    res.status(500).json({ error: 'Failed to fetch campaigns' })
+  }
+})
+
+// POST /api/admin/campaigns/:id/approve — pending_review → active; duration runs from approval date
+router.post('/campaigns/:id/approve', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const { data: campaign, error: fetchError } = await supabase
+      .from('ad_campaigns')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !campaign) return res.status(404).json({ error: 'Campaign not found' })
+    if (campaign.status !== 'pending_review') {
+      return res.status(400).json({ error: 'Only pending_review campaigns can be approved', current_status: campaign.status })
+    }
+
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + (campaign.duration_days || 30))
+
+    const { data, error } = await supabase
+      .from('ad_campaigns')
+      .update({
+        status: 'active',
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    res.json({ data, message: 'Campaign approved and now live' })
+  } catch (error: any) {
+    console.error('Approve campaign error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/admin/campaigns/:id/reject — reject + refund the reserved budget to the advertiser wallet
+router.post('/campaigns/:id/reject', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { rejection_reason } = req.body
+
+    if (!rejection_reason || !rejection_reason.trim()) {
+      return res.status(400).json({ error: 'rejection_reason is required' })
+    }
+
+    const { data: campaign, error: fetchError } = await supabase
+      .from('ad_campaigns')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !campaign) return res.status(404).json({ error: 'Campaign not found' })
+    if (campaign.status !== 'pending_review' && campaign.status !== 'draft') {
+      return res.status(400).json({ error: 'Only pending_review or draft campaigns can be rejected', current_status: campaign.status })
+    }
+
+    const { data, error } = await supabase
+      .from('ad_campaigns')
+      .update({ status: 'rejected', rejection_reason: rejection_reason.trim(), updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    // Refund the budget that was reserved at creation.
+    const { data: advertiser, error: advError } = await supabase
+      .from('advertisers')
+      .select('balance')
+      .eq('id', campaign.advertiser_id)
+      .single()
+
+    if (advError || !advertiser) {
+      console.error('REJECT REFUND FAILED — campaign rejected but wallet not refunded:', id, campaign.advertiser_id, campaign.budget)
+      return res.status(500).json({ error: 'Campaign rejected but refund failed — refund manually in Supabase', campaign_id: id, amount: campaign.budget })
+    }
+
+    const { error: refundError } = await supabase
+      .from('advertisers')
+      .update({ balance: Number(advertiser.balance) + Number(campaign.budget), updated_at: new Date().toISOString() })
+      .eq('id', campaign.advertiser_id)
+
+    if (refundError) {
+      console.error('REJECT REFUND FAILED — campaign rejected but wallet not refunded:', id, campaign.advertiser_id, campaign.budget)
+      return res.status(500).json({ error: 'Campaign rejected but refund failed — refund manually in Supabase', campaign_id: id, amount: campaign.budget })
+    }
+
+    res.json({ data, refunded: campaign.budget, message: 'Campaign rejected and budget refunded' })
+  } catch (error: any) {
+    console.error('Reject campaign error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// PATCH /api/admin/campaigns/:id/status — admin pause/reactivate of live campaigns (takedown power)
+router.patch('/campaigns/:id/status', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    if (status !== 'paused' && status !== 'active') {
+      return res.status(400).json({ error: 'status must be paused or active' })
+    }
+
+    const { data: campaign } = await supabase.from('ad_campaigns').select('status').eq('id', id).single()
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' })
+    if (campaign.status !== 'active' && campaign.status !== 'paused') {
+      return res.status(400).json({ error: 'Only active or paused campaigns can be changed this way', current_status: campaign.status })
+    }
+
+    const { data, error } = await supabase
+      .from('ad_campaigns')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    res.json({ data, message: 'Campaign ' + status })
+  } catch (error: any) {
+    console.error('Admin campaign status error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// GET /api/admin/advertisers — all advertisers with campaign counts
+router.get('/advertisers', adminMiddleware, async (req, res) => {
+  try {
+    const { data: advertisers, error } = await supabase
+      .from('advertisers')
+      .select('id, organization_name, email, balance, total_spent, status, created_at')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    const withCounts = await Promise.all(
+      (advertisers || []).map(async (adv) => {
+        const { count } = await supabase
+          .from('ad_campaigns')
+          .select('*', { count: 'exact', head: true })
+          .eq('advertiser_id', adv.id)
+
+        return { ...adv, campaign_count: count || 0 }
+      })
+    )
+
+    res.json({ data: withCounts })
+  } catch (error: any) {
+    console.error('List admin advertisers error:', error)
+    res.status(500).json({ error: 'Failed to fetch advertisers' })
+  }
+})
+
+// PATCH /api/admin/advertisers/:id/status — suspend or reactivate an advertiser account
+router.patch('/advertisers/:id/status', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    if (status !== 'active' && status !== 'suspended') {
+      return res.status(400).json({ error: 'status must be active or suspended' })
+    }
+
+    const { data, error } = await supabase
+      .from('advertisers')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Advertiser not found' })
+
+    res.json({ data, message: 'Advertiser ' + status })
+  } catch (error: any) {
+    console.error('Admin advertiser status error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router
