@@ -91,7 +91,8 @@ export interface AdClick {
 
 export interface AdPayment {
     id: string;
-    campaign_id: string;
+    advertiser_id?: string;
+    campaign_id?: string;
     amount: number;
     paystack_reference?: string;
     paystack_status?: string;
@@ -152,5 +153,5 @@ export interface ServedAd {
 
 export interface CreatePaymentRequest {
     amount: number;
-    campaign_id: string;
+    campaign_id?: string;
 }
