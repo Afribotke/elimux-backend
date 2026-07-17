@@ -36,6 +36,13 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
             return;
         }
 
+        // ad_campaigns_duration_days_check - verified directly against the
+        // live constraint (7-30 accepted, 6 and 31 rejected).
+        if (!Number.isInteger(body.duration_days) || body.duration_days < 7 || body.duration_days > 30) {
+            res.status(400).json({ error: 'duration_days must be a whole number between 7 and 30' });
+            return;
+        }
+
         const { data: advertiser } = await supabaseAdmin
             .from('advertisers')
             .select('balance, status')
