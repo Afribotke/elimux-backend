@@ -96,7 +96,9 @@ export interface AdPayment {
     amount: number;
     paystack_reference?: string;
     paystack_status?: string;
-    status: 'pending' | 'completed' | 'failed' | 'refunded';
+    // Verified against the live ad_payments_status_check constraint -
+    // 'completed' is rejected, 'paid' is the accepted value.
+    status: 'pending' | 'paid' | 'failed';
     paid_at?: string;
     created_at: string;
 }

@@ -29,7 +29,7 @@ async function applySuccessfulPayment(payment: any, paystackStatus: string): Pro
     await supabaseAdmin
         .from('ad_payments')
         .update({
-            status: 'completed',
+            status: 'paid',
             paystack_status: paystackStatus,
             paid_at: new Date().toISOString()
         })
@@ -146,8 +146,8 @@ router.get('/paystack/verify/:reference', async (req: Request, res: Response): P
             return;
         }
 
-        if (payment.status === 'completed') {
-            res.json({ success: true, data: { status: 'completed', payment } });
+        if (payment.status === 'paid') {
+            res.json({ success: true, data: { status: 'paid', payment } });
             return;
         }
 
@@ -197,7 +197,7 @@ router.post('/paystack/webhook', async (req: Request, res: Response): Promise<vo
                 .eq('paystack_reference', reference)
                 .single();
 
-            if (payment && payment.status !== 'completed') {
+            if (payment && payment.status !== 'paid') {
                 await applySuccessfulPayment(payment, 'success');
             }
 
