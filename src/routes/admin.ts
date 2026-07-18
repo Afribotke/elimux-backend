@@ -422,6 +422,28 @@ router.patch('/reviews/:id', adminMiddleware, async (req, res) => {
   }
 })
 
+// DELETE /api/admin/reviews/:id — permanently remove a review (spam, GDPR removal requests)
+router.delete('/reviews/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const { data, error } = await supabase
+      .from('reviews')
+      .delete()
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Review not found' })
+
+    res.json({ data, message: 'Review deleted' })
+  } catch (error: any) {
+    console.error('Delete review error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // POST /api/admin/scholarships — create a scholarship
 router.post('/scholarships', adminMiddleware, async (req, res) => {
   try {
