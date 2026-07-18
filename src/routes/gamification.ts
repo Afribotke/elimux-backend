@@ -65,10 +65,24 @@ async function awardEligibleBadges(deviceId: string, totalPoints: number) {
 
   if (insertBadgesError) throw insertBadgesError
 
-  // Note: badge.points_reward is informational only (shown on the badge) and
-  // isn't added to the points ledger - gamification_points_action_type_check
-  // only accepts search/review/share/referral/login, so there's no valid
-  // action_type for a "badge earned" ledger entry.
+  // Badge bonus points now land in the ledger under the 'badge' action type
+  // (added in migration 23). Clients can't self-award these - 'badge' is not
+  // in ACTION_POINTS, so the /points endpoint rejects it; only this server
+  // path can create badge entries.
+  const bonusRows = newlyEligible
+    .filter((b) => b.points_reward && b.points_reward > 0)
+    .map((b) => ({
+      device_id: deviceId,
+      action_type: 'badge',
+      points_earned: b.points_reward,
+      metadata: { badge_id: b.id, badge_name: b.name },
+    }))
+
+  if (bonusRows.length > 0) {
+    const { error: bonusError } = await supabase.from('gamification_points').insert(bonusRows)
+    if (bonusError) throw bonusError
+  }
+
   return newlyEligible
 }
 
@@ -193,6 +207,7 @@ function generateReferralCode(): string {
 //  - { referrer_code, referred_email } redeems a code someone was given
 router.post('/referrals', async (req, res) => {
   try {
+    const deviceId = getDeviceFingerprint(req)
     const { referrer_email, referrer_code, referred_email } = req.body
 
     if (referrer_code) {
@@ -229,7 +244,26 @@ router.post('/referrals', async (req, res) => {
         .single()
 
       if (error) throw error
-      return res.json({ data, message: 'Referral completed' })
+
+      // Pay the referrer: points go to the device that created the code
+      // (referrals are email-keyed; points are device-keyed - migration 22
+      // added the attribution column that makes this payout possible).
+      let referral_points_awarded = false
+      if (referral.referrer_device_id) {
+        const { error: ptsError } = await supabase.from('gamification_points').insert({
+          device_id: referral.referrer_device_id,
+          action_type: 'referral',
+          points_earned: ACTION_POINTS.referral,
+          metadata: { referred_email },
+        })
+        if (ptsError) throw ptsError
+        referral_points_awarded = true
+
+        const referrerTotal = await totalPointsForDevice(referral.referrer_device_id)
+        await awardEligibleBadges(referral.referrer_device_id, referrerTotal)
+      }
+
+      return res.json({ data, message: 'Referral completed', referral_points_awarded })
     }
 
     if (!referrer_email || !String(referrer_email).includes('@')) {
@@ -252,7 +286,7 @@ router.post('/referrals', async (req, res) => {
     for (let attempt = 0; attempt < 5 && !created; attempt++) {
       const { data, error } = await supabase
         .from('referrals')
-        .insert({ referrer_email, referrer_code: generateReferralCode() })
+        .insert({ referrer_email, referrer_code: generateReferralCode(), referrer_device_id: deviceId })
         .select()
         .single()
 
