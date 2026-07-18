@@ -72,7 +72,6 @@ router.get('/university/:id', adminMiddleware, async (req, res) => {
       .eq('institution_id', institutionId)
 
     if (programsError) throw programsError
-    const programIds = (programs || []).map((p) => p.id)
     const nameByProgramId = new Map((programs || []).map((p) => [p.id, p.name]))
 
     const [{ data: views, error: viewsError }, { data: applications, error: appsError }] = await Promise.all([
@@ -81,13 +80,18 @@ router.get('/university/:id', adminMiddleware, async (req, res) => {
         .select('program_id, user_country, source_query, created_at')
         .eq('institution_id', institutionId)
         .gte('created_at', thirtyDaysAgo),
-      programIds.length
-        ? supabase.from('program_applications').select('id, program_id').in('program_id', programIds).gte('created_at', thirtyDaysAgo)
-        : Promise.resolve({ data: [] as { id: string; program_id: string }[], error: null }),
+      supabase
+        .from('program_applications')
+        .select('id, institution_application:institution_applications(created_institution_id)')
+        .gte('created_at', thirtyDaysAgo),
     ])
 
     if (viewsError) throw viewsError
     if (appsError) throw appsError
+
+    const applicationsForInstitution = (applications || []).filter(
+      (a: any) => a.institution_application?.created_institution_id === institutionId
+    )
 
     const regionalInterest = new Map<string, number>()
     const searchTerms = new Map<string, number>()
@@ -128,7 +132,7 @@ router.get('/university/:id', adminMiddleware, async (req, res) => {
       .map(([date, count]) => ({ date, count }))
 
     const totalViews = views?.length || 0
-    const totalApplications = applications?.length || 0
+    const totalApplications = applicationsForInstitution.length
 
     res.json({
       data: {

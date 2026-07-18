@@ -312,4 +312,97 @@ router.delete('/programs/:id', institutionAuth, async (req: InstitutionAuthReque
     }
 });
 
+// GET /api/institution-portal/analytics - Own institution's analytics, last 30 days.
+// Scoped by institutionAuth: req.institutionId can only be the caller's own institution.
+router.get('/analytics', institutionAuth, async (req: InstitutionAuthRequest, res: Response): Promise<void> => {
+    try {
+        const institutionId = req.institutionId;
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+        const { data: programs } = await supabaseAdmin
+            .from('programs')
+            .select('id, name')
+            .eq('institution_id', institutionId);
+
+        const nameByProgramId = new Map((programs || []).map((p: any) => [p.id, p.name]));
+
+        const [{ data: views, error: viewsError }, { data: applications, error: appsError }, { data: reviews, error: reviewsError }] = await Promise.all([
+            supabaseAdmin
+                .from('program_views')
+                .select('program_id, user_country, source_query, created_at')
+                .eq('institution_id', institutionId)
+                .gte('created_at', thirtyDaysAgo),
+            // program_applications links to institutions via institution_applications.created_institution_id
+            supabaseAdmin
+                .from('program_applications')
+                .select('id, institution_application:institution_applications(created_institution_id)')
+                .gte('created_at', thirtyDaysAgo),
+            supabaseAdmin
+                .from('reviews')
+                .select('rating')
+                .eq('institution_id', institutionId)
+                .eq('status', 'approved'),
+        ]);
+
+        if (viewsError) throw viewsError;
+        if (appsError) throw appsError;
+        if (reviewsError) throw reviewsError;
+
+        const applicationsForInstitution = (applications || []).filter(
+            (a: any) => a.institution_application?.created_institution_id === institutionId
+        );
+
+        const regionalInterest = new Map<string, number>();
+        const searchTerms = new Map<string, number>();
+        const viewsByProgram = new Map<string, number>();
+        const dailyViews = new Map<string, number>();
+
+        for (const view of views || []) {
+            const region = view.user_country || 'Unknown';
+            regionalInterest.set(region, (regionalInterest.get(region) || 0) + 1);
+
+            if (view.source_query) {
+                const term = view.source_query.trim().toLowerCase();
+                if (term) searchTerms.set(term, (searchTerms.get(term) || 0) + 1);
+            }
+
+            if (view.program_id) viewsByProgram.set(view.program_id, (viewsByProgram.get(view.program_id) || 0) + 1);
+
+            const day = view.created_at.slice(0, 10);
+            dailyViews.set(day, (dailyViews.get(day) || 0) + 1);
+        }
+
+        const topPrograms = Array.from(viewsByProgram.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([program_id, count]) => ({ program_id, name: nameByProgramId.get(program_id) || 'Unknown program', views: count }));
+
+        const totalViews = views?.length || 0;
+        const totalApplications = applicationsForInstitution.length;
+        const reviewCount = reviews?.length || 0;
+        const avgRating = reviewCount > 0
+            ? Math.round(((reviews || []).reduce((s: number, r: any) => s + (r.rating || 0), 0) / reviewCount) * 10) / 10
+            : 0;
+
+        res.json({
+            success: true,
+            data: {
+                period_days: 30,
+                total_views: totalViews,
+                total_applications: totalApplications,
+                conversion_rate: totalViews > 0 ? Math.round((totalApplications / totalViews) * 1000) / 10 : 0,
+                review_count: reviewCount,
+                avg_rating: avgRating,
+                top_programs: topPrograms,
+                top_search_terms: Array.from(searchTerms.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([term, count]) => ({ term, count })),
+                regional_interest: Array.from(regionalInterest.entries()).sort((a, b) => b[1] - a[1]).map(([country, count]) => ({ country, count })),
+                views_trend: Array.from(dailyViews.entries()).sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([date, count]) => ({ date, count })),
+            }
+        });
+    } catch (error: any) {
+        console.error('Institution analytics error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 export default router;
