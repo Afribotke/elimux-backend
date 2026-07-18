@@ -952,4 +952,53 @@ router.patch('/advertisers/:id/status', adminMiddleware, async (req, res) => {
   }
 })
 
+// GET /api/admin/institution-accounts — list institution account claims
+router.get('/institution-accounts', adminMiddleware, async (req, res) => {
+  try {
+    const { status } = req.query
+
+    let query = supabase
+      .from('institution_accounts')
+      .select('*, institution:institutions(name)')
+      .order('created_at', { ascending: false })
+
+    if (status) query = query.eq('status', status as string)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    res.json({ data: data || [] })
+  } catch (error: any) {
+    console.error('List institution accounts error:', error)
+    res.status(500).json({ error: 'Failed to fetch institution accounts' })
+  }
+})
+
+// PATCH /api/admin/institution-accounts/:id/status — approve (active) or suspend a claim
+router.patch('/institution-accounts/:id/status', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    if (status !== 'active' && status !== 'suspended') {
+      return res.status(400).json({ error: 'status must be active or suspended' })
+    }
+
+    const { data, error } = await supabase
+      .from('institution_accounts')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Institution account not found' })
+
+    res.json({ data, message: 'Institution account ' + status })
+  } catch (error: any) {
+    console.error('Institution account status error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router

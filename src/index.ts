@@ -25,6 +25,7 @@ import advertiserRouter from './routes/advertiser'
 import advertiserPaymentsRouter from './routes/advertiser-payments'
 import campaignsRouter from './routes/campaigns'
 import adsRouter from './routes/ads'
+import institutionPortal from './routes/institution-portal'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -63,12 +64,13 @@ app.use('/api/advertiser', advertiserRouter)
 app.use('/api/advertiser/payments', advertiserPaymentsRouter)
 app.use('/api/campaigns', campaignsRouter)
 app.use('/api/ads', adsRouter)
+app.use('/api/institution-portal', institutionPortal)
 
 app.get('/', (req, res) => {
   res.json({
     name: 'ElimuX API',
     version: '1.0.0',
-    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/analytics', '/api/gamification', '/api/sponsor-ads', '/api/pwa', '/api/admin/scraper', '/api/scholarships', '/api/accreditation-bodies', '/api/major-sponsor', '/api/advertiser', '/api/advertiser/payments', '/api/campaigns', '/api/ads']
+    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/analytics', '/api/gamification', '/api/sponsor-ads', '/api/pwa', '/api/admin/scraper', '/api/scholarships', '/api/accreditation-bodies', '/api/major-sponsor', '/api/advertiser', '/api/advertiser/payments', '/api/campaigns', '/api/ads', '/api/institution-portal']
   })
 })
 
