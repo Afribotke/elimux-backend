@@ -180,7 +180,7 @@ router.get('/verify/:reference', async (req, res) => {
     const result = await verifyTransaction(reference)
 
     if (result.status === 'success') {
-      await applySuccessfulPayment(payment, result.id.toString())
+      await applySuccessfulPayment(payment, result.id.toString(), result.channel)
     } else if (result.status === 'failed' || result.status === 'abandoned') {
       await supabase.from('payments').update({ status: 'failed' }).eq('id', payment.id)
     }
@@ -198,10 +198,10 @@ router.get('/verify/:reference', async (req, res) => {
   }
 })
 
-async function applySuccessfulPayment(payment: any, transactionId: string) {
+async function applySuccessfulPayment(payment: any, transactionId: string, channel?: string) {
   await supabase
     .from('payments')
-    .update({ status: 'success', paystack_transaction_id: transactionId })
+    .update({ status: 'success', paystack_transaction_id: transactionId, payment_method: channel || null })
     .eq('id', payment.id)
 
   if (payment.subscription_id) {
@@ -241,7 +241,7 @@ router.post('/webhook', async (req, res) => {
         .maybeSingle()
 
       if (payment && payment.status !== 'success') {
-        await applySuccessfulPayment(payment, event.data.id.toString())
+        await applySuccessfulPayment(payment, event.data.id.toString(), event.data.channel)
       }
 
       console.log(`[WEBHOOK] charge.success for ${reference} — payment verified`)
@@ -269,6 +269,13 @@ router.get('/subscription', async (req, res) => {
       .maybeSingle()
 
     if (error) throw error
+
+    // Lazy expiry: an active subscription past its period end is expired
+    if (data && data.status === 'active' && data.current_period_end && new Date(data.current_period_end).getTime() < Date.now()) {
+      await supabase.from('subscriptions').update({ status: 'expired' }).eq('id', data.id)
+      data.status = 'expired'
+    }
+
     res.json({ data: data || null })
   } catch (error: any) {
     console.error('Subscription status error:', error)
@@ -320,5 +327,29 @@ router.get('/history', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch payment history' })
   }
 })
+
+// ============================================================
+// EXPIRY SWEEP — active subscriptions past current_period_end
+// become expired. Runs at startup and every 24h; the lazy check
+// in GET /subscription covers the gaps between sweeps.
+// ============================================================
+export async function expireLapsedSubscriptions() {
+  try {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .update({ status: 'expired' })
+      .eq('status', 'active')
+      .lt('current_period_end', new Date().toISOString())
+      .select('id')
+
+    if (error) throw error
+    if (data && data.length > 0) console.log(`[EXPIRY] Marked ${data.length} subscription(s) expired`)
+  } catch (error: any) {
+    console.error('Expiry sweep error:', error)
+  }
+}
+
+expireLapsedSubscriptions()
+setInterval(expireLapsedSubscriptions, 24 * 60 * 60 * 1000).unref()
 
 export default router
