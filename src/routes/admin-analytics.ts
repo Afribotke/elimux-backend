@@ -89,20 +89,34 @@ router.get('/revenue', adminMiddleware, async (req, res) => {
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-    const [{ data: activeSubs, error: subsError }, { data: successfulPayments, error: paymentsError }, { data: paymentHistory, error: historyError }] =
-      await Promise.all([
-        supabase.from('subscriptions').select('plan:subscription_plans(price_kes, duration_months)').eq('status', 'active'),
-        supabase.from('payments').select('amount, subscription:subscriptions(plan:subscription_plans(name))').eq('status', 'success'),
-        supabase
-          .from('payments')
-          .select('id, amount, currency, status, payment_method, created_at, subscriber:subscribers(email), subscription:subscriptions(plan:subscription_plans(name))')
-          .gte('created_at', thirtyDaysAgo)
-          .order('created_at', { ascending: false }),
-      ])
+    const [
+      { data: activeSubs, error: subsError },
+      { data: successfulPayments, error: paymentsError },
+      { data: paymentHistory, error: historyError },
+      { data: paidAdPayments, error: adRevenueError },
+      { data: adPaymentHistory, error: adHistoryError },
+    ] = await Promise.all([
+      supabase.from('subscriptions').select('plan:subscription_plans(price_kes, duration_months)').eq('status', 'active'),
+      supabase.from('payments').select('amount, subscription:subscriptions(plan:subscription_plans(name))').eq('status', 'success'),
+      supabase
+        .from('payments')
+        .select('id, amount, currency, status, payment_method, created_at, subscriber:subscribers(email), subscription:subscriptions(plan:subscription_plans(name))')
+        .gte('created_at', thirtyDaysAgo)
+        .order('created_at', { ascending: false }),
+      // Ad revenue: completed wallet top-ups from the advertiser portal
+      supabase.from('ad_payments').select('amount, created_at').eq('status', 'paid'),
+      supabase
+        .from('ad_payments')
+        .select('id, amount, status, paystack_reference, created_at, advertiser:advertisers(organization_name, email)')
+        .gte('created_at', thirtyDaysAgo)
+        .order('created_at', { ascending: false }),
+    ])
 
     if (subsError) throw subsError
     if (paymentsError) throw paymentsError
     if (historyError) throw historyError
+    if (adRevenueError) throw adRevenueError
+    if (adHistoryError) throw adHistoryError
 
     const mrr = (activeSubs || []).reduce((sum: number, s: any) => {
       const plan = s.plan
@@ -116,11 +130,19 @@ router.get('/revenue', adminMiddleware, async (req, res) => {
       revenueByPlan[planName] = (revenueByPlan[planName] || 0) + (p.amount || 0)
     }
 
+    const adRevenueTotal = (paidAdPayments || []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0)
+    const adRevenue30d = (paidAdPayments || [])
+      .filter((p: any) => p.created_at >= thirtyDaysAgo)
+      .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0)
+
     res.json({
       data: {
         mrr_kes: Math.round(mrr),
         revenue_by_plan: Object.entries(revenueByPlan).map(([plan, revenue_kes]) => ({ plan, revenue_kes })),
         payment_history: paymentHistory || [],
+        ad_revenue_total_kes: adRevenueTotal,
+        ad_revenue_30d_kes: adRevenue30d,
+        ad_payment_history: adPaymentHistory || [],
       },
     })
   } catch (error: any) {
