@@ -336,7 +336,7 @@ router.get('/analytics', institutionAuth, async (req: InstitutionAuthRequest, re
             supabaseAdmin
                 .from('program_applications')
                 .select('id, institution_application:institution_applications(created_institution_id)')
-                .gte('created_at', thirtyDaysAgo),
+                .gte('submitted_at', thirtyDaysAgo),
             supabaseAdmin
                 .from('reviews')
                 .select('rating')
