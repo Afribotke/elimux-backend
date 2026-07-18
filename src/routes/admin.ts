@@ -410,7 +410,7 @@ router.patch('/reviews/:id', adminMiddleware, async (req, res) => {
       .update({ status })
       .eq('id', id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     if (!data) return res.status(404).json({ error: 'Review not found' })
@@ -432,7 +432,7 @@ router.delete('/reviews/:id', adminMiddleware, async (req, res) => {
       .delete()
       .eq('id', id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     if (!data) return res.status(404).json({ error: 'Review not found' })
