@@ -82,6 +82,7 @@ router.get('/:id', async (req, res) => {
     const { data, error } = await supabase
       .from('institutions')
       .select('*, type:institution_types(*), country:countries(*), programs(*, category:program_categories(name, color))')
+      .eq('programs.is_active', true)
       .eq('id', id)
       .single();
 
