@@ -32,6 +32,16 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+const domainMismatches = [];
+
+function normalizeHost(u) {
+  try {
+    return new URL(u).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
 async function fetchWithTimeout(url, opts = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -128,6 +138,13 @@ async function resolveLogoForInstitution(inst) {
     if (!res.ok) return { ok: false, reason: `homepage HTTP ${res.status}` };
     finalPageUrl = res.url || pageUrl;
     html = await res.text();
+
+    const origHost = normalizeHost(inst.website_url);
+    const finalHost = normalizeHost(finalPageUrl);
+    if (origHost && finalHost && origHost !== finalHost) {
+      domainMismatches.push({ id: inst.id, name: inst.name, from: origHost, to: finalHost });
+      console.log(`  [domain-mismatch] ${inst.name}: ${origHost} -> ${finalHost} (logo kept)`);
+    }
   } catch (e) {
     return { ok: false, reason: `homepage fetch failed: ${e.message}` };
   }
@@ -219,6 +236,11 @@ async function main() {
   console.log(
     `Done. scraped=${scraped} failed=${failed} total=${institutions.length}${DRY_RUN ? ' (dry run, no writes made)' : ''}`
   );
+
+  if (domainMismatches.length) {
+    console.log(`\nDomain mismatches (${domainMismatches.length}) — logo kept, institution data flagged for review:`);
+    for (const m of domainMismatches) console.log(`  ${m.id} | ${m.name} | ${m.from} -> ${m.to}`);
+  }
 }
 
 main().catch((e) => {
