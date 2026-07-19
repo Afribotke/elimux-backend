@@ -1,9 +1,10 @@
 // Scrapes each institution's own website for a logo image and writes it to
 // institutions.logo_url, tagging logo_source='scraped'.
 //
-// Only ever touches rows where logo_source IS NULL — manual overrides
-// (logo_source='manual') and institution self-service uploads
-// (logo_source='institution_upload') are never selected or written to.
+// Only ever selects/writes rows where logo_url IS NULL and logo_source is not
+// 'manual' — manual overrides (e.g. KIPS Technical College) and institution
+// self-service uploads (logo_source='institution_upload', which also sets
+// logo_url) are never touched.
 //
 // Usage:
 //   railway run -- node scripts/fetch_logos.js --dry-run --limit=20
@@ -179,26 +180,45 @@ async function runPool(items, worker, concurrency) {
   await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, next));
 }
 
+// PostgREST caps an unpaginated select at 1000 rows (same cap the frontend's
+// generateStaticParams had to page around). Keyset (seek) pagination on id is
+// used instead of an offset, since offset pagination would desync as rows
+// drop out of the filter mid-run (we write logo_url as we go).
+const PAGE_SIZE = 1000;
+
+async function fetchAllCandidates() {
+  const all = [];
+  let lastId = null;
+  while (true) {
+    let q = supabase
+      .from('institutions')
+      .select('id, name, website_url, logo_source')
+      .eq('is_active', true)
+      .is('logo_url', null)
+      .not('website_url', 'is', null)
+      // NULL-safe manual exclusion — .neq('logo_source','manual') ALONE
+      // silently drops rows where logo_source IS NULL (NULL != 'manual' is NULL)
+      .or('logo_source.is.null,logo_source.neq.manual')
+      .order('id', { ascending: true })
+      .limit(PAGE_SIZE);
+    if (lastId !== null) q = q.gt('id', lastId);
+    const { data, error } = await q;
+    if (error) throw error;
+    all.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    lastId = data[data.length - 1].id;
+    if (LIMIT && all.length >= LIMIT) break;
+  }
+  return all;
+}
+
 async function main() {
   console.log(`fetch_logos.js starting${DRY_RUN ? ' (DRY RUN — no writes)' : ''}${LIMIT ? ` limit=${LIMIT}` : ''}`);
 
-  let query = supabase
-    .from('institutions')
-    .select('id, name, website_url')
-    .eq('is_active', true)
-    .is('logo_source', null)
-    .not('website_url', 'is', null)
-    .order('id', { ascending: true });
+  let institutions = await fetchAllCandidates();
+  if (LIMIT) institutions = institutions.slice(0, LIMIT);
 
-  if (LIMIT) query = query.limit(LIMIT);
-
-  const { data: institutions, error } = await query;
-  if (error) {
-    console.error('Failed to fetch institutions:', error.message);
-    process.exit(1);
-  }
-
-  console.log(`Found ${institutions.length} candidate institution(s) (logo_source IS NULL, website_url present).`);
+  console.log(`Found ${institutions.length} candidate institution(s) (no logo yet, not manually protected, website_url present).`);
 
   let scraped = 0;
   let failed = 0;
@@ -219,7 +239,7 @@ async function main() {
             .from('institutions')
             .update({ logo_url: result.url, logo_source: 'scraped' })
             .eq('id', inst.id)
-            .is('logo_source', null); // never clobber a row tagged by anything else in the meantime
+            .is('logo_url', null); // never clobber a row written by anything else in the meantime
           if (updateError) {
             console.error(`${prefix} -> DB WRITE FAILED: ${updateError.message}`);
           }
@@ -233,9 +253,7 @@ async function main() {
   );
 
   console.log('---');
-  console.log(
-    `Done. scraped=${scraped} failed=${failed} total=${institutions.length}${DRY_RUN ? ' (dry run, no writes made)' : ''}`
-  );
+  console.log(`Done. scraped=${scraped} failed=${failed} total=${institutions.length}${DRY_RUN ? ' (dry run, no writes made)' : ''}`);
 
   if (domainMismatches.length) {
     console.log(`\nDomain mismatches (${domainMismatches.length}) — logo kept, institution data flagged for review:`);
