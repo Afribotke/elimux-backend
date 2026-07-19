@@ -136,6 +136,10 @@ router.put('/institution', institutionAuth, async (req: InstitutionAuthRequest, 
             if (req.body[key] !== undefined) updates[key] = req.body[key];
         }
 
+        // Tag self-service logo uploads so the logo scraper (fetch_logos.js),
+        // which only fills rows where logo_source IS NULL, never overwrites them.
+        if (updates.logo_url !== undefined) updates.logo_source = 'institution_upload';
+
         if (Object.keys(updates).length === 0) {
             res.status(400).json({ error: 'No editable fields provided', editable: EDITABLE_INSTITUTION_FIELDS });
             return;
