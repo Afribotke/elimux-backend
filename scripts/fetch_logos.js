@@ -68,7 +68,7 @@ function findLogoCandidates(html) {
 
   for (const img of parseTags(html, 'img')) {
     const hint = `${img.class || ''} ${img.id || ''} ${img.alt || ''}`.toLowerCase();
-    if (img.src && /logo/.test(hint)) {
+    if (img.src && /logo/.test(hint) && !/\blogout\b/.test(hint)) {
       candidates.push({ url: img.src, method: 'img[logo]' });
     }
   }
