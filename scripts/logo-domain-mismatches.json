@@ -1,0 +1,3254 @@
+{
+  "source_run": "fetch_logos_full_run_v2.log",
+  "extracted_at": "2026-07-19T20:04:39.045Z",
+  "run_summary": "Done. scraped=5351 failed=3357 total=8708",
+  "mismatch_count": 541,
+  "mismatches": [
+    {
+      "id": "0c7b6cb1-ab3f-46d9-9e6a-a5aece2d95c7",
+      "name": "Independent University, Bangladesh",
+      "from": "iub.edu.bd",
+      "to": "iub.ac.bd"
+    },
+    {
+      "id": "0cbf934a-1e2e-4c7d-8e38-32db2566d390",
+      "name": "University Campus Suffolk",
+      "from": "ucs.ac.uk",
+      "to": "uos.ac.uk"
+    },
+    {
+      "id": "0ccc230d-b5e2-47c0-a424-1d2ffedae719",
+      "name": "Mansfield University of Pennsylvania",
+      "from": "mansfield.edu",
+      "to": "commonwealthu.edu"
+    },
+    {
+      "id": "0e0e4f91-f581-4faf-bd71-edb531583442",
+      "name": "Anglia Ruskin University",
+      "from": "anglia.ac.uk",
+      "to": "aru.ac.uk"
+    },
+    {
+      "id": "0e177e99-865b-47cc-b421-e0dc3071f884",
+      "name": "Fachhochschule Worms",
+      "from": "fh-worms.de",
+      "to": "hs-worms.de"
+    },
+    {
+      "id": "0e0b46d7-eba3-4844-a793-87397560acea",
+      "name": "Toyo Gakuen University",
+      "from": "toyogakuen-u.ac.jp",
+      "to": "tyg.jp"
+    },
+    {
+      "id": "0e1aa24a-593c-4796-b584-21569676eaba",
+      "name": "Université Paul Sabatier (Toulouse III)",
+      "from": "ups-tlse.fr",
+      "to": "univ-tlse3.fr"
+    },
+    {
+      "id": "0e396401-b7b8-47eb-9070-65601b818adc",
+      "name": "Fachhochschulstudiengänge Wels",
+      "from": "fh-wels.at",
+      "to": "fh-ooe.at"
+    },
+    {
+      "id": "0e9ad063-aa36-4d6e-8401-5343e883d6f8",
+      "name": "Lethbridge College",
+      "from": "lethbridgecollege.ca",
+      "to": "lethpolytech.ca"
+    },
+    {
+      "id": "0fb82f35-35df-4355-a069-9807841486f5",
+      "name": "Marlboro College",
+      "from": "marlboro.edu",
+      "to": "marlboro.emerson.edu"
+    },
+    {
+      "id": "0fc65c33-5bb6-4145-8c10-09a52cfb5e1b",
+      "name": "Ecole Nationale Supérieure des Telecommunications de Paris",
+      "from": "enst.fr",
+      "to": "telecom-paris.fr"
+    },
+    {
+      "id": "103003e2-49e8-4d56-8056-392267c015a5",
+      "name": "Universidade Metropolitana de Santos",
+      "from": "unimes.com.br",
+      "to": "portal.unimes.br"
+    },
+    {
+      "id": "10a4e57e-95ee-4403-9fdc-a17e1e4f0a88",
+      "name": "Hubert Kairuki Memorial University",
+      "from": "hkmu.ac.tz",
+      "to": "web.ku.ac.tz"
+    },
+    {
+      "id": "11170ed5-6e78-411f-a6c6-933f32f263a8",
+      "name": "Griffith College",
+      "from": "gcd.ie",
+      "to": "griffith.ie"
+    },
+    {
+      "id": "11e62d40-7d9f-463d-8d6c-e5fcd6200b25",
+      "name": "Sarah Lawrence College",
+      "from": "slc.edu",
+      "to": "sarahlawrence.edu"
+    },
+    {
+      "id": "120e39ad-081a-4c68-9bd4-f63b142db769",
+      "name": "Hochschule Neu-Ulm, Hochschule Neu-Ulm University of applied sciences",
+      "from": "hs-neu-ulm.de",
+      "to": "hnu.de"
+    },
+    {
+      "id": "1271ede3-d5d9-4041-ba3a-c9dd02f57629",
+      "name": "Indiana University at South Bend",
+      "from": "iusb.edu",
+      "to": "southbend.iu.edu"
+    },
+    {
+      "id": "127b6bb5-9400-4acd-a6ba-4ba525d49409",
+      "name": "Houston Baptist University",
+      "from": "hbu.edu",
+      "to": "hc.edu"
+    },
+    {
+      "id": "134c2cbc-3949-4178-a99d-41553ec4545f",
+      "name": "Southeast University",
+      "from": "seu.ac.bd",
+      "to": "seu.edu.bd"
+    },
+    {
+      "id": "138a85d8-0140-465e-bebf-295f2ceda529",
+      "name": "Kyushu Sangyo University",
+      "from": "ip.kyusan-u.ac.jp",
+      "to": "kyusan-u.ac.jp"
+    },
+    {
+      "id": "137f8d73-88d1-4ec5-8cc2-6542f62022a8",
+      "name": "Andrzej Frycz Modrzewski Cracow College",
+      "from": "ksw.edu.pl",
+      "to": "uafm.edu.pl"
+    },
+    {
+      "id": "145f6efd-8d92-4c24-bd89-c3f01a89204d",
+      "name": "Aalborg University",
+      "from": "auc.dk",
+      "to": "aau.dk"
+    },
+    {
+      "id": "1483568b-4c8e-48d7-9005-24fb6aafd050",
+      "name": "Université Catholique de Lyon",
+      "from": "univ-catholyon.fr",
+      "to": "ucly.fr"
+    },
+    {
+      "id": "15481b3d-f947-4694-97ab-02eda82a27aa",
+      "name": "Fachhochschule Wiesbaden",
+      "from": "fh-wiesbaden.de",
+      "to": "hs-rm.de"
+    },
+    {
+      "id": "1558061e-39b2-4942-b409-8e58d869120f",
+      "name": "Atlantic Cape Community College",
+      "from": "atlantic.edu",
+      "to": "atlanticcape.edu"
+    },
+    {
+      "id": "156efece-f5c7-492d-9519-079d267af8eb",
+      "name": "Mzumbe University (Chuo Kikuu Mzumbe)",
+      "from": "mzumbe.ac.tz",
+      "to": "mu.ac.tz"
+    },
+    {
+      "id": "15fd84c0-8f95-4512-b397-3e6a12cb9f3d",
+      "name": "Southeastern Louisiana University",
+      "from": "selu.edu",
+      "to": "southeastern.edu"
+    },
+    {
+      "id": "1770154f-4ffe-4126-bf0d-4baa4fc6bed7",
+      "name": "Institut Commercial de Nancy",
+      "from": "icn-nancy.com",
+      "to": "hugedomains.com"
+    },
+    {
+      "id": "17e47152-3199-47bc-a3f7-f69555fd73b0",
+      "name": "Instituto Tecnológico de Celaya",
+      "from": "itc.mx",
+      "to": "celaya.tecnm.mx"
+    },
+    {
+      "id": "182a97a5-873c-4f91-8a9e-e37c1e0efd13",
+      "name": "Universidad Alfonso X El Sabio",
+      "from": "uax.es",
+      "to": "uax.com"
+    },
+    {
+      "id": "187d25c8-79c5-476c-9ec0-9aa4fe994076",
+      "name": "Barcelona Graduate School of Economics",
+      "from": "barcelonagse.eu",
+      "to": "bse.eu"
+    },
+    {
+      "id": "18a57278-7db3-44f4-b713-dc791d199859",
+      "name": "Fachhochschule Osnabrück",
+      "from": "fh-osnabrueck.de",
+      "to": "hs-osnabrueck.de"
+    },
+    {
+      "id": "18cc04a2-9840-4bbf-829e-af89edc1f2a2",
+      "name": "Emory & Henry College",
+      "from": "ehc.edu",
+      "to": "emoryhenry.edu"
+    },
+    {
+      "id": "18eaf819-7987-47f6-9fe5-9e8c323b8ad6",
+      "name": "Hochschule Mittweida, University of Applied Sciences",
+      "from": "htwm.de",
+      "to": "hs-mittweida.de"
+    },
+    {
+      "id": "19049d94-9bf7-4911-8a3b-5a63ad76b3f0",
+      "name": "Fachhochschule Trier, Hochschule für Technik, Wirtschaft und Gestaltung",
+      "from": "fh-trier.de",
+      "to": "hochschule-trier.de"
+    },
+    {
+      "id": "19a913f2-4609-4a66-b0a6-fa533f54b5ac",
+      "name": "College of Western Idaho",
+      "from": "cwidaho.cc",
+      "to": "cwi.edu"
+    },
+    {
+      "id": "1a9869b4-7223-44c8-a333-05a4bf4adb05",
+      "name": "Heinrich-Heine Universität Düsseldorf",
+      "from": "uni-duesseldorf.de",
+      "to": "hhu.de"
+    },
+    {
+      "id": "1ab86dab-7f27-4ab0-a3be-675aa8b2794e",
+      "name": "College of Charleston",
+      "from": "cofc.edu",
+      "to": "charleston.edu"
+    },
+    {
+      "id": "1ad464c3-3566-4dd8-a248-a26ca2d19325",
+      "name": "Fachhochschule Burgenland",
+      "from": "fh-burgenland.at",
+      "to": "hochschule-burgenland.at"
+    },
+    {
+      "id": "1af4932c-9611-4758-a923-54cadbfe139b",
+      "name": "Lausanne Hotel School (EHL)",
+      "from": "ehl.ch",
+      "to": "ehl.edu"
+    },
+    {
+      "id": "1c0538ca-5214-45e8-bd7f-e7f7a35b63fa",
+      "name": "Northwest Kansas Technical College",
+      "from": "nwktc.edu",
+      "to": "fhnw.edu"
+    },
+    {
+      "id": "1c49e44b-07d8-464a-89cb-c1851cca92c5",
+      "name": "Otto-von-Guericke Universität Magdeburg",
+      "from": "uni-magdeburg.de",
+      "to": "ovgu.de"
+    },
+    {
+      "id": "1cb51cde-ffbe-41c6-a0f1-fa1e82400e70",
+      "name": "Evangelische Fachhochschule Reutlingen-Ludwigsburg, Hochschule für Soziale Arbeit, Religionspädagogik und Diakonie",
+      "from": "efh-reutlingen-ludwigsburg.de",
+      "to": "eh-ludwigsburg.de"
+    },
+    {
+      "id": "1ca5d142-e707-43da-a871-f6ec7290cc71",
+      "name": "Universidad Nacional de Cuyo",
+      "from": "uncu.edu.ar",
+      "to": "uncuyo.edu.ar"
+    },
+    {
+      "id": "1cdcd4ce-d0d2-4e34-980e-ef6863d63d24",
+      "name": "Instituto Tecnológico de Aguascalientes",
+      "from": "ita.mx",
+      "to": "aguascalientes.tecnm.mx"
+    },
+    {
+      "id": "1d025e85-69f7-4d70-83f0-6ba48959aa09",
+      "name": "Magnitogorsk State University",
+      "from": "masu.ru",
+      "to": "premialnie-diplom24.com"
+    },
+    {
+      "id": "1d6af889-5ed3-44ae-a7da-c2f42f5add45",
+      "name": "Webster University Geneva",
+      "from": "webster.ch",
+      "to": "geneva.webster.edu"
+    },
+    {
+      "id": "1dcc1121-f671-434f-b28d-ad8d459f932d",
+      "name": "Indiana State University",
+      "from": "indstate.edu",
+      "to": "indianastate.edu"
+    },
+    {
+      "id": "1fa3277a-de2c-4c66-aeb8-21479942c8fd",
+      "name": "Fachhochschule Krems",
+      "from": "fh-krems.ac.at",
+      "to": "imc.ac.at"
+    },
+    {
+      "id": "20b4cdb8-e933-4266-bfff-16c42b446e3d",
+      "name": "University of Bunkyo",
+      "from": "u-bunkyo.ac.jp",
+      "to": "bgu.ac.jp"
+    },
+    {
+      "id": "20bbdac3-fb9d-443b-838a-74eded6d823d",
+      "name": "Mid Western University",
+      "from": "mwu.edu.np",
+      "to": "mu.edu.np"
+    },
+    {
+      "id": "227a225a-997d-4b7a-a344-beb2432f0954",
+      "name": "Ecole Nationale Supérieure des Mines d'Alès",
+      "from": "mines-ales.fr",
+      "to": "imt-mines-ales.fr"
+    },
+    {
+      "id": "235be618-4617-4b0f-bee4-70aba02bde36",
+      "name": "Tompkins Cortland Community College",
+      "from": "tc3.edu",
+      "to": "tompkinscortland.edu"
+    },
+    {
+      "id": "240559ec-5328-4a05-9e48-1b95f944175c",
+      "name": "University of Lancaster",
+      "from": "lancs.ac.uk",
+      "to": "lancaster.ac.uk"
+    },
+    {
+      "id": "241e3111-5182-4e12-9699-295e8cf6a6e2",
+      "name": "Marymount Manhattan College",
+      "from": "mmm.edu",
+      "to": "nyc.northeastern.edu"
+    },
+    {
+      "id": "24414ce6-1a94-4253-b0cd-290bdd6941f2",
+      "name": "Virginia University of Lynchburg",
+      "from": "vul.edu",
+      "to": "wp.vul.edu"
+    },
+    {
+      "id": "247af561-78a4-44e8-9c16-349db64592ed",
+      "name": "Evangelische Fachhochschule Darmstadt",
+      "from": "eh-darmstadt.de",
+      "to": "eh-hessen.de"
+    },
+    {
+      "id": "253d6e48-55af-4f23-8457-40c6a826fdc6",
+      "name": "Lehigh University",
+      "from": "lehigh.edu",
+      "to": "www2.lehigh.edu"
+    },
+    {
+      "id": "25568682-884d-4915-9c68-08b437585802",
+      "name": "Fachhochschule Heidelberg",
+      "from": "fh-heidelberg.de",
+      "to": "srh-university.de"
+    },
+    {
+      "id": "2563cd34-cbf9-4ee0-a222-cae59e9fca36",
+      "name": "Universidad CAECE, Buenos Aires",
+      "from": "caece.edu.ar",
+      "to": "ucaece.edu.ar"
+    },
+    {
+      "id": "2637a4de-4ee7-491b-9c8f-aa23f69e3db2",
+      "name": "Cevro Institut College",
+      "from": "vsci.cz",
+      "to": "cevro.cz"
+    },
+    {
+      "id": "26392f09-ed35-483f-a16c-d45f7cc207f4",
+      "name": "Fatima Mata National College",
+      "from": "fatimacollege.net",
+      "to": "fmnc.ac.in"
+    },
+    {
+      "id": "265d50a9-e9b3-4895-b46d-df828b0e08a7",
+      "name": "Université Panthéon-Assas (Paris II)",
+      "from": "u-paris2.fr",
+      "to": "assas-universite.fr"
+    },
+    {
+      "id": "27dbadac-3e8c-424c-a2cf-4d6086d59890",
+      "name": "Fachhochschule Ravensburg-Weingarten",
+      "from": "fh-weingarten.de",
+      "to": "rwu.de"
+    },
+    {
+      "id": "28208130-6497-4b26-92cb-d434d5f8f0b0",
+      "name": "Foundation University",
+      "from": "foundationu.com",
+      "to": "foundationu.edu.ph"
+    },
+    {
+      "id": "2808da7d-4f9b-4473-9ab7-66896cc03051",
+      "name": "National Pirogov Memorial Medical University",
+      "from": "vnmu.vn.ua",
+      "to": "vnmu.edu.ua"
+    },
+    {
+      "id": "29155531-5430-4b2a-97bb-f03b52990573",
+      "name": "Katholische Fachhochschule Freiburg, Hochschule für Sozialwesen, Religionspädagogik und Pflege",
+      "from": "kfh-freiburg.de",
+      "to": "kh-freiburg.de"
+    },
+    {
+      "id": "298cb6f0-61a3-4836-b1f3-f30a53ca0dda",
+      "name": "University of Central Lancashire",
+      "from": "uclan.ac.uk",
+      "to": "lancashire.ac.uk"
+    },
+    {
+      "id": "29a909e1-df25-4503-9c75-54d8e8b6f307",
+      "name": "Andrassy Gyula German Speaking University Budapest",
+      "from": "andrassyuni.hu",
+      "to": "aub.eu"
+    },
+    {
+      "id": "29fbe48a-7323-4cdf-a30f-c2719e2760b3",
+      "name": "University of North Carolina at Charlotte",
+      "from": "uncc.edu",
+      "to": "charlotte.edu"
+    },
+    {
+      "id": "2a0441e9-63e3-4cd9-8895-f0985f44964c",
+      "name": "Damanhour University",
+      "from": "damanhour.edu.eg",
+      "to": "damanhour.dmu.edu.eg"
+    },
+    {
+      "id": "2abc282e-d568-417d-94b6-6c0bba5b0495",
+      "name": "Tripura University",
+      "from": "tripurauniv.in",
+      "to": "tripurauniv.ac.in"
+    },
+    {
+      "id": "2ab6af70-e450-4641-8dc8-be8f39b13858",
+      "name": "Acadia University",
+      "from": "acadiau.ca",
+      "to": "www2.acadiau.ca"
+    },
+    {
+      "id": "2b704f8d-2ae2-45a1-98ee-9bcce43b34f1",
+      "name": "Private Fachhochschule für Wirtschaft und Technik Vechta/Diepholz",
+      "from": "fhwt.de",
+      "to": "phwt.de"
+    },
+    {
+      "id": "2b7ef026-55e8-40cf-81d5-aa6c0a71481c",
+      "name": "Université du Québec à Trois-Rivières",
+      "from": "uqtr.uquebec.ca",
+      "to": "uqtr.ca"
+    },
+    {
+      "id": "2b86c1eb-1604-4cea-8259-6185637c1ea9",
+      "name": "Edward Waters University",
+      "from": "ewc.edu",
+      "to": "ew.edu"
+    },
+    {
+      "id": "2b9bfe36-949f-467b-8fb8-2d1f24be1ed8",
+      "name": "Teacher Training College of Revalidation, Rehabilitation and Physical Education",
+      "from": "nkrriwf.pl",
+      "to": "aftermarket.pl"
+    },
+    {
+      "id": "2c9720ba-5c36-4f4b-926b-c2915f17bb0d",
+      "name": "Southern Denmark Business School",
+      "from": "hhs.dk",
+      "to": "detblaagymnasium.dk"
+    },
+    {
+      "id": "2d054ced-a5ef-46a4-8228-229ac0fbfd3b",
+      "name": "Taylor University",
+      "from": "tayloru.edu",
+      "to": "taylor.edu"
+    },
+    {
+      "id": "2e46b03d-06fd-4c07-9dc5-3c4ff9b1b009",
+      "name": "Centro Regional Universitário de Espiríto Santo do Pinhal",
+      "from": "creupi.br",
+      "to": "sou.unipinhal.edu.br"
+    },
+    {
+      "id": "2f6b8366-ab23-434a-b9aa-b0464e959a9f",
+      "name": "Philosophisch-Theologische Hochschule Münster",
+      "from": "pth-muenster.de",
+      "to": "cts-hochschule.de"
+    },
+    {
+      "id": "2f9db4e0-1910-4a44-80ec-a4f2d64f6f41",
+      "name": "Fachhochschule Koblenz",
+      "from": "fh-koblenz.de",
+      "to": "hs-koblenz.de"
+    },
+    {
+      "id": "319734b5-12c5-4cb9-9683-b341cb01e546",
+      "name": "Vignan University",
+      "from": "vignanuniversity.org",
+      "to": "vignan.ac.in"
+    },
+    {
+      "id": "31b3acd1-7a40-4303-a844-9a9c51cd292c",
+      "name": "Bloomsburg University of Pennsylvania",
+      "from": "bloomu.edu",
+      "to": "commonwealthu.edu"
+    },
+    {
+      "id": "31e77c92-9364-46b2-8621-b4ffbb87e8ec",
+      "name": "Universidade de Passo Fundo",
+      "from": "upf.tche.br",
+      "to": "upf.br"
+    },
+    {
+      "id": "32537394-270f-4258-997b-dac6e2ed4664",
+      "name": "Adventist University of Central Africa",
+      "from": "auca.ac.rw",
+      "to": "web.auca.ac.rw"
+    },
+    {
+      "id": "3268b525-961f-4e00-86ac-939fc0e57a6a",
+      "name": "Silesian Academy of Medicine in Katowice",
+      "from": "slam.katowice.pl",
+      "to": "sum.edu.pl"
+    },
+    {
+      "id": "326e442d-4092-490b-921d-32889bf473d4",
+      "name": "Universidad Regional del Sureste",
+      "from": "urse.edu.mx",
+      "to": "web.urse.edu.mx"
+    },
+    {
+      "id": "3348b785-bf46-4044-a2e4-957f6c91239c",
+      "name": "Faculté Universitaire des Sciences Agronomiques de Gembloux",
+      "from": "fsagx.ac.be",
+      "to": "gembloux.uliege.be"
+    },
+    {
+      "id": "34168b98-9fec-4e21-93f0-75c01554f469",
+      "name": "Katholische Universität Eichstätt",
+      "from": "ku-eichstaett.de",
+      "to": "ku.de"
+    },
+    {
+      "id": "3495e051-301b-4704-bad7-81c026df2e4c",
+      "name": "GSFC University",
+      "from": "gsfcuni.edu.in",
+      "to": "gsfcuniversity.ac.in"
+    },
+    {
+      "id": "34e4c786-c27b-4826-8595-b39a42887001",
+      "name": "Ecole Supérieure de Commerce et Management",
+      "from": "escem.fr",
+      "to": "excelia-group.fr"
+    },
+    {
+      "id": "34e2debf-325e-41fa-bb1d-cefbe7b7ed35",
+      "name": "University of Burgundy",
+      "from": "u-bourgogne.fr",
+      "to": "ube.fr"
+    },
+    {
+      "id": "35090b50-38a0-4e7d-8320-eb017dbab337",
+      "name": "Central European University",
+      "from": "ceu.hu",
+      "to": "ceu.edu"
+    },
+    {
+      "id": "3516cf27-d3a1-4295-8e3f-7f792bc76c93",
+      "name": "Galway Mayo Institute of Technology",
+      "from": "gmit.ie",
+      "to": "atu.ie"
+    },
+    {
+      "id": "35dead9e-baa8-4388-8107-21d9c09cf94f",
+      "name": "Veterinärmedizinische Universität Wien",
+      "from": "vu-wien.ac.at",
+      "to": "vetmeduni.ac.at"
+    },
+    {
+      "id": "365c61ad-d490-4f60-a453-d9ea15a40a01",
+      "name": "Mahatma Gandhi Chitrakut Gramoday University",
+      "from": "ruraluniversity-chitrakoot.org",
+      "to": "resumebuild.com"
+    },
+    {
+      "id": "36ebdfc7-8e44-49c5-80f3-aeda51738bcc",
+      "name": "Facultés Universitaires Catholiques de Mons",
+      "from": "fucam.ac.be",
+      "to": "uclouvain.be"
+    },
+    {
+      "id": "3720e047-3cf6-4091-9fd2-e00d69cd522a",
+      "name": "St. John's College - Annapolis",
+      "from": "sjca.edu",
+      "to": "concretecms.com"
+    },
+    {
+      "id": "3734dce1-4b7e-471e-8ad6-782c7a00a582",
+      "name": "Maria Curie-Sklodowska University Lublin",
+      "from": "umcs.lublin.pl",
+      "to": "umcs.pl"
+    },
+    {
+      "id": "37ad2b83-48fd-40f0-b3fd-f2cd31bf83be",
+      "name": "Universidad de Norteamerica",
+      "from": "un.mx",
+      "to": "cel.edu.mx"
+    },
+    {
+      "id": "3844f6d3-1fe5-40d0-a9ef-df0c336bbe5b",
+      "name": "Westsächsische Hochschule Zwickau (FH)",
+      "from": "fh-zwickau.de",
+      "to": "whz.de"
+    },
+    {
+      "id": "38b2e82e-e238-4b62-8e32-8e146cd67142",
+      "name": "University of the Pacific",
+      "from": "uop.edu",
+      "to": "pacific.edu"
+    },
+    {
+      "id": "391f7645-dad9-406c-80c0-4ff00fc45046",
+      "name": "ifs University College",
+      "from": "ifslearning.ac.uk",
+      "to": "walbrook.ac.uk"
+    },
+    {
+      "id": "393883d1-767a-4639-98db-e7ab0c5fc275",
+      "name": "Rak Medical & Health Sciences University",
+      "from": "rakmhsu.com",
+      "to": "rakmhsu.ac.ae"
+    },
+    {
+      "id": "39bd820b-6253-47f8-9895-fc025254c174",
+      "name": "Universidad Técnica \"Federico Santa María\"",
+      "from": "utfsm.cl",
+      "to": "usm.cl"
+    },
+    {
+      "id": "39e83ba1-c484-4d1b-9492-4e4f4a826313",
+      "name": "University of Technology and Life Sciences",
+      "from": "utp.edu.pl",
+      "to": "pbs.edu.pl"
+    },
+    {
+      "id": "3a12a9b8-a88d-48a0-a687-faece47088d9",
+      "name": "California State University, Fresno",
+      "from": "csufresno.edu",
+      "to": "fresnostate.edu"
+    },
+    {
+      "id": "3a401e1a-7c58-41f6-83d2-87487fb52731",
+      "name": "University of Molise",
+      "from": "unimol.it",
+      "to": "www3.unimol.it"
+    },
+    {
+      "id": "3aa23f9a-c436-4237-ad84-146f44efac67",
+      "name": "Université Rennes II - Haute-Bretagne",
+      "from": "uhb.fr",
+      "to": "univ-rennes2.fr"
+    },
+    {
+      "id": "3c1aeb24-7db1-4940-913c-6097412e1654",
+      "name": "Royal Holloway University of London",
+      "from": "rhul.ac.uk",
+      "to": "royalholloway.ac.uk"
+    },
+    {
+      "id": "3c98e19c-4a26-4774-8da4-b8844bd598ba",
+      "name": "Hillsborough Community College",
+      "from": "hccfl.edu",
+      "to": "hcfl.edu"
+    },
+    {
+      "id": "3cb64c6f-d68a-46d8-8580-5676f20b8815",
+      "name": "University of Bradford",
+      "from": "brad.ac.uk",
+      "to": "bradford.ac.uk"
+    },
+    {
+      "id": "3cfe5973-1fda-43f6-be02-3095dc6bc820",
+      "name": "European Business School Schloß Reichartshausen",
+      "from": "ebs.de",
+      "to": "ebs.edu"
+    },
+    {
+      "id": "3d2be7b6-071c-4c81-8030-92519bbb2ce0",
+      "name": "University of Economics and Innovation Lublin",
+      "from": "wsei.lublin.pl",
+      "to": "wsei.pl"
+    },
+    {
+      "id": "3d710fbe-9835-41ca-87ec-3f640256e5ba",
+      "name": "Universidad de Navarra",
+      "from": "unav.es",
+      "to": "unav.edu"
+    },
+    {
+      "id": "3db4a52c-46e7-4cc8-9820-34a4814822e9",
+      "name": "Nicola Valley Institute of Technology",
+      "from": "nvit.bc.ca",
+      "to": "nvit.ca"
+    },
+    {
+      "id": "3e70f5f4-e18d-445f-9940-44149a266463",
+      "name": "Fachhochschule Lübeck",
+      "from": "fh-luebeck.de",
+      "to": "th-luebeck.de"
+    },
+    {
+      "id": "3e7e3749-14d2-4e34-843f-b14bc014c21a",
+      "name": "Washington University, Saint Louis",
+      "from": "wustl.edu",
+      "to": "washu.edu"
+    },
+    {
+      "id": "3ec343b1-1e24-466c-8f43-ba997942f211",
+      "name": "Universität Kaiserslautern",
+      "from": "uni-kl.de",
+      "to": "rptu.de"
+    },
+    {
+      "id": "3fb74b60-68fa-4c62-80da-cc32f7736062",
+      "name": "Catholic University of Lublin",
+      "from": "kul.lublin.pl",
+      "to": "kul.pl"
+    },
+    {
+      "id": "40ab87a8-5759-47df-8e8a-4548d2fadc1f",
+      "name": "Helsinki School of Economics and Business Administration",
+      "from": "hkkk.fi",
+      "to": "aalto.fi"
+    },
+    {
+      "id": "40af7216-1a99-4ceb-94d6-a6146687cb33",
+      "name": "SRH University of Applied Sciences",
+      "from": "srh-berlin.de",
+      "to": "srh-university.de"
+    },
+    {
+      "id": "40c6f3b7-bb2f-42df-96e1-77e472ed7487",
+      "name": "Fontys University of Applied Sciences",
+      "from": "fontys.edu",
+      "to": "fontys.nl"
+    },
+    {
+      "id": "40ee2659-b54c-4480-8681-6b8a8a15b13a",
+      "name": "Internationales Hochschulinstitut Zittau",
+      "from": "ihi-zittau.de",
+      "to": "tu-dresden.de"
+    },
+    {
+      "id": "412f2836-b387-424d-9197-43f3c91fbb9a",
+      "name": "Rochester Institute of Technology, Dubai",
+      "from": "dubai.rit.edu",
+      "to": "rit.edu"
+    },
+    {
+      "id": "415089de-a9cb-4f8a-9dbb-2454dcac7b2e",
+      "name": "Poznan School of Banking",
+      "from": "wsb.poznan.pl",
+      "to": "merito.pl"
+    },
+    {
+      "id": "414b27e5-77b6-4faf-acd6-6ca5973eb728",
+      "name": "Université de Corse Pascal Paoli",
+      "from": "univ-corse.fr",
+      "to": "universita.corsica"
+    },
+    {
+      "id": "4181f0d4-29b6-4e0f-9721-0c36344777d6",
+      "name": "University of Gdansk",
+      "from": "univ.gda.pl",
+      "to": "ug.edu.pl"
+    },
+    {
+      "id": "4246512b-8d35-44a0-a61b-12f2d8912186",
+      "name": "Ecole pour les Etudes et la Recherche en Informatique et Electronique",
+      "from": "eerie.fr",
+      "to": "admin-linux.fr"
+    },
+    {
+      "id": "437f2aef-fc3b-48e0-93de-5607539cdfc1",
+      "name": "École Polytechnique",
+      "from": "polytechnique.fr",
+      "to": "polytechnique.edu"
+    },
+    {
+      "id": "45511e35-fd21-4fc7-9e22-eb64473b1001",
+      "name": "European University at St.Petersburg",
+      "from": "eu.spb.ru",
+      "to": "eusp.org"
+    },
+    {
+      "id": "45b189d0-27d2-4682-a8e8-8d43ac79f99c",
+      "name": "University of Ontario Institute of Technology",
+      "from": "uoit.ca",
+      "to": "ontariotechu.ca"
+    },
+    {
+      "id": "46c3474a-e90f-478e-a2e7-b6aa4aad59d3",
+      "name": "Central Ostrobothnia University of Applied Sciences",
+      "from": "cou.fi",
+      "to": "net.centria.fi"
+    },
+    {
+      "id": "474d7679-f43f-47d4-bff7-92fea6ca3c3c",
+      "name": "Sri Sathya Sai Institute of Higher Learning",
+      "from": "srisathyasai.org.in",
+      "to": "srisathyasai.org"
+    },
+    {
+      "id": "4768cf13-1ee3-4fa5-84bb-0c3e36621fb7",
+      "name": "Fachhochschule Kaiserslautern",
+      "from": "fh-kl.de",
+      "to": "hs-kl.de"
+    },
+    {
+      "id": "4789a0ae-0c8c-4b3f-b11a-06e667312d07",
+      "name": "United Medical and Dental Schools, University of London",
+      "from": "umds.ac.uk",
+      "to": "kcl.ac.uk"
+    },
+    {
+      "id": "47c64052-49a4-453e-8e72-7476c03bcc58",
+      "name": "Jönköping University College",
+      "from": "hj.se",
+      "to": "ju.se"
+    },
+    {
+      "id": "4856884f-8200-450e-bb97-3717ab819070",
+      "name": "Kakatiya University",
+      "from": "kuwarangal.com",
+      "to": "idn-play.net"
+    },
+    {
+      "id": "48c1bce5-c97a-46bb-b809-bc1670562d91",
+      "name": "Universidade Comunitária da Região de Chapecó - Unochapecó",
+      "from": "unochapeco.edu.br",
+      "to": "uno.edu.br"
+    },
+    {
+      "id": "490dc985-5757-4427-918e-a1351ca2c658",
+      "name": "HSR - Hochschule für Technik Rapperswil",
+      "from": "hsr.ch",
+      "to": "ost.ch"
+    },
+    {
+      "id": "49787458-784e-45b6-b3e8-43b5b5c2fbbb",
+      "name": "Polytechnic University",
+      "from": "uitec.ac.jp",
+      "to": "uitec.jeed.go.jp"
+    },
+    {
+      "id": "4981a00e-0daa-4b18-918d-3a6c0f0c0801",
+      "name": "Texas State University",
+      "from": "txstate.edu",
+      "to": "txst.edu"
+    },
+    {
+      "id": "4a2aa342-2a65-4345-86e3-cf4642c5ee78",
+      "name": "Duale Hochschule Baden-Württemberg Karlsruhe",
+      "from": "dhbw-karlsruhe.de",
+      "to": "karlsruhe.dhbw.de"
+    },
+    {
+      "id": "4a78eaf8-4fd2-429e-b195-95883de44bd9",
+      "name": "Tokuyama University",
+      "from": "tokuyama-u.ac.jp",
+      "to": "shunan-u.ac.jp"
+    },
+    {
+      "id": "4b64d8fd-aeb2-4a38-a6c3-32be0675e033",
+      "name": "Fachhochschule Stralsund",
+      "from": "fh-stralsund.de",
+      "to": "hochschule-stralsund.de"
+    },
+    {
+      "id": "4c085339-d47a-41a8-9163-fd08b6a7dd25",
+      "name": "University of Brighton",
+      "from": "bton.ac.uk",
+      "to": "brighton.ac.uk"
+    },
+    {
+      "id": "4d0a4cf8-260b-4a7e-a5f4-9cf841cded86",
+      "name": "Takachiho University",
+      "from": "takachiho.ac.jp",
+      "to": "takachiho.jp"
+    },
+    {
+      "id": "4d5599f9-5bd4-47c3-92e5-90cf1dca2877",
+      "name": "Université Panthéon-Sorbonne (Paris I)",
+      "from": "univ-paris1.fr",
+      "to": "pantheonsorbonne.fr"
+    },
+    {
+      "id": "4ddf3ced-b9f5-4fb1-8013-7788527fddf2",
+      "name": "Fachhochschule Kempten, Hochschule für Technik und Wirtschaft",
+      "from": "fh-kempten.de",
+      "to": "hs-kempten.de"
+    },
+    {
+      "id": "4dd8bbe4-1d71-4a91-901d-e403dc7042f1",
+      "name": "University of Bergen",
+      "from": "uib.no",
+      "to": "www4.uib.no"
+    },
+    {
+      "id": "4dc1d7c1-202b-43d1-b851-3972da1801ff",
+      "name": "Universidade Federal de Juiz de Fora",
+      "from": "ufjf.br",
+      "to": "www2.ufjf.br"
+    },
+    {
+      "id": "4ead3c0a-2a31-4b81-909a-e43572926a13",
+      "name": "Ontario College of Art and Design",
+      "from": "ocad.ca",
+      "to": "ocadu.ca"
+    },
+    {
+      "id": "4ee20eb8-6419-4078-80e3-c04643ec2cb1",
+      "name": "Gezira College of Technology",
+      "from": "geziracollege.edu.sd",
+      "to": "geziracollege.education"
+    },
+    {
+      "id": "4f97e4df-0437-465c-8a4b-98821dcb7ca8",
+      "name": "Kalinga University",
+      "from": "kalingauniversity.com",
+      "to": "hugedomains.com"
+    },
+    {
+      "id": "4f5bda2f-d338-4e58-bcd4-2b013108f583",
+      "name": "Zhejiang Forestry University",
+      "from": "zjfc.edu.cn",
+      "to": "en.zafu.edu.cn"
+    },
+    {
+      "id": "4fc85b26-93d5-4823-9c88-f84c8afcfbff",
+      "name": "Lock Haven University",
+      "from": "lockhaven.edu",
+      "to": "commonwealthu.edu"
+    },
+    {
+      "id": "509b41a0-2b9c-41da-a4d7-6072501a2e9c",
+      "name": "Université de Valenciennes et du Hainaut-Cambrésis",
+      "from": "univ-valenciennes.fr",
+      "to": "uphf.fr"
+    },
+    {
+      "id": "512e6684-000e-489b-9714-cde7d9ea021b",
+      "name": "Sokoine University of Agriculture",
+      "from": "suanet.ac.tz",
+      "to": "sua.ac.tz"
+    },
+    {
+      "id": "5163d2d8-8b45-4d1b-a0d6-75a647700f72",
+      "name": "Gotland University College",
+      "from": "hgo.se",
+      "to": "uu.se"
+    },
+    {
+      "id": "51b998c3-39d9-4ce5-9119-8174b52cb2d0",
+      "name": "University of Information Technology & Sciences",
+      "from": "uits.edu.bd",
+      "to": "uits.ac.bd"
+    },
+    {
+      "id": "52d6be6e-91ae-4db1-a1e1-5e5ed2224c21",
+      "name": "University of Wroclaw",
+      "from": "uni.wroc.pl",
+      "to": "uwr.edu.pl"
+    },
+    {
+      "id": "52e16ee2-f846-4646-9834-abd8a6e1b50f",
+      "name": "Hendrix College",
+      "from": "hendrix.edu",
+      "to": "via.hendrix.edu"
+    },
+    {
+      "id": "5462f626-3b8b-4d70-bce1-c1f8f5af81b2",
+      "name": "Academy of Fine Arts",
+      "from": "kuva.fi",
+      "to": "uniarts.fi"
+    },
+    {
+      "id": "54943a54-71e7-4b7d-8eca-74dec0e88b4f",
+      "name": "North Carolina Wesleyan College",
+      "from": "ncwc.edu",
+      "to": "ncwu.edu"
+    },
+    {
+      "id": "54caa28e-48a1-4f66-91b2-dffb911c4f27",
+      "name": "Magadh University",
+      "from": "magadhuniversity.org",
+      "to": "back2college.com"
+    },
+    {
+      "id": "54c8bdbb-d559-4545-a589-ac97adaa3dd5",
+      "name": "Technical University of Gdansk",
+      "from": "pg.gda.pl",
+      "to": "pg.edu.pl"
+    },
+    {
+      "id": "554e710f-c9ca-413e-9c76-9f4598b3a73a",
+      "name": "Keweenaw Bay Ojibwa Community College",
+      "from": "kbocc.org",
+      "to": "businessbrokerfinder.us.com"
+    },
+    {
+      "id": "55d52ff4-3a6d-49b6-80d4-c8487d6b9fe7",
+      "name": "University of Toronto, Scarborough",
+      "from": "scar.utoronto.ca",
+      "to": "utsc.utoronto.ca"
+    },
+    {
+      "id": "560b243f-deaa-402b-898b-926766677e5f",
+      "name": "Helsinki University of Technology",
+      "from": "hut.fi",
+      "to": "aalto.fi"
+    },
+    {
+      "id": "563d915d-f1f0-4d89-add6-a5ebeb3358cf",
+      "name": "Mälardalen University",
+      "from": "mdh.se",
+      "to": "mdu.se"
+    },
+    {
+      "id": "56586583-563b-4bf5-948a-126c54c7c776",
+      "name": "42 US",
+      "from": "42.us.org",
+      "to": "42.fr"
+    },
+    {
+      "id": "567080d3-1de1-49dd-be99-b7e2665ba874",
+      "name": "Universidade de Marília",
+      "from": "unimar.br",
+      "to": "portal.unimar.br"
+    },
+    {
+      "id": "57690637-c461-4cbb-a40d-fcf6b4b1edf9",
+      "name": "Nevada System of Higher Education",
+      "from": "system.nevada.edu",
+      "to": "nshe.nevada.edu"
+    },
+    {
+      "id": "57bb57da-27fe-4fea-ba0b-9d762a9403ae",
+      "name": "Suleyman Demirel University",
+      "from": "sdu.edu.tr",
+      "to": "w3.sdu.edu.tr"
+    },
+    {
+      "id": "5870bfb6-6ce6-43d8-8ccd-8a39f4a508c8",
+      "name": "Fachhochschule Schmalkalden",
+      "from": "fh-schmalkalden.de",
+      "to": "hs-schmalkalden.de"
+    },
+    {
+      "id": "58e42e9e-aa37-430b-8b93-dd1d5d91e24f",
+      "name": "Shingyeong University",
+      "from": "sgu.ac.kr",
+      "to": "global.sgu.ac.kr"
+    },
+    {
+      "id": "58fe6ac3-cf9e-4a93-a4cf-c42e8eac4c39",
+      "name": "Aleksander Gieysztor School of Humanities in Pultusk",
+      "from": "wsh.edu.pl",
+      "to": "vistula.edu.pl"
+    },
+    {
+      "id": "5905fe78-2ad5-4788-9fdf-88d30c55a1e3",
+      "name": "Université de Franche Comté",
+      "from": "univ-fcomte.fr",
+      "to": "umlp.fr"
+    },
+    {
+      "id": "59084c55-afd9-4db4-934f-6ee2a259a3d2",
+      "name": "KC University",
+      "from": "kcu.ac.kr",
+      "to": "gangseo.ac.kr"
+    },
+    {
+      "id": "59e4295e-14e3-403d-bea0-9c88240f3d5e",
+      "name": "Steinbeis-Hochschule-Berlin",
+      "from": "stw.de",
+      "to": "steinbeis.de"
+    },
+    {
+      "id": "5a6ed0c8-a85c-4b3a-8fc4-e2d3ca638bf6",
+      "name": "University of Southern Queensland",
+      "from": "usq.edu.au",
+      "to": "unisq.edu.au"
+    },
+    {
+      "id": "5a9e0865-6080-4d29-890f-5015299fb125",
+      "name": "Agricultural-Technical Academy in Olsztyn",
+      "from": "art.olsztyn.pl",
+      "to": "ecopir.eu"
+    },
+    {
+      "id": "5b57f028-4e78-48d4-9dab-a1e3aa9d3148",
+      "name": "Centro Universitário Monte Serrat",
+      "from": "unimonte.br",
+      "to": "usjt.br"
+    },
+    {
+      "id": "5bef3c97-8611-41d6-b442-339db4b0b0c8",
+      "name": "Indian Institute of Technology, Guwahati",
+      "from": "iitg.ernet.in",
+      "to": "iitg.ac.in"
+    },
+    {
+      "id": "5de97016-5050-4499-89c8-3381c7f4846d",
+      "name": "Staatliche Hochschule für Musik",
+      "from": "mh-trossingen.de",
+      "to": "hfm-trossingen.de"
+    },
+    {
+      "id": "5e18c2b3-aa41-422d-b3d8-a292e196191e",
+      "name": "Evangelische Fachhochschule Nürnberg",
+      "from": "evfh-nuernberg.de",
+      "to": "evhn.de"
+    },
+    {
+      "id": "5eaed567-45eb-40a9-91db-f92250fe7231",
+      "name": "All Nations University College",
+      "from": "anuc.edu.gh",
+      "to": "anu.edu.gh"
+    },
+    {
+      "id": "5f8555cb-90ff-4435-9995-572eb8c0d861",
+      "name": "Royal Danish School of Educational Sciences",
+      "from": "dlh.dk",
+      "to": "dlh.com"
+    },
+    {
+      "id": "5fa51924-0d73-4798-b374-d5ccfa8e7b79",
+      "name": "Finnmark University College",
+      "from": "hifm.no",
+      "to": "uit.no"
+    },
+    {
+      "id": "60b87354-551c-419d-bdcb-f70d47904275",
+      "name": "School of Design and Crafts",
+      "from": "hdk.gu.se",
+      "to": "gu.se"
+    },
+    {
+      "id": "60b6f247-fb81-467c-8578-a74830609bda",
+      "name": "Universidad Xicotepetl",
+      "from": "uxac.edu.mx",
+      "to": "uxac.mx"
+    },
+    {
+      "id": "6184eec0-57fb-4240-b8b2-52cf371d7c85",
+      "name": "Fachhochschule Gießen-Friedberg",
+      "from": "fh-giessen.de",
+      "to": "thm.de"
+    },
+    {
+      "id": "619f711e-f64e-4f85-bfe1-ef30f0c7f8dd",
+      "name": "City University of Science and Information Technology",
+      "from": "cusit.edu.pk",
+      "to": "cityuniversity.edu.pk"
+    },
+    {
+      "id": "6207e7d0-7dab-41c2-8ca6-7574a33af734",
+      "name": "Theatre Academy Finland",
+      "from": "teak.fi",
+      "to": "uniarts.fi"
+    },
+    {
+      "id": "624f2150-9c96-4723-b743-ed84625ebb66",
+      "name": "Ozarks Technical Community College",
+      "from": "otc.edu",
+      "to": "ozarkstech.edu"
+    },
+    {
+      "id": "624f9b07-2145-4ed0-847b-547c46ea9390",
+      "name": "Ecole Supérieure de Commerce de Lille",
+      "from": "esc-lille.fr",
+      "to": "skema.edu"
+    },
+    {
+      "id": "625a3cee-32a8-4694-8c8e-b976888e21e3",
+      "name": "Technische Fachhochschule Berlin",
+      "from": "tfh-berlin.de",
+      "to": "bht-berlin.de"
+    },
+    {
+      "id": "626f7266-30ab-4f63-8d3f-fe0af0c2ed64",
+      "name": "Osaka University of Health and Sport Sciences",
+      "from": "ouhs.ac.jp",
+      "to": "ouhs.jp"
+    },
+    {
+      "id": "629d3cb1-cddb-417c-8a05-2d7bce3f286c",
+      "name": "Universidad Pontificia Bolivariana",
+      "from": "upb.edu.co",
+      "to": "portal.upb.edu.co"
+    },
+    {
+      "id": "634680d3-b0b6-475d-8fae-226465dababd",
+      "name": "Universiteit Antwerpen Management School",
+      "from": "uams.be",
+      "to": "antwerpmanagementschool.be"
+    },
+    {
+      "id": "64025866-527f-4910-a85e-5dfa222d1a0e",
+      "name": "Oregon Graduate Institute of Science and Technology",
+      "from": "ogi.edu",
+      "to": "ohsu.edu"
+    },
+    {
+      "id": "6459ba59-2760-41e2-bc4c-0a1ace7f9cc6",
+      "name": "Knowledge International University",
+      "from": "almaarifah.com",
+      "to": "hugedomains.com"
+    },
+    {
+      "id": "643d849a-d6e7-4336-9c3d-b09fbd0e2e54",
+      "name": "Universidad de Cantabria",
+      "from": "unican.es",
+      "to": "web.unican.es"
+    },
+    {
+      "id": "642f0345-c397-42b9-bcc9-df877c01ded3",
+      "name": "Universidad Nacional Agraria de la Selva",
+      "from": "unas.edu.pe",
+      "to": "gob.pe"
+    },
+    {
+      "id": "646dac9d-3e65-44c9-bcc1-1b62eb55aa10",
+      "name": "Tribhuvan University Kathmandu",
+      "from": "tribhuvan-university.edu.np",
+      "to": "tu.edu.np"
+    },
+    {
+      "id": "679f7b26-4642-4164-a6b1-a10f7d5b25fd",
+      "name": "Helwan University",
+      "from": "helwan.edu.eg",
+      "to": "capu.edu.eg"
+    },
+    {
+      "id": "67f01e6f-6bfb-49e7-af6c-c21dfa4765c8",
+      "name": "Washington Bible College/Capital Bible Seminary",
+      "from": "bible.edu",
+      "to": "lbc.edu"
+    },
+    {
+      "id": "680645a5-2c69-43ff-a23e-ef7fc8c3904a",
+      "name": "Ecole Nationale Supérieure du Pétrole et des Monteurs",
+      "from": "ifp.fr",
+      "to": "ifpenergiesnouvelles.fr"
+    },
+    {
+      "id": "67f319e8-00df-4ef1-a841-60cd7e201b92",
+      "name": "Kobe Women's University",
+      "from": "suma.kobe-wu.ac.jp",
+      "to": "kobe-wu.ac.jp"
+    },
+    {
+      "id": "682f4999-8fe3-4224-8969-850e37adf577",
+      "name": "Carolinas College of Health Sciences",
+      "from": "carolinascollege.edu",
+      "to": "atriumhealth.org"
+    },
+    {
+      "id": "684f9cba-fcd1-4875-855a-808058ceeb35",
+      "name": "Fachhochschule Brandenburg",
+      "from": "fh-brandenburg.de",
+      "to": "th-brandenburg.de"
+    },
+    {
+      "id": "68858b43-2097-4933-ac5c-6924fb888d4d",
+      "name": "Astrakhan State University",
+      "from": "aspu.ru",
+      "to": "esk-ural.ru"
+    },
+    {
+      "id": "68cda836-61b1-449f-ac52-c7e7c4124f00",
+      "name": "Selangor Islamic University College",
+      "from": "kuis.edu.my",
+      "to": "uis.edu.my"
+    },
+    {
+      "id": "69592e52-e721-49d8-860b-24aa099c1b71",
+      "name": "Universidade Católica de Santos",
+      "from": "unisantos.com.br",
+      "to": "unisantos.br"
+    },
+    {
+      "id": "6986a0cd-6955-4db9-b69c-0f1b0c364494",
+      "name": "Athlone Institute of Technology",
+      "from": "ait.ie",
+      "to": "tus.ie"
+    },
+    {
+      "id": "69c9126a-4575-43e3-bf15-7949009494ec",
+      "name": "Dublin Institute of Technology",
+      "from": "dit.ie",
+      "to": "tudublin.ie"
+    },
+    {
+      "id": "6a3d230f-4890-4f8b-ac9c-b07c84638a32",
+      "name": "Ecole Nationale Supérieure des Telecommunications de Bretagne",
+      "from": "enst-bretagne.fr",
+      "to": "imt-atlantique.fr"
+    },
+    {
+      "id": "6a46bf23-9b86-4c47-b839-c4447a80cb5d",
+      "name": "Universidad Intercontinental",
+      "from": "uic.edu.mx",
+      "to": "uic.mx"
+    },
+    {
+      "id": "6ac71dc4-36dd-4cf7-9ece-d43de3c28ca9",
+      "name": "Maj Institute of Pharmacology Polish Academy of Sciences",
+      "from": "if-pan.krakow.pl",
+      "to": "if-pan.edu.pl"
+    },
+    {
+      "id": "6b1a7a6f-4ff4-406d-b362-519be75653c0",
+      "name": "Karachi Medical and Dental College",
+      "from": "kmdc.edu.pk",
+      "to": "thekmu.edu.pk"
+    },
+    {
+      "id": "6ca12bba-8fdf-4aea-b08a-5bc2a550aa2a",
+      "name": "Meharry Medical College",
+      "from": "home.mmc.edu",
+      "to": "meharry.edu"
+    },
+    {
+      "id": "6cbbf726-3139-467a-9911-415d8e828e18",
+      "name": "Botho University",
+      "from": "bothocollege.ac.bw",
+      "to": "bothouniversity.com"
+    },
+    {
+      "id": "6d922e74-d2a9-4138-8816-55d206e3ca5d",
+      "name": "Universität Koblenz-Landau",
+      "from": "uni-koblenz-landau.de",
+      "to": "unblock.uni-koblenz.de"
+    },
+    {
+      "id": "6d95508a-b8ce-41a8-8492-dd63622e6437",
+      "name": "Universidade Federal do Maranhão",
+      "from": "ufma.br",
+      "to": "portalpadrao.ufma.br"
+    },
+    {
+      "id": "6decf932-6c0b-4db1-a06b-cd19ed318f16",
+      "name": "Chungbuk National University",
+      "from": "chungbuk.ac.kr",
+      "to": "cbnu.ac.kr"
+    },
+    {
+      "id": "6ec23abc-a4e3-4f44-a350-25716761077d",
+      "name": "Ecole Supérieure de Physique et de Chimie Industrielles",
+      "from": "espci.fr",
+      "to": "espci.psl.eu"
+    },
+    {
+      "id": "6f53d032-bc16-4845-a398-694b53a3c7f3",
+      "name": "University of Maine at Fort Kent",
+      "from": "umfk.maine.edu",
+      "to": "umfk.edu"
+    },
+    {
+      "id": "6fb02c95-3c5d-41b6-8394-2601bfd636a7",
+      "name": "Ecole des Hautes Etudes Industrielles de Lille",
+      "from": "hei.fr",
+      "to": "junia.com"
+    },
+    {
+      "id": "6fe89d48-3b29-49f1-beeb-eb4cfc68facb",
+      "name": "Sadat Academy for Management Sciences",
+      "from": "sadatacademy.edu.eg",
+      "to": "sams.edu.eg"
+    },
+    {
+      "id": "6ff07a8b-681d-464c-8065-811e2ebce32a",
+      "name": "Dartmouth College",
+      "from": "dartmouth.edu",
+      "to": "home.dartmouth.edu"
+    },
+    {
+      "id": "70370d59-2a66-4845-a9e3-b807f420ba33",
+      "name": "Vaasa University of Applied Sciences",
+      "from": "puv.fi",
+      "to": "vamk.fi"
+    },
+    {
+      "id": "70e3fd26-881c-48c6-97a4-48a98dfe5046",
+      "name": "Tietgen Business College",
+      "from": "tietgen.dk",
+      "to": "tietgenskolen.dk"
+    },
+    {
+      "id": "71212c0f-f048-4c01-9cb2-fe9a659f8a50",
+      "name": "Bridgwater & Taunton College",
+      "from": "btc.ac.uk",
+      "to": "ucscollegegroup.ac.uk"
+    },
+    {
+      "id": "717fa998-f8bc-4e50-9f02-a425f39a543f",
+      "name": "Fachhochschule München",
+      "from": "fh-muenchen.de",
+      "to": "hm.edu"
+    },
+    {
+      "id": "71b172f3-0bcd-4a40-9227-adbc86fc7cd4",
+      "name": "Hogeschool Rotterdam",
+      "from": "hro.nl",
+      "to": "hogeschoolrotterdam.nl"
+    },
+    {
+      "id": "72677de6-c99f-4087-a445-1b902ecd2b6d",
+      "name": "Tamil Nadu Dr. Ambedkar Law University",
+      "from": "tndalu.org",
+      "to": "ww1.tndalu.org"
+    },
+    {
+      "id": "729df2e8-0e96-4bfa-9c15-6ef390db6dde",
+      "name": "Nicolaus Copernicus University of Torun",
+      "from": "uni.torun.pl",
+      "to": "umk.pl"
+    },
+    {
+      "id": "72a1a820-c26d-4344-9898-e6ac098544af",
+      "name": "University of Finance and Management in Bialystok",
+      "from": "wsfiz.edu.pl",
+      "to": "wans.edu.pl"
+    },
+    {
+      "id": "725ce709-fb0b-428a-a7a4-dbd44f28dcfb",
+      "name": "Universidade Federal Rural do Rio de Janeiro",
+      "from": "ufrrj.br",
+      "to": "portal.ufrrj.br"
+    },
+    {
+      "id": "734c4505-6ba3-4f03-8a86-430bdfbc551e",
+      "name": "Instituto de Estudios Superiores de la Sierra",
+      "from": "ties.com.mx",
+      "to": "wallpapers.com"
+    },
+    {
+      "id": "732fb0a0-8387-43bf-88fd-78095f62d304",
+      "name": "Pacific Western University",
+      "from": "pwu.com",
+      "to": "forsale.dynadot.com"
+    },
+    {
+      "id": "741dfeb0-96a6-4874-a3aa-a51f8373f237",
+      "name": "Ecole Supérieure des Sciences Economiques et Commerciales",
+      "from": "essec.fr",
+      "to": "essec.edu"
+    },
+    {
+      "id": "74e08851-472b-4aaf-9fc7-ff3abb223f49",
+      "name": "Polytechnic University of New York",
+      "from": "poly.edu",
+      "to": "engineering.nyu.edu"
+    },
+    {
+      "id": "7517a1f8-6839-4b9c-9c8e-263320cab65d",
+      "name": "Al-Jabal Al-Gharbi University",
+      "from": "jgu.edu.ly",
+      "to": "gu.edu.ly"
+    },
+    {
+      "id": "75cc4b96-7560-416c-b137-5cabeb8d8abf",
+      "name": "Saveetha School of Engineering",
+      "from": "saveethaengineering.com",
+      "to": "simatsengineering.com"
+    },
+    {
+      "id": "759ca9b8-e73a-4af9-a55c-a56cd14cef41",
+      "name": "University of the Assumption",
+      "from": "ua.edu.ph",
+      "to": "web.ua.edu.ph"
+    },
+    {
+      "id": "76d256b6-075d-4cbd-8b85-dd62a9e61c37",
+      "name": "Europäische Betriebswirtschafts-Akademie",
+      "from": "eba-muenchen.de",
+      "to": "munich-business-school.de"
+    },
+    {
+      "id": "77ec6ae8-346d-4a41-a990-cd3854cf5a98",
+      "name": "HUG - Univ. Hospitals of Geneva",
+      "from": "hcuge.ch",
+      "to": "rpa.hug.ch"
+    },
+    {
+      "id": "7894e828-fc5b-47e8-ace7-b43631414a50",
+      "name": "Fachhochschule Reutlingen, Hochschule für Technik und Wirtschaft",
+      "from": "fh-reutlingen.de",
+      "to": "reutlingen-university.de"
+    },
+    {
+      "id": "790002d8-7d8e-4289-af32-23166c366718",
+      "name": "State University of New York at Oswego",
+      "from": "oswego.edu",
+      "to": "ww1.oswego.edu"
+    },
+    {
+      "id": "796c04b5-1e05-4607-81a9-be6a176f708e",
+      "name": "East Africa University Bosaso",
+      "from": "eastafricauniversity.net",
+      "to": "broughtonvillagebakery.co.uk"
+    },
+    {
+      "id": "7a4aa77a-3875-4185-b7d6-246fda13be9f",
+      "name": "Lakeshore Technical College",
+      "from": "gotoltc.edu",
+      "to": "lakeshore.edu"
+    },
+    {
+      "id": "7b262781-f549-49d2-859c-523c6d86b176",
+      "name": "Deutsch-Ordens Fachhochschule Riedlingen, Hochschule für Wirtschaft",
+      "from": "fh-riedlingen.de",
+      "to": "mobile-university.de"
+    },
+    {
+      "id": "7b37fd72-b35b-4bea-88e4-6cfb4b769870",
+      "name": "Hellenic College of Noah",
+      "from": "noah.edu.gr",
+      "to": "noah-495.cloudflareaccess.com"
+    },
+    {
+      "id": "7b6bae58-61df-4360-9d62-84923028232d",
+      "name": "Cumberland County College",
+      "from": "cccnj.edu",
+      "to": "rcsj.edu"
+    },
+    {
+      "id": "7cd190f8-44aa-4454-9311-124d74102706",
+      "name": "Langara College",
+      "from": "langara.bc.ca",
+      "to": "langara.ca"
+    },
+    {
+      "id": "7d0b9103-0d16-494f-a2ff-1f771d19bf7a",
+      "name": "International School of Business Management",
+      "from": "isbm-school.com",
+      "to": "isbm-school.ch"
+    },
+    {
+      "id": "7d1cb6e4-fba4-4c53-a8cf-7fe67c99fcfe",
+      "name": "Bahcesehir University",
+      "from": "bahcesehir.edu.tr",
+      "to": "bau.edu.tr"
+    },
+    {
+      "id": "7cde5f06-d884-4ba3-8fcb-33654ef1ff8a",
+      "name": "Saratov State Agrarian University",
+      "from": "sgau.ru",
+      "to": "vavilovsar.ru"
+    },
+    {
+      "id": "7d3c481c-81de-4847-ac95-9ae60c38d5b6",
+      "name": "University of Texas Southwestern Medical Center",
+      "from": "swmed.edu",
+      "to": "utsouthwestern.edu"
+    },
+    {
+      "id": "7d83cc98-4a81-4534-8d69-84bc95f2da93",
+      "name": "Hajvery University Lahore for Women",
+      "from": "hajvery.edu.pk",
+      "to": "apply.hup.edu.pk"
+    },
+    {
+      "id": "7dae60b3-bd3c-42fe-9c73-85f47277b9da",
+      "name": "National University of Arts",
+      "from": "unarte.ro",
+      "to": "unarte.org"
+    },
+    {
+      "id": "7e76000c-a5e0-4532-b4c6-0ce22d1de8b4",
+      "name": "Université Charles-de-Gaulle (Lille III)",
+      "from": "univ-lille3.fr",
+      "to": "univ-lille.fr"
+    },
+    {
+      "id": "7e778b11-c074-4c7b-aada-1079b547d035",
+      "name": "ICI University",
+      "from": "ici.edu",
+      "to": "globaluniversity.edu"
+    },
+    {
+      "id": "7eb81d14-c9f7-405b-bbc4-7a6891f5ff85",
+      "name": "Fachhochschule Konstanz, Hochschule für Technik, Wirtschaft und Gestaltung",
+      "from": "fh-konstanz.de",
+      "to": "htwg-konstanz.de"
+    },
+    {
+      "id": "7f79f8bb-758d-4774-8bdc-e9b2147f32b7",
+      "name": "Antioch University - Los Angeles",
+      "from": "antiochla.edu",
+      "to": "antioch.edu"
+    },
+    {
+      "id": "7f2e9e32-290a-4380-8374-0ace5275f6ad",
+      "name": "University Medical School of Pécs",
+      "from": "pote.hu",
+      "to": "aok.pte.hu"
+    },
+    {
+      "id": "7fc65404-6688-436a-be33-7273bc0980b0",
+      "name": "University of the Sunshine Coast",
+      "from": "usc.edu.au",
+      "to": "unisc.edu.au"
+    },
+    {
+      "id": "7f99e7e0-ced5-417a-ba12-4282a751f4d1",
+      "name": "Universidad Nacional de Piura",
+      "from": "unp.edu.pe",
+      "to": "gob.pe"
+    },
+    {
+      "id": "813487ff-4a10-430c-bff5-a6a609836e7d",
+      "name": "Thomas Jefferson University",
+      "from": "tju.edu",
+      "to": "jefferson.edu"
+    },
+    {
+      "id": "81f57335-5dcd-4bd0-9236-8b42aaf43687",
+      "name": "Kiev National Economic University",
+      "from": "kneu.kiev.ua",
+      "to": "kneu.edu.ua"
+    },
+    {
+      "id": "842fb3cb-72a2-4f18-ba64-4a1405b6b2d0",
+      "name": "Temple College",
+      "from": "templejc.edu",
+      "to": "templecollege.edu"
+    },
+    {
+      "id": "841af52f-187d-4d4f-982e-30b41c9828d7",
+      "name": "Universität Klagenfurt",
+      "from": "uni-klu.ac.at",
+      "to": "aau.at"
+    },
+    {
+      "id": "846458cc-a77f-470b-8f98-a6159d63b7e4",
+      "name": "University of Information Technology and Management in Rzeszow",
+      "from": "wsiz.rzeszow.pl",
+      "to": "wsiz.edu.pl"
+    },
+    {
+      "id": "8491d895-2938-44b1-bf66-eced1fcfbae9",
+      "name": "Acharya Ranga Agricultural University",
+      "from": "angrau.net",
+      "to": "dropcatch.com"
+    },
+    {
+      "id": "84ba34b1-dde6-4e10-bbf7-5e593c2f1e9e",
+      "name": "Evangelische Fachhochschule für Religionspädagogik, und Gemeindediakonie Moritzburg",
+      "from": "fhs-moritzburg.de",
+      "to": "cheaphotelguide.com"
+    },
+    {
+      "id": "851d0f6b-aa8b-4c9c-8958-7741c139d5cb",
+      "name": "Université Paris Nanterre (Paris X)",
+      "from": "u-paris10.fr",
+      "to": "parisnanterre.fr"
+    },
+    {
+      "id": "8522b6b7-b725-44f6-83d5-31c8882790ce",
+      "name": "Ecole Supérieure d'Electricité",
+      "from": "supelec.fr",
+      "to": "centralesupelec.fr"
+    },
+    {
+      "id": "853e1249-78a3-4c80-a826-17c500f94253",
+      "name": "Szent István University",
+      "from": "szie.hu",
+      "to": "uni-mate.hu"
+    },
+    {
+      "id": "859b0b76-a8c4-42dd-bfb0-3c7509253f97",
+      "name": "Université de Savoie",
+      "from": "univ-savoie.fr",
+      "to": "univ-smb.fr"
+    },
+    {
+      "id": "862c1f12-b1e7-457e-ad3f-e01a29546b12",
+      "name": "Niagara County Community College",
+      "from": "niagaracc.suny.edu",
+      "to": "sunyniagara.edu"
+    },
+    {
+      "id": "86c42d74-9415-427d-aa57-85f3d187c928",
+      "name": "Kawasaki Medical School",
+      "from": "kawasaki-m.ac.jp",
+      "to": "k.kawasaki-m.ac.jp"
+    },
+    {
+      "id": "87004cbf-7f6c-41dd-8d04-7ba34900e236",
+      "name": "Palm Beach State College",
+      "from": "palmbeachstate.edu",
+      "to": "pbsc.edu"
+    },
+    {
+      "id": "871a22a2-befd-45d7-bead-83b38aa8fba3",
+      "name": "Vinayaka Mission's Research Foundation-Deemed University",
+      "from": "vinayakamissions.com",
+      "to": "vmrfdu.edu.in"
+    },
+    {
+      "id": "87f02b50-636a-4d20-819c-36484cd50dad",
+      "name": "Imperial College School of Medicine",
+      "from": "med.ic.ac.uk",
+      "to": "imperial.ac.uk"
+    },
+    {
+      "id": "8842184d-a24b-41e4-98ca-1005faa60d65",
+      "name": "Hungarian Academy of Craft and Design",
+      "from": "mif.hu",
+      "to": "mome.hu"
+    },
+    {
+      "id": "88bc1815-e25f-4777-962e-df23d5d67cb7",
+      "name": "Universitat de Lleida",
+      "from": "udl.es",
+      "to": "udl.cat"
+    },
+    {
+      "id": "8963ff86-f090-4766-9e8a-b5f5e67b85da",
+      "name": "Texas A&M University - Commerce",
+      "from": "tamuc.edu",
+      "to": "etamu.edu"
+    },
+    {
+      "id": "89558683-562d-4a18-9f6f-11354d85fdfe",
+      "name": "Universidad Autónoma de Nayarit",
+      "from": "uan.mx",
+      "to": "uan.edu.mx"
+    },
+    {
+      "id": "8a850eb5-882b-41f0-b8f9-ff80f29b2b56",
+      "name": "University of Lethbridge",
+      "from": "uleth.ca",
+      "to": "ulethbridge.ca"
+    },
+    {
+      "id": "8a4bf67b-54a8-41ea-b1dc-bdcc0c3e6de7",
+      "name": "Universidad Autónoma Agraria \"Antonio Narro\"",
+      "from": "uaaan.mx",
+      "to": "uaaan.edu.mx"
+    },
+    {
+      "id": "8b26b5ba-90f0-4105-9139-f40cfc22c4c4",
+      "name": "Thunderbird School of Global Management",
+      "from": "thunderbird.edu",
+      "to": "thunderbird.asu.edu"
+    },
+    {
+      "id": "8b5f34b2-5758-441d-9d34-ca4aa8a35868",
+      "name": "Facultés Universitaires Notre-Dame de la Paix",
+      "from": "fundp.ac.be",
+      "to": "unamur.be"
+    },
+    {
+      "id": "8bcc8d31-cda2-40ca-899c-a72295e14ffc",
+      "name": "Kirklareli University",
+      "from": "kirklareli.edu.tr",
+      "to": "klu.edu.tr"
+    },
+    {
+      "id": "8bd64405-1292-4480-b1b9-b6870125d6a8",
+      "name": "Gustavus Adolphus College",
+      "from": "gac.edu",
+      "to": "gustavus.edu"
+    },
+    {
+      "id": "8c810e0c-854c-439d-9567-b5c64378aa8f",
+      "name": "Agricultural University of Athens",
+      "from": "aua.gr",
+      "to": "www2.aua.gr"
+    },
+    {
+      "id": "8d284d79-ff44-4ce6-a886-0bb3531e06ed",
+      "name": "Vlerick Leuven Gent Management School",
+      "from": "vlerick.be",
+      "to": "vlerick.com"
+    },
+    {
+      "id": "8d1d7ae5-0d4e-41ae-8e7f-d019c16d4987",
+      "name": "International University in Geneva",
+      "from": "iun.ch",
+      "to": "iig.ch"
+    },
+    {
+      "id": "8dc8f3b6-5edc-4b85-ab3d-5cc49576e958",
+      "name": "Escuela de Administración de Negocios",
+      "from": "ean.edu.co",
+      "to": "eastchinaschools.us"
+    },
+    {
+      "id": "8e148c0f-479b-4981-85fb-c16cdc513ea3",
+      "name": "Kherson State University",
+      "from": "university.kherson.ua",
+      "to": "kspu.edu"
+    },
+    {
+      "id": "8f013fee-75ef-4d54-a744-22dbdebf815d",
+      "name": "Iniciativa Universidad del Atlantico",
+      "from": "universidadatlantico.org",
+      "to": "uneatlantico.es"
+    },
+    {
+      "id": "8f30313c-b739-4211-96b4-91d07da58a4f",
+      "name": "John F. Kennedy University",
+      "from": "jfku.edu",
+      "to": "law.nu.edu"
+    },
+    {
+      "id": "8f44c08d-0d01-4f81-8a8f-dcab0aa4468d",
+      "name": "Indiana University Southeast",
+      "from": "ius.edu",
+      "to": "southeast.iu.edu"
+    },
+    {
+      "id": "8fb0a3ef-b39f-4a23-8fa2-f54152e9f385",
+      "name": "Medizinische Hochschule Hannover",
+      "from": "mh-hannover.de",
+      "to": "mhh.de"
+    },
+    {
+      "id": "90147239-93fa-4021-b9d7-43acea3ef383",
+      "name": "Fachhochschule Gelsenkirchen",
+      "from": "fh-gelsenkirchen.de",
+      "to": "w-hs.de"
+    },
+    {
+      "id": "90175104-8bdd-4fae-a67b-c90208b29826",
+      "name": "Hochschule Bonn-Rhein-Sieg",
+      "from": "hochschule-bonn-rhein-sieg.de",
+      "to": "h-brs.de"
+    },
+    {
+      "id": "911a716a-26cd-4c75-9e33-2616bad7c669",
+      "name": "Universidad Iberoamericana, Campus León",
+      "from": "leon.uia.mx",
+      "to": "iberoleon.mx"
+    },
+    {
+      "id": "91f7f261-38c9-4e70-a300-81b82862948c",
+      "name": "Institute of Architecture \"Ion Mincu\" Bucharest",
+      "from": "iaim.ro",
+      "to": "uauim.ro"
+    },
+    {
+      "id": "92a3f827-99be-4a05-9404-4588d6049e76",
+      "name": "EHSAL - Europese Hogeschool Brussel",
+      "from": "ehsal.be",
+      "to": "odisee.be"
+    },
+    {
+      "id": "92d7fc7b-7b92-440c-bebe-badfd5d07247",
+      "name": "Universidad Jóse Vasconcelos",
+      "from": "univas.edu.mx",
+      "to": "universidadvasconcelos.edu.mx"
+    },
+    {
+      "id": "92f7dc22-d9ba-4b41-8785-f7607630378a",
+      "name": "Indiana University/Purdue University at Indianapolis",
+      "from": "iupui.edu",
+      "to": "indianapolis.iu.edu"
+    },
+    {
+      "id": "9367afd4-a58e-4d43-bd80-49221a654b32",
+      "name": "Universidad de Medellín",
+      "from": "udem.edu.co",
+      "to": "udemedellin.edu.co"
+    },
+    {
+      "id": "93cc84d2-5a0d-49e2-932d-835a16474517",
+      "name": "Duale Hochschule Baden-Wuerttemberg Mannheim",
+      "from": "dhbw-mannheim.de",
+      "to": "mannheim.dhbw.de"
+    },
+    {
+      "id": "942068ff-06e2-4e0f-ba81-7a88ce9148a0",
+      "name": "Box Hill Institute",
+      "from": "bhtafe.edu.au",
+      "to": "boxhill.edu.au"
+    },
+    {
+      "id": "945834a0-2111-42d2-9347-a94ca9c6c619",
+      "name": "Ecole Nationale Supérieure d'Arts et Métiers de Paris",
+      "from": "paris.ensam.fr",
+      "to": "artsetmetiers.fr"
+    },
+    {
+      "id": "94532e73-fe16-4eae-af35-9d613c6ca32a",
+      "name": "Gaziantep University",
+      "from": "gantep.edu.tr",
+      "to": "gaziantep.edu.tr"
+    },
+    {
+      "id": "9481b37f-5eb7-4509-9591-32b9c37792a2",
+      "name": "Universitas Kristen Krida Wacana",
+      "from": "ukrida.ac.id",
+      "to": "portal.ukrida.ac.id"
+    },
+    {
+      "id": "9491638d-53a4-4c22-acea-b0729a5f6873",
+      "name": "Shanghai Medical University",
+      "from": "shmu.edu.cn",
+      "to": "mail.fudan.edu.cn"
+    },
+    {
+      "id": "95ab9781-bc95-401b-a592-0990831eca0f",
+      "name": "Odessa National Maritime Academy",
+      "from": "ma.odessa.ua",
+      "to": "champion-casinos.org.ua"
+    },
+    {
+      "id": "96856c41-85d6-4b3c-9111-9fc0b1a31bd7",
+      "name": "International School of Management ISM Dortmund",
+      "from": "ism-dortmund.de",
+      "to": "ism.de"
+    },
+    {
+      "id": "93b9e795-e973-4b67-9840-c3a18f269cda",
+      "name": "Kwangju University",
+      "from": "kwangju.ac.kr",
+      "to": "gwangju.ac.kr"
+    },
+    {
+      "id": "979374f8-a399-431f-93df-0a20cda0e88d",
+      "name": "University of New Orleans",
+      "from": "uno.edu",
+      "to": "lsuneworleans.edu"
+    },
+    {
+      "id": "97d54c3d-4166-4cfd-b449-44c0a85abbae",
+      "name": "Ryerson Polytechnic University",
+      "from": "ryerson.ca",
+      "to": "torontomu.ca"
+    },
+    {
+      "id": "983317e6-832a-4a16-b03d-022981609ddb",
+      "name": "St. Petersburg Repin State Academic Institute of Painting Sculpture and Achitecture",
+      "from": "artacademy.spb.ru",
+      "to": "pmail.sitgeeks.com"
+    },
+    {
+      "id": "995ec0af-cbde-4db6-86a2-f2f421a445e5",
+      "name": "Technical University of Liberec",
+      "from": "vslib.cz",
+      "to": "tul.cz"
+    },
+    {
+      "id": "9ab9240d-8e0c-4d5a-9e97-7bf60eaa900a",
+      "name": "St. Petersburg State University of Aerospace Instrumentation",
+      "from": "suai.ru",
+      "to": "guap.ru"
+    },
+    {
+      "id": "9a87b689-9351-45b8-8db0-50f5db95437e",
+      "name": "Technische Universität Wien",
+      "from": "tuwien.ac.at",
+      "to": "tuwien.at"
+    },
+    {
+      "id": "9b50170f-dc87-48d0-9fd2-fc78507ff7c2",
+      "name": "Ural Gorkij State University",
+      "from": "usu.ru",
+      "to": "urfu.ru"
+    },
+    {
+      "id": "9b8c2f1e-8d1b-4345-93bd-6de9f2ca1099",
+      "name": "Poole Gakuin University",
+      "from": "poole.ac.jp",
+      "to": "poole.ed.jp"
+    },
+    {
+      "id": "9be63cac-449f-45bb-b29d-992a33eaac65",
+      "name": "Jacobs University Bremen",
+      "from": "jacobs-university.de",
+      "to": "constructor.university"
+    },
+    {
+      "id": "9bda7683-854d-4835-9bbf-39be2b2e7d36",
+      "name": "International Centre for Isclamic Science",
+      "from": "kolieh.com",
+      "to": "icis-uk.com"
+    },
+    {
+      "id": "9c4171d7-66f7-4be0-a2f9-d6c674507cd0",
+      "name": "Chiba Institute of Technology",
+      "from": "it-chiba.ac.jp",
+      "to": "chibatech.jp"
+    },
+    {
+      "id": "9c8c02d0-b841-4094-aceb-496bc3d86381",
+      "name": "Stellenbosch University",
+      "from": "sun.ac.za",
+      "to": "su.ac.za"
+    },
+    {
+      "id": "9ea8ebeb-0f91-4bc5-95df-37261279da15",
+      "name": "Suffolk County Community College",
+      "from": "www3.sunysuffolk.edu",
+      "to": "sunysuffolk.edu"
+    },
+    {
+      "id": "9ed2c455-86d7-46da-ad7e-d2d8e2459c5d",
+      "name": "Universidade Federal da Grande Dourados",
+      "from": "ufgd.edu.br",
+      "to": "portal.ufgd.edu.br"
+    },
+    {
+      "id": "9f24a3cf-6b70-47df-bf39-de9fe2963b03",
+      "name": "Dnepropetrovsk National University of Railway Transport",
+      "from": "diit.edu.ua",
+      "to": "diit.ust.edu.ua"
+    },
+    {
+      "id": "a05aa64c-a113-48af-89ef-333adcec7c87",
+      "name": "NTB - Hochschule für Technik Buchs",
+      "from": "ntb.ch",
+      "to": "ost.ch"
+    },
+    {
+      "id": "a0f5d963-799e-43b1-acd1-c701ecbe5be9",
+      "name": "Universite Amadou Hampaté Ba",
+      "from": "uahb.sn",
+      "to": "univ.uahb.sn"
+    },
+    {
+      "id": "a0f1e687-c99c-4592-b106-bb778e5f5e94",
+      "name": "Hochschule für Gestaltung und Kunst Zürich",
+      "from": "hgkz.ch",
+      "to": "hey-uni.de"
+    },
+    {
+      "id": "a1ba32e4-1575-4a05-a015-7f97e11e9d38",
+      "name": "Quinnipiac College",
+      "from": "quinnipiac.edu",
+      "to": "qu.edu"
+    },
+    {
+      "id": "a1cdd320-fec4-4afe-9c00-edd24c0ee83d",
+      "name": "Fachhochschule Biberach, Hochschule für Bauwesen und Wirtschaft",
+      "from": "fh-biberach.de",
+      "to": "hochschule-biberach.de"
+    },
+    {
+      "id": "a1fc8574-cc05-4744-82a4-0028f0d25090",
+      "name": "Australlian College of Kuwait",
+      "from": "ackonline.com",
+      "to": "hugedomains.com"
+    },
+    {
+      "id": "a222f08f-98d6-4822-aa6d-114bfe97d173",
+      "name": "STMIK AMIKOM Yogyakarta",
+      "from": "amikom.ac.id",
+      "to": "home.amikom.ac.id"
+    },
+    {
+      "id": "a2d6783a-f2b4-4740-9bf4-d6e1951d22c5",
+      "name": "Technical University of Radom",
+      "from": "man.radom.pl",
+      "to": "uniwersytetradom.pl"
+    },
+    {
+      "id": "a3cff831-81e3-49c5-bb49-e7e57803609f",
+      "name": "St. Petersburg State Technological University of Plant Polymers",
+      "from": "gturp.spb.ru",
+      "to": "vshte.ru"
+    },
+    {
+      "id": "a4d070ac-3079-4ab5-a148-7834cf358809",
+      "name": "Hochschule Zittau/Görlitz (FH)",
+      "from": "hs-zigr.de",
+      "to": "hszg.de"
+    },
+    {
+      "id": "a5c5cabe-a370-450b-ba06-d797ffca4fe8",
+      "name": "Philosophisch-Theologische Hochschule der Salesianer Don Boscos",
+      "from": "pth-bb.de",
+      "to": "kloster-benediktbeuern.de"
+    },
+    {
+      "id": "a66ef7da-8d92-49f9-8703-16662a45965b",
+      "name": "Université René Descartes (Paris V)",
+      "from": "univ-paris5.fr",
+      "to": "www-ex.parisdescartes.fr"
+    },
+    {
+      "id": "a68e2856-feba-437a-a7f3-d5e7b86416ae",
+      "name": "Clarion University of Pennsylvania",
+      "from": "clarion.edu",
+      "to": "pennwest.edu"
+    },
+    {
+      "id": "a7aa03d7-3caa-4a8f-911e-6ff37570f66f",
+      "name": "Universidade Católica de Brasília",
+      "from": "ucb.br",
+      "to": "ucb.catolica.edu.br"
+    },
+    {
+      "id": "a79dd4a9-1b79-4ec6-8f59-92270f270593",
+      "name": "United States Military Academy",
+      "from": "usma.edu",
+      "to": "westpoint.edu"
+    },
+    {
+      "id": "a85d4292-ce0f-4e8e-8b2d-bde820edebc1",
+      "name": "Lake Land College",
+      "from": "lakeland.cc.il.us",
+      "to": "lakelandcollege.edu"
+    },
+    {
+      "id": "a8a98162-81fc-4a6a-b574-d1043f79328e",
+      "name": "Pontifícia Universidade Católica de São Paulo",
+      "from": "pucsp.br",
+      "to": "www1.pucsp.br"
+    },
+    {
+      "id": "a92ccc89-1653-4dae-9984-7ac0a47e8711",
+      "name": "University of Western Sydney",
+      "from": "uws.edu.au",
+      "to": "westernsydney.edu.au"
+    },
+    {
+      "id": "a9a8ff2a-0029-4026-8916-d356ac65d612",
+      "name": "AgroSup Dijon",
+      "from": "agrosupdijon.fr",
+      "to": "institut-agro-dijon.fr"
+    },
+    {
+      "id": "a9bf9875-2009-4401-8087-23c94411d50e",
+      "name": "International Institute for Geo - Information Science and Earth Observation",
+      "from": "itc.nl",
+      "to": "utwente.nl"
+    },
+    {
+      "id": "a9fede13-3f32-418d-a60d-21dc65b0e7ed",
+      "name": "Ecole Nationale d'Ingénieurs de Saint-Etienne",
+      "from": "enise.fr",
+      "to": "enise.ec-lyon.fr"
+    },
+    {
+      "id": "aa426fab-680d-40fc-a127-92d2e11b5015",
+      "name": "National Institute of Business Management",
+      "from": "nibm.lk",
+      "to": "nibm.ac.lk"
+    },
+    {
+      "id": "aa67890b-6683-4e1a-8460-028e9f1f3e7f",
+      "name": "Bilkent University",
+      "from": "bilkent.edu.tr",
+      "to": "w3.bilkent.edu.tr"
+    },
+    {
+      "id": "aa9ffbdf-405a-4b84-a8e8-98c451af22c0",
+      "name": "Universidade Portucalense Infante D. Henrique",
+      "from": "uportu.pt",
+      "to": "upt.pt"
+    },
+    {
+      "id": "ab022484-8de1-4cf1-82af-8772ac2f315d",
+      "name": "University of Kuopio",
+      "from": "uku.fi",
+      "to": "uef.fi"
+    },
+    {
+      "id": "ab341ddc-f15a-462c-9588-6177822239cd",
+      "name": "Université des Sciences et Technologies de Lille (Lille I)",
+      "from": "univ-lille1.fr",
+      "to": "univ-lille.fr"
+    },
+    {
+      "id": "ab36f4e1-22af-45cf-9a24-00635f5ee769",
+      "name": "Vesalius College",
+      "from": "vesalius.edu",
+      "to": "brussels-school.be"
+    },
+    {
+      "id": "ab176714-3808-4e79-95f3-fbdc32ded942",
+      "name": "University of Bolton",
+      "from": "bolton.ac.uk",
+      "to": "greatermanchester.ac.uk"
+    },
+    {
+      "id": "abd98aa0-ebf1-414d-91ec-211938f67313",
+      "name": "Portland State University",
+      "from": "ee.pdx.edu",
+      "to": "pdx.edu"
+    },
+    {
+      "id": "ac32d986-ec41-492d-89a7-4fcf05bd4325",
+      "name": "Université Rennes I",
+      "from": "univ-rennes1.fr",
+      "to": "univ-rennes.fr"
+    },
+    {
+      "id": "acff1f97-98d7-48db-b0bc-340dcb0324f8",
+      "name": "Skyline University College, Sharjah",
+      "from": "skylineuniversity.com",
+      "to": "hugedomains.com"
+    },
+    {
+      "id": "ad1e04e1-e825-4b1e-90db-11819eff640b",
+      "name": "Fachhochschule Neubrandenburg",
+      "from": "fh-nb.de",
+      "to": "hs-nb.de"
+    },
+    {
+      "id": "ad0111ac-840a-486d-98a9-5affc40967e7",
+      "name": "Vrije Universiteit Brussel",
+      "from": "vub.ac.be",
+      "to": "vub.be"
+    },
+    {
+      "id": "ad9e0b6e-9f20-43e7-8e7c-a208dc0c06e9",
+      "name": "Hogeschool voor Wetenschap en Kunst (VLEKHO), Brussel",
+      "from": "vlekho.be",
+      "to": "odisee.be"
+    },
+    {
+      "id": "ae6459ba-12cc-49d7-a19d-fd5d164dac2c",
+      "name": "Midlands State University",
+      "from": "msu.ac.zw",
+      "to": "ww5.msu.ac.zw"
+    },
+    {
+      "id": "ae1b5ad6-c0e5-48ce-a5d7-ee72f26b002d",
+      "name": "Universidade do Sagrado Coração",
+      "from": "usc.br",
+      "to": "unisagrado.edu.br"
+    },
+    {
+      "id": "b05f1c0f-dfd7-4aec-ac0d-d3ae4dc429d8",
+      "name": "Alice-Salomon-Fachhochschule für Sozialarbeit und Sozialpädagogik Berlin",
+      "from": "asfh-berlin.de",
+      "to": "ash-berlin.eu"
+    },
+    {
+      "id": "b087d56e-79c9-4792-8b26-860ed18195e0",
+      "name": "ISFORT - Institut de Formation en Technologie Alimentaire",
+      "from": "isfort.ac.ma",
+      "to": "isfort-maroc.com"
+    },
+    {
+      "id": "b0a7d9cf-1fbe-44a2-8e51-537f73cd5b0b",
+      "name": "Fachhochschule Landshut, Hochschule für Wirtschaft - Sozialwesen - Technik",
+      "from": "fh-landshut.de",
+      "to": "haw-landshut.de"
+    },
+    {
+      "id": "b150ca52-b428-4bd8-b91d-7a2f5ad44be3",
+      "name": "Fachhochschule Pforzheim, Hochschule für Gestaltung, Technik und Wirtschaft",
+      "from": "fh-pforzheim.de",
+      "to": "hs-pforzheim.de"
+    },
+    {
+      "id": "b17cf0df-60e5-4785-8e10-d0d87a3841db",
+      "name": "Dutch University Institute for Art History (DUIA)",
+      "from": "iuoart.org",
+      "to": "mcountryday.com"
+    },
+    {
+      "id": "b18eecb9-e8bf-4633-a6cf-78be4a5f2f89",
+      "name": "Hallmark University",
+      "from": "hallmarkuniversity.edu",
+      "to": "hallmark.edu"
+    },
+    {
+      "id": "b19fffb0-a9a0-4969-9712-84117dc06a1d",
+      "name": "Mary Baldwin College",
+      "from": "mbc.edu",
+      "to": "montanabiblecollege.edu"
+    },
+    {
+      "id": "b2c7664c-d84a-4c56-9b78-8e411c51fe3c",
+      "name": "Universitas HKBP Nommensen",
+      "from": "nommensen.org",
+      "to": "hmimerangin.org"
+    },
+    {
+      "id": "b2ee4519-4d78-4212-9f08-fef2875f7b29",
+      "name": "University of Wisconsin System",
+      "from": "uwsa.edu",
+      "to": "wisconsin.edu"
+    },
+    {
+      "id": "b2cd46d9-185e-45cc-95a7-5346c0837b42",
+      "name": "Universidade Federal de Campina Grande",
+      "from": "ufcg.edu.br",
+      "to": "gov.br"
+    },
+    {
+      "id": "b441a999-93c7-4b8a-ba98-4d9bb01e7707",
+      "name": "State University of New York at Fredonia",
+      "from": "home.fredonia.edu",
+      "to": "fredonia.edu"
+    },
+    {
+      "id": "b4f997a7-d4d0-4684-af0c-de720e518479",
+      "name": "California Maritime Academy",
+      "from": "csum.edu",
+      "to": "maritime.calpoly.edu"
+    },
+    {
+      "id": "b5cc5632-0372-4001-9be9-3cc2d43967a3",
+      "name": "Ecole Nationale des Ponts et Chausees",
+      "from": "enpc.fr",
+      "to": "ecoledesponts.fr"
+    },
+    {
+      "id": "b639cd25-bc5f-41f2-97ed-9ab06716007c",
+      "name": "University of Maine at Farmington",
+      "from": "umf.maine.edu",
+      "to": "farmington.edu"
+    },
+    {
+      "id": "b70fe2f6-6e10-4a99-8c40-196e345febef",
+      "name": "Shendi University",
+      "from": "ush.sd",
+      "to": "ush.edu.sd"
+    },
+    {
+      "id": "b75b07a5-981a-414f-aa67-ec02ee5dac5f",
+      "name": "University of Pittsburgh at Johnstown",
+      "from": "upj.pitt.edu",
+      "to": "johnstown.pitt.edu"
+    },
+    {
+      "id": "b8054f18-d4ae-4f71-86ac-9b8c30d8ac81",
+      "name": "ITMO University",
+      "from": "ifmo.ru",
+      "to": "itmo.ru"
+    },
+    {
+      "id": "b82b23d8-59ac-4d2f-a2bd-f6efc4600867",
+      "name": "Yaroslavl State Pedagogical University",
+      "from": "yspu.yar.ru",
+      "to": "yspu.org"
+    },
+    {
+      "id": "b749fbdb-8e7f-4dc3-a82e-da97a9114670",
+      "name": "Centro de Enseñanza Técnica Industrial",
+      "from": "ceti.mx",
+      "to": "web2.ceti.mx"
+    },
+    {
+      "id": "b8b2a57c-305f-4aa3-a7ed-84ffa512dbe6",
+      "name": "Jeonju National University of Education",
+      "from": "jnue.ac.kr",
+      "to": "jnue.kr"
+    },
+    {
+      "id": "b8dcf711-4f68-4789-b842-3861f41ddb6e",
+      "name": "Universidade São Judas Tadeu",
+      "from": "saojudas.br",
+      "to": "usjt.br"
+    },
+    {
+      "id": "b9076112-545e-48b8-abdc-685c293151ba",
+      "name": "Tamagawa University",
+      "from": "tamagawa.ac.jp",
+      "to": "tamagawa.jp"
+    },
+    {
+      "id": "b930e4be-312e-4d62-8ef8-99d9cb6ec4c4",
+      "name": "American University of Paris",
+      "from": "aup.fr",
+      "to": "aup.edu"
+    },
+    {
+      "id": "b9639e96-49b5-432a-8f4a-ed0c89142dcc",
+      "name": "Lagos City Polytechnic",
+      "from": "mylcp.net",
+      "to": "lagoscitypolytechnic.edu.ng"
+    },
+    {
+      "id": "b96c6979-22bc-4f93-ab57-0b2a9dc951ce",
+      "name": "Zetech College",
+      "from": "zetechcollege.com",
+      "to": "hugedomains.com"
+    },
+    {
+      "id": "b9a43658-c9d9-42d5-b9eb-7668adecfd2c",
+      "name": "Universidade Católica de Pelotas",
+      "from": "ucpel.tche.br",
+      "to": "ucpel.edu.br"
+    },
+    {
+      "id": "b9b1446c-5571-4558-bc71-6e7fd1ed89b1",
+      "name": "Universität der Bundeswehr Hamburg",
+      "from": "unibw-hamburg.de",
+      "to": "hsu-hh.de"
+    },
+    {
+      "id": "ba20187a-639a-48ad-ac94-a1640e6da178",
+      "name": "Crimea State Medical University",
+      "from": "crsmu.com",
+      "to": "hugedomains.com"
+    },
+    {
+      "id": "ba168080-3c09-4eec-b800-695bb6a1929c",
+      "name": "Fachhochschule des Mittelstandes (FHM)",
+      "from": "fhm-mittelstand.de",
+      "to": "fh-mittelstand.de"
+    },
+    {
+      "id": "ba91615c-e587-4484-937c-250cd5324370",
+      "name": "Korea Polytechnic University",
+      "from": "kpu.ac.kr",
+      "to": "tukorea.ac.kr"
+    },
+    {
+      "id": "bab0eb6b-6116-4bc0-959b-7e318ddf57eb",
+      "name": "Hochschule Magdeburg-Stendal (FH)",
+      "from": "hs-magdeburg.de",
+      "to": "h2.de"
+    },
+    {
+      "id": "bb9f9c4c-036b-4a19-8489-7e4fc8514ecb",
+      "name": "Shanghai University of Finance and Economics",
+      "from": "shufe.edu.cn",
+      "to": "sufe.edu.cn"
+    },
+    {
+      "id": "bc70decd-7f7b-44e7-a51e-3c86dd4e0e38",
+      "name": "Westminster College of Fulton",
+      "from": "westminster-mo.edu",
+      "to": "wcmo.edu"
+    },
+    {
+      "id": "be18b00a-535d-4136-b651-bd98fd625663",
+      "name": "Université de Fianarantsoa",
+      "from": "univ-fianar.mg",
+      "to": "univ-fianarantsoa.mg"
+    },
+    {
+      "id": "bf544880-3bd8-4753-8d48-4b85f412f016",
+      "name": "Tallahassee Community College",
+      "from": "tcc.fl.edu",
+      "to": "tsc.fl.edu"
+    },
+    {
+      "id": "bf870ebd-96b8-43ca-b392-24d8979501b8",
+      "name": "Université de La Rochelle",
+      "from": "univ-lr.fr",
+      "to": "univ-larochelle.fr"
+    },
+    {
+      "id": "c00375cb-c361-4d6c-9a7d-3e7012d9f91d",
+      "name": "Miva Open University",
+      "from": "miva.university",
+      "to": "miva.edu.ng"
+    },
+    {
+      "id": "c0b9b381-ae8e-4ce0-abff-b7f382f8e401",
+      "name": "Eastern Virginia Medical School",
+      "from": "evms.edu",
+      "to": "odu.edu"
+    },
+    {
+      "id": "c0f79ade-2e3b-447e-99a2-3ccde754ea83",
+      "name": "Fachhochschulstudiengänge der Wiener Wirtschaft",
+      "from": "fhw.at",
+      "to": "fh-wien.ac.at"
+    },
+    {
+      "id": "c1102254-b72f-4abc-a50a-46b986137e3c",
+      "name": "Erasmushogeschool Brussel",
+      "from": "ehb.be",
+      "to": "erasmushogeschool.be"
+    },
+    {
+      "id": "c1519725-78b0-48d2-b486-c23971b0357d",
+      "name": "Institute of Management and Economy",
+      "from": "ime.ru",
+      "to": "spbume.ru"
+    },
+    {
+      "id": "c18af867-a0ee-41ee-945d-8ecd4fd8851a",
+      "name": "Indiana University/Purdue University at Columbus",
+      "from": "iupuc.edu",
+      "to": "columbus.iu.edu"
+    },
+    {
+      "id": "c19c4228-3a86-47d0-b84c-e3c4406d6326",
+      "name": "Universidad Europea de Madrid",
+      "from": "uem.es",
+      "to": "universidadeuropea.com"
+    },
+    {
+      "id": "c1ecf401-a79d-4131-b3ef-521feb2c0041",
+      "name": "Fachhochschulstudiengänge Krems IMC",
+      "from": "imc-krems.ac.at",
+      "to": "imc.ac.at"
+    },
+    {
+      "id": "c1fa5e10-00e4-41af-9a6c-fe2ef74c0f1b",
+      "name": "Seneca College",
+      "from": "senecacollege.ca",
+      "to": "senecapolytechnic.ca"
+    },
+    {
+      "id": "c1e22fa5-3f3e-4833-b3da-fc2a5a8ae989",
+      "name": "Chongshin University",
+      "from": "chongshin.ac.kr",
+      "to": "csu.ac.kr"
+    },
+    {
+      "id": "c2b7292f-2124-4a24-82f2-1e4ebd861e27",
+      "name": "European Academy of Arts in Warsaw",
+      "from": "eas.edu.pl",
+      "to": "vistula.edu.pl"
+    },
+    {
+      "id": "c2aa8dbe-9545-40ca-b68c-62f76639d9ab",
+      "name": "Scandinavian Art and Business Institute",
+      "from": "sabi.eu.com",
+      "to": "hospitalcandelaria-atlantico.com.co"
+    },
+    {
+      "id": "c2e383dc-8f99-49d7-b425-8f5039b120a8",
+      "name": "Universitas Bhayangkara Surabaya",
+      "from": "ubhara.ac.id",
+      "to": "home.ubhara.ac.id"
+    },
+    {
+      "id": "c30d0cbf-d446-4431-a371-271fa9b14656",
+      "name": "University of Applied Sciences Basel (FHBB )",
+      "from": "fhbb.ch",
+      "to": "fhnw.ch"
+    },
+    {
+      "id": "c3facade-f891-4b27-9e10-42587ee9d45d",
+      "name": "Fachhochschule Jena",
+      "from": "fh-jena.de",
+      "to": "eah-jena.de"
+    },
+    {
+      "id": "c4685da0-a541-4562-9191-f33541a467c8",
+      "name": "Fachhochschulstudiengänge Steyr",
+      "from": "fh-steyr.at",
+      "to": "fh-ooe.at"
+    },
+    {
+      "id": "c4a5e0fe-2afe-4a92-b823-5aac37a9e02d",
+      "name": "Dallas County Community College",
+      "from": "dcccd.edu",
+      "to": "dallascollege.edu"
+    },
+    {
+      "id": "c561b685-87e9-4d2d-8106-e463c9e32239",
+      "name": "Saad College of Nursing and Allied Health Sciences",
+      "from": "saadcollege.com",
+      "to": "dropcatch.com"
+    },
+    {
+      "id": "c57866fb-48c2-4f77-ac74-acf11afe4d50",
+      "name": "Ecole Polytechnique Marseille",
+      "from": "polytech-marseille.fr",
+      "to": "polytech.univ-amu.fr"
+    },
+    {
+      "id": "c596e66d-c782-4be7-a993-7d020ecfd003",
+      "name": "University of Medicine and Pharmacy of Targu Mures",
+      "from": "umftgm.ro",
+      "to": "umfst.ro"
+    },
+    {
+      "id": "c64f6ecc-b1b2-4803-9692-7ff71132519a",
+      "name": "Pangasinan State University",
+      "from": "psu.edu.ph",
+      "to": "main.psu.edu.ph"
+    },
+    {
+      "id": "c67a46f6-8268-42d6-8452-0431dc11a97d",
+      "name": "Staatliche Studienakademie Bautzen",
+      "from": "ba-bautzen.de",
+      "to": "dhsn.de"
+    },
+    {
+      "id": "c6b5c084-7cc4-487d-acc9-69208b5004e8",
+      "name": "Akademi Farmasi Yarsis Pekanbaru",
+      "from": "akfaryarsiptk.ac.id",
+      "to": "cabanajuno.com"
+    },
+    {
+      "id": "c776494b-931c-4bdf-ad89-6175301b76bc",
+      "name": "EVTEK University of Applied Sciences",
+      "from": "evtek.fi",
+      "to": "metropolia.fi"
+    },
+    {
+      "id": "c784e028-7ccf-4e44-867c-2bc9b49a8aa2",
+      "name": "Märkische Fachhochschule Iserlohn",
+      "from": "mfh-iserlohn.de",
+      "to": "spielbanken.net"
+    },
+    {
+      "id": "c78957a2-4881-45ac-b87f-46b7a93bd24c",
+      "name": "Danish University of Education",
+      "from": "dpu.dk",
+      "to": "dpu.au.dk"
+    },
+    {
+      "id": "c7cab869-d873-4ea1-bced-7cf704876a00",
+      "name": "Faculdade Italo Brasileira",
+      "from": "italo.br",
+      "to": "uniitalo.com.br"
+    },
+    {
+      "id": "c8bb6d48-c405-4417-a21b-cff6a50d250f",
+      "name": "Swinburne University of Technology",
+      "from": "swin.edu.au",
+      "to": "swinburne.edu.au"
+    },
+    {
+      "id": "ca434111-8e92-4612-a82e-d922c91f5b2b",
+      "name": "Duale Hochschule Baden-Württemberg Mosbach",
+      "from": "dhbw-mosbach.de",
+      "to": "mosbach.dhbw.de"
+    },
+    {
+      "id": "ca9fd485-7c2c-42a8-82d3-8ad3855f12f8",
+      "name": "Northern Essex Community College",
+      "from": "necc.mass.edu",
+      "to": "necc.edu"
+    },
+    {
+      "id": "cb40ca67-5953-4045-a868-a36cc73663ca",
+      "name": "Concordia College - Moorhead",
+      "from": "cord.edu",
+      "to": "concordiacollege.edu"
+    },
+    {
+      "id": "cc425696-58ed-44d9-be1c-3472c1185175",
+      "name": "Spring Arbor College",
+      "from": "arbor.edu",
+      "to": "springarbor.edu"
+    },
+    {
+      "id": "ccf20c7f-8167-4e3c-b75e-5c5b4604b249",
+      "name": "Najran University",
+      "from": "nu.edu.sa",
+      "to": "portal.nu.edu.sa"
+    },
+    {
+      "id": "cdbded00-56d4-4b4d-93f6-48a702e018cb",
+      "name": "Shannon College of Hotel Management",
+      "from": "shannoncollege.com",
+      "to": "universityofgalway.ie"
+    },
+    {
+      "id": "ce1078d7-67ba-4856-a004-701b5a3b998e",
+      "name": "Georg-Simon-Ohm-Fachhochschule Nürnberg",
+      "from": "fh-nuernberg.de",
+      "to": "th-nuernberg.de"
+    },
+    {
+      "id": "cf79b2a1-b571-4595-b681-c445aeb1e892",
+      "name": "Universitat Ramon Llull",
+      "from": "url.es",
+      "to": "url.edu"
+    },
+    {
+      "id": "d0b97804-3e4f-4e0a-942d-41589e4a14c3",
+      "name": "Bangabandhu Sheikh Mujibur Rahman Medical University",
+      "from": "bsmmu.edu.bd",
+      "to": "bmu.ac.bd"
+    },
+    {
+      "id": "d22240f3-cb3b-49f2-8d9c-b8e824eb0c6b",
+      "name": "Mimasaka Women's College",
+      "from": "mimasaka.ac.jp",
+      "to": "mimasaka.jp"
+    },
+    {
+      "id": "d257b761-2307-4975-a22e-09142b4c3c01",
+      "name": "University of Applied Sciences Solothurn Northwestern Switzerland",
+      "from": "fhso.ch",
+      "to": "fhnw.ch"
+    },
+    {
+      "id": "d27cc081-68f1-497a-b35c-6978416a7439",
+      "name": "Chongju University",
+      "from": "chongju.ac.kr",
+      "to": "cju.ac.kr"
+    },
+    {
+      "id": "d28cdef7-ff64-41df-9af4-61acd0f06684",
+      "name": "National University of Food Technologies",
+      "from": "usuft.kiev.ua",
+      "to": "marketing-research.in.ua"
+    },
+    {
+      "id": "d2dcae08-bdfc-4fbf-a8ac-b9798ba48c46",
+      "name": "Lviv Polytechnic National University",
+      "from": "lp.edu.ua",
+      "to": "lpnu.ua"
+    },
+    {
+      "id": "d340774e-2976-4eae-bf9c-32107dcb29cc",
+      "name": "Institute of Teachers Education, Sultan Abdul Halim",
+      "from": "ipsah.edu.my",
+      "to": "new.ipsah.edu.my"
+    },
+    {
+      "id": "d3cfb34b-d4f0-4f51-89c0-e7f41884cb76",
+      "name": "Ecole Normale Supérieure de Paris",
+      "from": "ens.fr",
+      "to": "ens.psl.eu"
+    },
+    {
+      "id": "d4d38478-fe28-4436-87a1-399346f1c482",
+      "name": "Fachhochschule Mannheim, Hochschule für Sozialwesen",
+      "from": "fhs-mannheim.de",
+      "to": "hs-mannheim.de"
+    },
+    {
+      "id": "d4e16655-7857-46df-be35-662ee7d08591",
+      "name": "Fachhochschule Bielefeld",
+      "from": "fh-bielefeld.de",
+      "to": "hsbi.de"
+    },
+    {
+      "id": "d51f9225-bc55-4445-9ac6-93bdcf36e9e9",
+      "name": "PH Zug - Pädagogische Hochschule Zug",
+      "from": "phzg.ch",
+      "to": "zg.ch"
+    },
+    {
+      "id": "d5490234-f28c-4c2f-b381-701c96d3e3b1",
+      "name": "Brno University of Technology",
+      "from": "vutbr.cz",
+      "to": "vut.cz"
+    },
+    {
+      "id": "d5809b68-5f71-4e23-85ab-c887dac6a936",
+      "name": "Fachhochschulstudiengänge Hagenberg",
+      "from": "fh-hagenberg.at",
+      "to": "fh-ooe.at"
+    },
+    {
+      "id": "d69b091d-3f47-4650-9e6c-9669fee7a9d6",
+      "name": "Universidade Estadual Paulista",
+      "from": "unesp.br",
+      "to": "www2.unesp.br"
+    },
+    {
+      "id": "d790a6f3-83ae-4a5c-9f98-1a8fce9ac4d0",
+      "name": "Sikha 'O' Anushandhan University",
+      "from": "soauniversity.ac.in",
+      "to": "soa.ac.in"
+    },
+    {
+      "id": "d79ba702-19b8-4840-ae08-a552cd397ac4",
+      "name": "Universidad de Sonora",
+      "from": "uson.mx",
+      "to": "unison.mx"
+    },
+    {
+      "id": "d9efe365-f91f-4e28-af7c-dc792c7bcf25",
+      "name": "Europa-Universität Viadrina Frankfurt (Oder)",
+      "from": "euv-frankfurt-o.de",
+      "to": "europa-uni.de"
+    },
+    {
+      "id": "da321321-5960-47b1-ab4c-1fd623a51012",
+      "name": "University of Wisconsin Colleges",
+      "from": "uwc.edu",
+      "to": "wisconsin.edu"
+    },
+    {
+      "id": "dac684ee-accd-4a11-9115-d161db6037d9",
+      "name": "Bocconi University",
+      "from": "unibocconi.eu",
+      "to": "unibocconi.it"
+    },
+    {
+      "id": "dae53219-981a-45cd-8887-19fd432a415d",
+      "name": "Universidad Internacional de Valencia",
+      "from": "viu.es",
+      "to": "universidadviu.com"
+    },
+    {
+      "id": "db4e5b40-35ac-4a70-b850-24b8dd8ffe0e",
+      "name": "American Business School of Paris",
+      "from": "absparis.com",
+      "to": "american-business-college-paris.com"
+    },
+    {
+      "id": "db42c4b0-cd7a-4212-a8dc-751ac28f5ce1",
+      "name": "Universidad Santo Tomás",
+      "from": "usta.edu.co",
+      "to": "usantotomas.edu.co"
+    },
+    {
+      "id": "db67b66c-82d8-4118-b106-fbb826eecce1",
+      "name": "Edinboro University of Pennsylvania",
+      "from": "edinboro.edu",
+      "to": "pennwest.edu"
+    },
+    {
+      "id": "dc000465-436e-4c7a-8ab5-49232c824d19",
+      "name": "St. Anne University",
+      "from": "ustanne.ednet.ns.ca",
+      "to": "usainteanne.ca"
+    },
+    {
+      "id": "dc6d6b0d-7ce6-4a20-95cc-0b8c331abc9a",
+      "name": "UC Hastings College of the Law",
+      "from": "uchastings.edu",
+      "to": "uclawsf.edu"
+    },
+    {
+      "id": "dc81580c-e50b-4bb8-a7d7-11ed471b0552",
+      "name": "Chonnam National University",
+      "from": "chonnam.ac.kr",
+      "to": "jnu.ac.kr"
+    },
+    {
+      "id": "dd2e1c60-12c2-4f09-ac17-48d0f806abf5",
+      "name": "Indian Institute of Science",
+      "from": "iisc.ernet.in",
+      "to": "iisc.ac.in"
+    },
+    {
+      "id": "dd840194-8f1f-4b55-b39a-3d4ab51230ff",
+      "name": "Yukon College",
+      "from": "yukoncollege.yk.ca",
+      "to": "yukonu.ca"
+    },
+    {
+      "id": "de06a80a-bd8c-4131-89d1-345d3e63e001",
+      "name": "Philosophisch-Theologische Hochschule Vallendar der Gesellschaft des Katholischen Apostolates (Pallottiner)",
+      "from": "pthv.de",
+      "to": "vp-uni.de"
+    },
+    {
+      "id": "de388fb5-1bfb-45e5-b4b8-bd27c0e34749",
+      "name": "Massasoit Community College",
+      "from": "massasoit.mass.edu",
+      "to": "massasoit.edu"
+    },
+    {
+      "id": "de7c189d-492f-411a-9c25-7589e86efa94",
+      "name": "Universidade Estadual do Vale do Acaraú",
+      "from": "uvanet.br",
+      "to": "uva.ce.gov.br"
+    },
+    {
+      "id": "dea35fa4-aec0-4b1e-a05e-442e6f673eb1",
+      "name": "Hampton University",
+      "from": "hamptonu.edu",
+      "to": "home.hamptonu.edu"
+    },
+    {
+      "id": "df13dcb0-2df5-4c3d-8e25-a4363b47d501",
+      "name": "Université de Mons-Hainaut",
+      "from": "umh.ac.be",
+      "to": "portail.umons.ac.be"
+    },
+    {
+      "id": "df794dee-d469-4a48-850d-df7e4176ae23",
+      "name": "University of Birmingham",
+      "from": "bham.ac.uk",
+      "to": "birmingham.ac.uk"
+    },
+    {
+      "id": "dfabfaf3-d6e4-4931-b647-6ab1d3e807f4",
+      "name": "Florida Memorial University",
+      "from": "fmuniv.edu",
+      "to": "fmu.edu"
+    },
+    {
+      "id": "e089e30e-84b6-40ac-9e82-f811103c8b43",
+      "name": "Universidade de São Paulo",
+      "from": "usp.br",
+      "to": "www5.usp.br"
+    },
+    {
+      "id": "e0f294c4-94ce-42b9-97cf-1fb45a5daca8",
+      "name": "East China Jiao Tong University",
+      "from": "ecjtu.jx.cn",
+      "to": "ecjtu.edu.cn"
+    },
+    {
+      "id": "e17c0f03-1913-40e7-83f6-937a4a002f2e",
+      "name": "Ecole Nationale d'Architecture",
+      "from": "archi.ac.ma",
+      "to": "enarabat.ac.ma"
+    },
+    {
+      "id": "e25ce251-f09c-4008-8f66-adac25c27b01",
+      "name": "Universitat Autónoma de Barcelona",
+      "from": "uab.es",
+      "to": "uab.cat"
+    },
+    {
+      "id": "e32f774b-87aa-438b-a6fa-3e203b404e40",
+      "name": "Institut d'Etudes Politiques de Paris (Sciences Po)",
+      "from": "sciences-po.fr",
+      "to": "sciencespo.fr"
+    },
+    {
+      "id": "e3bdf63a-f7b9-4070-a519-e62321672f5c",
+      "name": "University of Québec",
+      "from": "uquebec.ca",
+      "to": "reseau.uquebec.ca"
+    },
+    {
+      "id": "e4a926b1-41d1-4976-b079-1578d470e15d",
+      "name": "Taras Shevchenko National University of Kyiv",
+      "from": "univ.kiev.ua",
+      "to": "knu.ua"
+    },
+    {
+      "id": "e509ca7b-ee6a-4d36-89c9-8add71ce753d",
+      "name": "Fachhochschule Rosenheim, Hochschule für Technik und Wirtschaft",
+      "from": "fh-rosenheim.de",
+      "to": "th-rosenheim.de"
+    },
+    {
+      "id": "e6f839dc-0e48-486e-9bd1-677d91f3a1d0",
+      "name": "Faculté Polytechnique de Mons",
+      "from": "fpms.ac.be",
+      "to": "portail.umons.ac.be"
+    },
+    {
+      "id": "e7ca50e6-8965-4962-9ed8-3efa41ccc5cc",
+      "name": "American University in Bulgaria",
+      "from": "aubg.bg",
+      "to": "aubg.edu"
+    },
+    {
+      "id": "e7ed5a4d-e378-453b-bbcc-89da12b67177",
+      "name": "Rheinische Fachhochschule Köln",
+      "from": "rfh-koeln.de",
+      "to": "rh-koeln.de"
+    },
+    {
+      "id": "e7dccaaf-71fd-489a-87fb-ec75081ee980",
+      "name": "CUNY Brooklyn College",
+      "from": "brooklyn.cuny.edu",
+      "to": "brooklyn.edu"
+    },
+    {
+      "id": "e7ec98f6-d70e-4ce0-8fb2-03a28ab43835",
+      "name": "Lahti Polytechnic",
+      "from": "lamk.fi",
+      "to": "lab.fi"
+    },
+    {
+      "id": "e83606e9-8e87-435c-af90-4c87d56f57b9",
+      "name": "Uniformed Services University of the Health Sciences",
+      "from": "usuhs.mil",
+      "to": "usuhs.edu"
+    },
+    {
+      "id": "e83c9f88-3d69-4001-a6e5-1503c55a0048",
+      "name": "Cork Institute of Technology",
+      "from": "cit.ie",
+      "to": "mtu.ie"
+    },
+    {
+      "id": "e9617788-0b9a-4cac-ae5b-6e3b917344ae",
+      "name": "Kiev School Of Economics",
+      "from": "kse.org.ua",
+      "to": "kse.ua"
+    },
+    {
+      "id": "e9552b9b-7970-4b83-a89f-53f7361bb4b3",
+      "name": "Universidade Ibirapuera",
+      "from": "unib.br",
+      "to": "ibirapuera.br"
+    },
+    {
+      "id": "ea5c4b07-0c13-4aed-abc0-42a284fcef90",
+      "name": "Télé-université, Université du Québec",
+      "from": "teluq.uquebec.ca",
+      "to": "teluq.ca"
+    },
+    {
+      "id": "ea919a0f-4b7d-4557-a58f-6c5826a26598",
+      "name": "Presidency University",
+      "from": "presidency.edu.bd",
+      "to": "pu.edu.bd"
+    },
+    {
+      "id": "eafe8129-1572-4e33-87b2-fb81c5ff1eeb",
+      "name": "Europäische Fachhochschule",
+      "from": "eufh.de",
+      "to": "cbs.de"
+    },
+    {
+      "id": "eb462018-d6e2-43b1-a4fd-d2d023ba8a65",
+      "name": "Fern-Fachhochschule Hamburg",
+      "from": "fern-fh.de",
+      "to": "hfh-fernstudium.de"
+    },
+    {
+      "id": "ec8de639-fc48-4e81-bfec-90078f32f51c",
+      "name": "Universidad International SEK, Santiago",
+      "from": "uisek.cl",
+      "to": "usek.cl"
+    },
+    {
+      "id": "ed188983-f4ed-484a-8b85-c8edc15744a3",
+      "name": "Université Sorbonne-Nouvelle (Paris III)",
+      "from": "univ-paris3.fr",
+      "to": "sorbonne-nouvelle.fr"
+    },
+    {
+      "id": "ed1fc99a-79f4-41e2-9cc4-0c13da7aef46",
+      "name": "Gujarat University Ahmedabad",
+      "from": "gujaratuniversity.org.in",
+      "to": "gujaratuniversity.ac.in"
+    },
+    {
+      "id": "ee44f74b-153b-48c9-8393-73d0be426690",
+      "name": "Crescent University",
+      "from": "crescent-university.edu.ng",
+      "to": "cuab.edu.ng"
+    },
+    {
+      "id": "eede3b8f-6bc4-4c84-b03c-d64e1a3b01d7",
+      "name": "Universität Duisburg-Essen",
+      "from": "uni-duisburg-essen.de",
+      "to": "uni-due.de"
+    },
+    {
+      "id": "ef645b03-04a1-4fad-84b7-b4760e207782",
+      "name": "Engineering College of Aarhus",
+      "from": "iha.dk",
+      "to": "ingenioer.au.dk"
+    },
+    {
+      "id": "ef8604a1-435b-4a52-bd3c-537ca48d4417",
+      "name": "Hochschule für Technik und Wirtschaft des Saarlandes",
+      "from": "htw-saarland.de",
+      "to": "htwsaar.de"
+    },
+    {
+      "id": "ef8d5d8a-8a0f-46c4-b577-45c9ec46548e",
+      "name": "Universidade Metodista de Angola",
+      "from": "uma.co.ao",
+      "to": "universidademetodista.ao"
+    },
+    {
+      "id": "efaf2551-e4dd-4f5a-97b3-f84772982b30",
+      "name": "Jefferson State Community College",
+      "from": "jeffstateonline.com",
+      "to": "jeffersonstate.edu"
+    },
+    {
+      "id": "efd06b14-e9bf-4bcc-8476-f16eaafe64e6",
+      "name": "Faculdade Dom Bosco",
+      "from": "faculdadedombosco.edu.br",
+      "to": "faculdadedombosco.net"
+    },
+    {
+      "id": "f070b84d-6c99-4b21-be9f-ea4c1a93ab8f",
+      "name": "FHS St.Gallen",
+      "from": "fhsg.ch",
+      "to": "ost.ch"
+    },
+    {
+      "id": "f088a076-7aa6-48e5-8054-297e4c141920",
+      "name": "University of Sudbury",
+      "from": "usudbury.com",
+      "to": "usudbury.ca"
+    },
+    {
+      "id": "f0b8a35c-59a1-4bd6-a6ea-50b37ea2bef8",
+      "name": "Sewanee, University of the South",
+      "from": "sewanee.edu",
+      "to": "new.sewanee.edu"
+    },
+    {
+      "id": "f0dd229d-51cc-4bee-aaba-43bc7b6dc636",
+      "name": "University of Richmond",
+      "from": "urich.edu",
+      "to": "richmond.edu"
+    },
+    {
+      "id": "f29d869b-535a-42ac-825d-4ffd0fef86c1",
+      "name": "Hochschule Ulm, Hochschule für Angewandte Wissenschaft",
+      "from": "hs-ulm.de",
+      "to": "thu.de"
+    },
+    {
+      "id": "f39522a0-4adb-43ef-8c87-26dad4b52b2e",
+      "name": "École des Hautes Études Commerciales (HEC Business School)",
+      "from": "hec.fr",
+      "to": "hec.edu"
+    },
+    {
+      "id": "f3d4745d-618c-46ca-9be5-95d476867552",
+      "name": "Medizinische Universität Wien",
+      "from": "meduniwien.at",
+      "to": "meduniwien.ac.at"
+    },
+    {
+      "id": "f3d8759d-1893-46db-a841-b641d37ba3b9",
+      "name": "Universidad de Flores - Buenos Aires",
+      "from": "uflo.edu.ar",
+      "to": "uflouniversidad.edu.ar"
+    },
+    {
+      "id": "f43667f6-9f7c-4e47-8481-f5d40570451b",
+      "name": "Instituto Politécnico da Guarda",
+      "from": "ipg.pt",
+      "to": "politecnicoguarda.pt"
+    },
+    {
+      "id": "f4f15964-3d28-407b-9c65-cb505d31d913",
+      "name": "University of Abertay Dundee",
+      "from": "abertay.ac.uk",
+      "to": "app-abertay-web-prod-hghnbjcqabcvfjhm.uksouth-01.azurewebsites.net"
+    },
+    {
+      "id": "f56f10a1-e7a2-4e2c-9461-2240d67338ae",
+      "name": "CIC - Canadian International College",
+      "from": "cic-cairo.com",
+      "to": "cic-cairo.edu.eg"
+    },
+    {
+      "id": "f6490ac3-0ff2-41b1-8bf2-f46922e59af6",
+      "name": "Chungwoon University",
+      "from": "chungwoon.ac.kr",
+      "to": "home.chungwoon.ac.kr"
+    },
+    {
+      "id": "f7fbf9e0-685a-4c4e-9e26-cd800f172245",
+      "name": "Chernivci National University",
+      "from": "chnu.cv.ua",
+      "to": "chnu.edu.ua"
+    },
+    {
+      "id": "f85872c6-cbd7-4a83-a2ab-b6d4c9e88b97",
+      "name": "State Film, Television and Theatre Higher School Leon Schiller in Lodz",
+      "from": "filmowka.lodz.pl",
+      "to": "filmschool.lodz.pl"
+    },
+    {
+      "id": "f8a0fae0-82f5-4053-bd6d-546e093fa095",
+      "name": "Sibelius Academy",
+      "from": "siba.fi",
+      "to": "uniarts.fi"
+    },
+    {
+      "id": "f8b13aec-03cb-4de1-8710-b2152c7113af",
+      "name": "Foundation University",
+      "from": "foundationuniversity.com",
+      "to": "hugedomains.com"
+    },
+    {
+      "id": "f9690693-b4e1-424d-8617-13b71e7dc385",
+      "name": "Busan University of Foreign Studies",
+      "from": "bufs.ac.kr",
+      "to": "landing.bufs.ac.kr"
+    },
+    {
+      "id": "fae153f2-46c5-47ff-8fd2-706e801c7105",
+      "name": "Douglas College",
+      "from": "douglas.bc.ca",
+      "to": "douglascollege.ca"
+    },
+    {
+      "id": "fbbac344-b077-4317-a259-5d1839864842",
+      "name": "Universitas Trunojoyo Madura",
+      "from": "trunojoyo.ac.id",
+      "to": "www2.trunojoyo.ac.id"
+    },
+    {
+      "id": "fcd6c9f0-9f85-4758-9870-40967afdb784",
+      "name": "University of Liverpool",
+      "from": "liv.ac.uk",
+      "to": "liverpool.ac.uk"
+    },
+    {
+      "id": "fd537f17-1c4c-40ad-9301-1f652a9300cc",
+      "name": "MacCormac College",
+      "from": "maccormac.edu",
+      "to": "generations.edu"
+    },
+    {
+      "id": "fdfcdd70-6f83-47ea-89ef-07b3fcbf284e",
+      "name": "BiTS - Business and Information Technology School gGmbH",
+      "from": "bits-iserlohn.de",
+      "to": "ue-germany.com"
+    },
+    {
+      "id": "fe4d0231-76f2-4dd5-9181-c0a8e91da035",
+      "name": "Okanagan University College",
+      "from": "okanagan.bc.ca",
+      "to": "okanagancollege.ca"
+    },
+    {
+      "id": "ff0677ea-ee84-4788-ac10-74c28f8ce371",
+      "name": "Precarpathian University",
+      "from": "pu.if.ua",
+      "to": "multisite.cnu.edu.ua"
+    },
+    {
+      "id": "ff0fe0eb-8562-4712-a5af-2217b8fe3d97",
+      "name": "Medical University Plovdiv",
+      "from": "meduniversity-plovdiv.bg",
+      "to": "mu-plovdiv.bg"
+    },
+    {
+      "id": "ff679e6b-534c-4a96-ad4c-29d717ac5284",
+      "name": "Nalanda Open University",
+      "from": "nalandaopenuniversity.info",
+      "to": "resumebuild.com"
+    },
+    {
+      "id": "ff56504c-cd4f-4ea8-ae75-44acd6ef6ab5",
+      "name": "Warsaw School of Information Technology",
+      "from": "wsisiz.edu.pl",
+      "to": "wit.edu.pl"
+    },
+    {
+      "id": "ff98ef94-e1e0-4eeb-a2eb-f5413402ac50",
+      "name": "Pontifícia Universidade Católica do Rio Grande do Sul",
+      "from": "pucrs.br",
+      "to": "portal.pucrs.br"
+    },
+    {
+      "id": "fffd5145-7ad2-4d4d-a525-a14d9a6fcd7b",
+      "name": "Odense University",
+      "from": "ou.dk",
+      "to": "sdu.dk"
+    },
+    {
+      "id": "fffdc657-6a1d-4bdf-a4f7-5393bfbd538d",
+      "name": "Jacksonville College-Main Campus",
+      "from": "jacksonville-college.edu",
+      "to": "jacksonvillecollege.edu"
+    }
+  ]
+}
