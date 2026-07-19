@@ -13,6 +13,9 @@ interface AISearchBody {
   categoryId?: string | null
   level?: string | null
   maxBudget?: number | null
+  // Optional search-mode filter ('academic' | 'skills'). Omitted/null = no filter,
+  // so all existing callers behave exactly as before.
+  institutionMode?: 'academic' | 'skills' | null
 }
 
 // The LLM returns natural phrasing ("USA", "UK") or a subject synonym ("Computer
@@ -55,6 +58,25 @@ const CATEGORY_SYNONYMS: Record<string, string> = {
   aviation: 'Aviation & Maritime',
   design: 'Architecture & Design',
   'graphic design': 'Architecture & Design',
+}
+
+// Search-mode mapping against the LIVE institution_types seed values (verified
+// against the production DB). Types not listed in either mode (e.g. Language
+// School, Online Institution, Research Institute) only appear when no mode is
+// selected - to reclassify a type, edit these lists, never the seed data.
+const INSTITUTION_MODE_TYPES: Record<'academic' | 'skills', string[]> = {
+  academic: ['University', 'College', 'Community College'],
+  skills: ['TVET Institute', 'Polytechnic', 'Vocational School', 'Institute of Technology'],
+}
+
+async function resolveInstitutionTypeIds(mode: 'academic' | 'skills'): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('institution_types')
+    .select('id, name')
+    .in('name', INSTITUTION_MODE_TYPES[mode])
+    .eq('is_active', true)
+  if (error) throw error
+  return (data || []).map((t: any) => t.id)
 }
 
 interface ResolveResult {
@@ -212,6 +234,22 @@ router.post('/', async (req, res) => {
     const maxBudget = body.maxBudget ?? intent.maxBudget
     const keywords = intent.keywords.length > 0 ? intent.keywords : query.split(/\s+/).filter(Boolean)
 
+    // Optional institution-mode filter. Anything other than 'academic'/'skills'
+    // is treated as absent (no filter), keeping older clients unaffected.
+    const institutionMode =
+      body.institutionMode === 'academic' || body.institutionMode === 'skills' ? body.institutionMode : null
+    let modeTypeIds: string[] = []
+    if (institutionMode) {
+      modeTypeIds = await resolveInstitutionTypeIds(institutionMode)
+      if (modeTypeIds.length === 0) {
+        // Fail open with a loud log: an empty mapping would otherwise silently
+        // return zero results, which looks like broken search to the user.
+        console.error(
+          `institutionMode "${institutionMode}" matched 0 institution_types rows - check INSTITUTION_MODE_TYPES against the live seed`
+        )
+      }
+    }
+
     const PROGRAM_SELECT =
       '*, institution:institutions!inner(id, name, city, country:countries(name, flag_emoji)), category:program_categories(id, name, color, icon)'
 
@@ -221,6 +259,7 @@ router.post('/', async (req, res) => {
     if (countryId) programsQuery = programsQuery.eq('institution.country_id', countryId)
     if (level) programsQuery = programsQuery.eq('level', level)
     if (maxBudget != null) programsQuery = programsQuery.lte('tuition_fees', maxBudget)
+    if (modeTypeIds.length > 0) programsQuery = programsQuery.in('institution.type_id', modeTypeIds)
 
     const { data: programsData, count: totalPrograms, error: programsError } = await programsQuery.limit(50)
     if (programsError) throw programsError
@@ -231,6 +270,7 @@ router.post('/', async (req, res) => {
       .eq('is_active', true)
 
     if (countryId) institutionsQuery = institutionsQuery.eq('country_id', countryId)
+    if (modeTypeIds.length > 0) institutionsQuery = institutionsQuery.in('type_id', modeTypeIds)
 
     const { data: institutionsData, count: totalInstitutions, error: institutionsError } = await institutionsQuery.limit(50)
     if (institutionsError) throw institutionsError
@@ -336,6 +376,7 @@ router.post('/', async (req, res) => {
             category: !!categoryId,
             level: !!level,
             budget: maxBudget != null,
+            mode: institutionMode,
           },
         },
         programs: rankedPrograms,
