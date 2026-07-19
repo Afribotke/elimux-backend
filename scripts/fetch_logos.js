@@ -33,6 +33,18 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Scraping ~9000 arbitrary third-party servers hits occasional socket
+// teardown races in Node's fetch/undici (e.g. "other side closed" mid HTTP/2
+// stream) that surface as a raw 'error' event outside any try/catch and
+// crash the process by default. One flaky remote site must not kill an
+// hours-long run — log and keep going.
+process.on('uncaughtException', (err) => {
+  console.error(`\n[uncaught exception — continuing] ${err && err.message ? err.message : err}`);
+});
+process.on('unhandledRejection', (err) => {
+  console.error(`\n[unhandled rejection — continuing] ${err && err.message ? err.message : err}`);
+});
+
 const domainMismatches = [];
 
 function normalizeHost(u) {
