@@ -211,6 +211,40 @@ router.get('/slots/:name', async (req: Request, res: Response): Promise<void> =>
     }
 });
 
+// GET /api/ads/homepage - Active campaigns for the homepage ads section (PUBLIC)
+router.get('/homepage', async (_req: Request, res: Response) => {
+    try {
+        const { data, error } = await supabaseAdmin
+            .from('ad_campaigns')
+            .select('id, headline, description, chips, cta_label, target_url, vertical, featured, advertisers(organization_name, logo_url)')
+            .eq('status', 'active')
+            .order('featured', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching homepage ads:', error);
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+
+        const ads = (data || []).map((row: any) => ({
+            id: row.id,
+            name: row.advertisers?.organization_name || row.headline,
+            logo_url: row.advertisers?.logo_url || null,
+            title: row.headline,
+            description: row.description,
+            chips: Array.isArray(row.chips) ? row.chips : [],
+            cta_label: row.cta_label || 'Learn more',
+            cta_url: `/api/ads/click?ad_id=${row.id}&redirect=true`,
+            vertical: row.vertical,
+            featured: row.featured === true,
+        }));
+
+        return res.json({ data: ads });
+    } catch (error) {
+        console.error('Unexpected error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 function generateSessionId(): string {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
