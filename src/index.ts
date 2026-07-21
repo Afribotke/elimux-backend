@@ -25,6 +25,7 @@ import advertiserRouter from './routes/advertiser'
 import advertiserPaymentsRouter from './routes/advertiser-payments'
 import campaignsRouter from './routes/campaigns'
 import adsRouter from './routes/ads'
+import configRouter from './routes/config'
 import institutionPortal from './routes/institution-portal'
 
 const app = express()
@@ -64,6 +65,7 @@ app.use('/api/advertiser', advertiserRouter)
 app.use('/api/advertiser/payments', advertiserPaymentsRouter)
 app.use('/api/campaigns', campaignsRouter)
 app.use('/api/ads', adsRouter)
+app.use('/api/config', configRouter)
 app.use('/api/institution-portal', institutionPortal)
 
 app.get('/', (req, res) => {
