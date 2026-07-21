@@ -4,7 +4,17 @@ import { supabase } from '../lib/supabase';
 const router = Router();
 
 // Whitelisted public display settings — never expose the whole table
-const PUBLIC_KEYS = ['ad_placeholder_price_kes', 'show_public_impressions'] as const;
+const PUBLIC_KEYS = [
+  'ad_placeholder_price_kes',
+  'ad_placeholder_price_usd',
+  'show_public_impressions',
+  'ad_tier_basic_kes',
+  'ad_tier_basic_usd',
+  'ad_tier_standard_kes',
+  'ad_tier_standard_usd',
+  'ad_tier_premium_kes',
+  'ad_tier_premium_usd',
+] as const;
 
 // GET /api/config/public - public display config (prices, display flags)
 router.get('/public', async (_req, res) => {
