@@ -114,13 +114,24 @@ router.get('/click', async (req: Request, res: Response): Promise<void> => {
         const sessionId = req.headers['x-session-id'] as string || generateSessionId();
         const ipAddress = req.ip || req.socket.remoteAddress || '';
 
+        // ELIMUX 22: Atomically deduct per-click cost
+        const { data: costData, error: costError } = await supabaseAdmin.rpc('deduct_click_cost', {
+            p_campaign_id: ad_id as string,
+            p_click_type: 'click'
+        });
+        const costDeducted = costData || 0;
+        if (costError) console.error('Click billing error:', costError);
+
         // campaign_clicks, not ad_clicks - ad_clicks.ad_id FKs to
         // sponsor_ads(id) and is owned by the separate sponsor-ads feature.
         // See 20_campaign_clicks.sql.
         await supabaseAdmin.from('campaign_clicks').insert({
             ad_id: ad_id as string,
+            campaign_id: ad_id as string,
             user_device_id: sessionId,
-            ip_address: ipAddress
+            ip_address: ipAddress,
+            cost_deducted: costDeducted,
+            click_type: 'click'
         });
 
         // No billing_model/cpc_rate columns in the actual schema - campaigns
@@ -242,6 +253,101 @@ router.get('/homepage', async (_req: Request, res: Response) => {
     } catch (error) {
         console.error('Unexpected error:', error);
         return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ELIMUX 22: POST /api/ads/impression - CPM impression tracking (PUBLIC)
+router.post('/impression', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { ad_id } = req.query;
+        if (!ad_id) {
+            res.status(400).json({ error: 'Missing ad_id' });
+            return;
+        }
+        const campaignId = ad_id as string;
+        const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+        const userDeviceId = req.query.user_device_id as string || `anon_${ipAddress}`;
+
+        const { data: costData } = await supabaseAdmin.rpc('deduct_click_cost', {
+            p_campaign_id: campaignId, p_click_type: 'impression'
+        });
+        const costDeducted = costData || 0;
+
+        await supabaseAdmin.from('campaign_clicks').insert({
+            ad_id: campaignId, campaign_id: campaignId,
+            user_device_id: userDeviceId, ip_address: ipAddress,
+            cost_deducted: costDeducted, click_type: 'impression'
+        });
+
+        res.json({ success: true, billed: costDeducted > 0, cost: costDeducted });
+    } catch (error: any) {
+        console.error('Track impression error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ELIMUX 22: POST /api/ads/conversion - CPA conversion tracking (PUBLIC)
+router.post('/conversion', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { ad_id } = req.query;
+        if (!ad_id) {
+            res.status(400).json({ error: 'Missing ad_id' });
+            return;
+        }
+        const campaignId = ad_id as string;
+        const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+        const userDeviceId = req.query.user_device_id as string || `anon_${ipAddress}`;
+
+        const { data: costData } = await supabaseAdmin.rpc('deduct_click_cost', {
+            p_campaign_id: campaignId, p_click_type: 'conversion'
+        });
+        const costDeducted = costData || 0;
+
+        await supabaseAdmin.from('campaign_clicks').insert({
+            ad_id: campaignId, campaign_id: campaignId,
+            user_device_id: userDeviceId, ip_address: ipAddress,
+            cost_deducted: costDeducted, click_type: 'conversion'
+        });
+
+        res.json({ success: true, billed: costDeducted > 0, cost: costDeducted });
+    } catch (error: any) {
+        console.error('Track conversion error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ELIMUX 22: GET /api/ads/stats - Campaign click stats with cost data
+router.get('/stats', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { campaign_id } = req.query;
+        if (!campaign_id) {
+            res.status(400).json({ error: 'Missing campaign_id' });
+            return;
+        }
+
+        const { data: clicks } = await supabaseAdmin
+            .from('campaign_clicks')
+            .select('click_type, cost_deducted')
+            .eq('campaign_id', campaign_id);
+
+        const stats = { total_clicks: 0, total_impressions: 0, total_conversions: 0, total_cost: 0 };
+        (clicks || []).forEach((row: any) => {
+            if (row.click_type === 'click') stats.total_clicks++;
+            if (row.click_type === 'impression') stats.total_impressions++;
+            if (row.click_type === 'conversion') stats.total_conversions++;
+            stats.total_cost += parseFloat(row.cost_deducted || 0);
+        });
+
+        const { data: campaign } = await supabaseAdmin
+            .from('ad_campaigns')
+            .select('total_spend, platform_fee, partner_commission, actual_clicks, actual_impressions, actual_conversions')
+            .eq('id', campaign_id)
+            .single();
+
+        res.json({ success: true, data: { ...stats, campaign_totals: campaign || null } });
+    } catch (error: any) {
+        console.error('Stats error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

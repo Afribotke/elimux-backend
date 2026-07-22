@@ -17,102 +17,128 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 
 const VALID_PLACEMENTS: CampaignPlacement[] = ['ribbon', 'homepage_hero', 'search_inline', 'institution_sidebar', 'scholarship_banner'];
 
-// POST /api/campaigns - Create new campaign
+// POST /api/campaigns - Create new campaign (ELIMUX 22: per-click billing mode)
 router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Response): Promise<void> => {
     try {
-        const body: CreateCampaignRequest = req.body;
+        const {
+            title, description, billing_model = 'cpc', budget, daily_budget, total_budget,
+            duration_days, placement, start_date, end_date, image_url, target_url
+        } = req.body;
 
-        // title/image_url/target_url/placement/budget/duration_days are all
-        // NOT NULL with no default on ad_campaigns - all six are mandatory.
-        if (!body.title || !body.image_url || !body.target_url || !body.placement || !body.budget || !body.duration_days) {
-            res.status(400).json({
-                error: 'Missing required fields: title, image_url, target_url, placement, budget, duration_days'
-            });
+        if (!title || !budget || !duration_days || !placement) {
+            res.status(400).json({ error: 'Missing required fields: title, budget, duration_days, placement' });
+            return;
+        }
+        if (!['cpc', 'cpm', 'cpa'].includes(billing_model)) {
+            res.status(400).json({ error: 'Invalid billing_model. Use cpc, cpm, or cpa' });
             return;
         }
 
-        if (!VALID_PLACEMENTS.includes(body.placement)) {
-            res.status(400).json({ error: `Invalid placement. Must be one of: ${VALID_PLACEMENTS.join(', ')}` });
+        // Get pricing settings from key-value platform_settings
+        const { data: pricingRows, error: pricingError } = await supabaseAdmin
+            .from('platform_settings')
+            .select('key, value')
+            .in('key', ['ad_min_daily_budget', 'ad_min_campaign_budget', 'ad_max_daily_budget', 'ad_billing_enabled']);
+        if (pricingError) throw pricingError;
+
+        const pricing: Record<string, string> = {};
+        (pricingRows || []).forEach((row: any) => { pricing[row.key] = row.value; });
+
+        const minDaily = parseFloat(pricing['ad_min_daily_budget'] || '5');
+        const minCampaign = parseFloat(pricing['ad_min_campaign_budget'] || '50');
+        const maxDaily = parseFloat(pricing['ad_max_daily_budget'] || '10000');
+        const billingEnabled = pricing['ad_billing_enabled'] === 'true';
+
+        if (daily_budget && parseFloat(daily_budget) < minDaily) {
+            res.status(400).json({ error: `Daily budget must be at least KES ${minDaily}` });
+            return;
+        }
+        if (daily_budget && parseFloat(daily_budget) > maxDaily) {
+            res.status(400).json({ error: `Daily budget cannot exceed KES ${maxDaily}` });
+            return;
+        }
+        if (total_budget && parseFloat(total_budget) < minCampaign) {
+            res.status(400).json({ error: `Total budget must be at least KES ${minCampaign}` });
             return;
         }
 
-        // ad_campaigns_duration_days_check - verified directly against the
-        // live constraint (7-30 accepted, 6 and 31 rejected).
-        if (!Number.isInteger(body.duration_days) || body.duration_days < 7 || body.duration_days > 30) {
-            res.status(400).json({ error: 'duration_days must be a whole number between 7 and 30' });
-            return;
-        }
-
-        const { data: advertiser } = await supabaseAdmin
+        const { data: advertiser, error: advError } = await supabaseAdmin
             .from('advertisers')
-            .select('balance, status')
+            .select('id, balance, status, total_spend')
             .eq('id', req.advertiserId)
             .single();
-
-        if (!advertiser || advertiser.status !== 'active') {
-            res.status(403).json({ error: 'Advertiser not approved' });
+        if (advError || !advertiser) {
+            res.status(404).json({ error: 'Advertiser not found' });
+            return;
+        }
+        if (advertiser.status !== 'active') {
+            res.status(400).json({ error: 'Advertiser account is not active' });
             return;
         }
 
-        if (body.budget > advertiser.balance) {
-            res.status(400).json({
-                error: 'Insufficient balance',
-                balance: advertiser.balance,
-                required: body.budget
-            });
-            return;
-        }
+        // ELIMUX 22: Per-click billing - no upfront deduction
+        let status = 'pending';
+        let balanceDeducted = 0;
 
-        const insertData: any = {
-            advertiser_id: req.advertiserId,
-            title: body.title,
-            description: body.description,
-            headline: body.headline,
-            image_url: body.image_url,
-            image_dimensions: body.image_dimensions,
-            target_url: body.target_url,
-            placement: body.placement,
-            budget: body.budget,
-            duration_days: body.duration_days,
-            auto_renew: body.auto_renew || false,
-            status: 'draft',
-            impressions: 0,
-            clicks: 0
-        };
-
-        if (body.start_date && body.end_date) {
-            insertData.start_date = body.start_date;
-            insertData.end_date = body.end_date;
+        if (!billingEnabled) {
+            // Legacy flat-budget mode: deduct upfront
+            if (advertiser.balance < parseFloat(budget)) {
+                res.status(400).json({ error: 'Insufficient balance for flat-budget campaign' });
+                return;
+            }
+            await supabaseAdmin.from('advertisers').update({ balance: advertiser.balance - parseFloat(budget) }).eq('id', req.advertiserId);
+            balanceDeducted = parseFloat(budget);
+            status = 'active';
         }
 
         const { data: campaign, error } = await supabaseAdmin
             .from('ad_campaigns')
-            .insert(insertData)
+            .insert({
+                advertiser_id: req.advertiserId,
+                title, description: description || '', billing_model,
+                budget: parseFloat(budget),
+                daily_budget: daily_budget ? parseFloat(daily_budget) : null,
+                total_budget: total_budget ? parseFloat(total_budget) : null,
+                duration_days: parseInt(duration_days),
+                placement,
+                start_date: start_date || new Date().toISOString(),
+                end_date: end_date || new Date(Date.now() + parseInt(duration_days) * 86400000).toISOString(),
+                image_url: image_url || '',
+                target_url: target_url || '',
+                status,
+                created_at: new Date().toISOString()
+            })
             .select()
             .single();
 
         if (error) {
-            console.error('Create campaign error:', error);
-            res.status(500).json({ error: 'Failed to create campaign', details: error.message });
-            return;
+            if (!billingEnabled && balanceDeducted > 0) {
+                await supabaseAdmin.from('advertisers').update({ balance: advertiser.balance }).eq('id', req.advertiserId);
+            }
+            throw error;
         }
 
-        // Reserve the budget against the wallet now that the campaign
-        // actually exists - the earlier check only confirmed it *could*
-        // afford it, it didn't deduct anything.
-        await supabaseAdmin
-            .from('advertisers')
-            .update({ balance: advertiser.balance - body.budget })
-            .eq('id', req.advertiserId);
+        const { data: campaignWithCost } = await supabaseAdmin
+            .from('ad_campaigns')
+            .select('cost_per_unit, discount_applied_percent')
+            .eq('id', campaign.id)
+            .single();
 
         res.status(201).json({
             success: true,
-            message: 'Campaign created successfully',
-            data: campaign
+            message: billingEnabled
+                ? 'Campaign created. Pending admin approval. Pay-per-click billing: no upfront charge.'
+                : 'Campaign created and activated (flat budget mode).',
+            data: {
+                ...campaign,
+                cost_per_unit: campaignWithCost?.cost_per_unit,
+                discount_applied_percent: campaignWithCost?.discount_applied_percent,
+                billing_mode: billingEnabled ? 'per_click' : 'flat_budget'
+            }
         });
     } catch (error: any) {
         console.error('Create campaign error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: error.message || 'Failed to create campaign' });
     }
 });
 
