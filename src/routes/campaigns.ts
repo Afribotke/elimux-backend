@@ -64,7 +64,7 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
 
         const { data: advertiser, error: advError } = await supabaseAdmin
             .from('advertisers')
-            .select('id, balance, status, total_spend')
+            .select('id, balance, status, total_spent')
             .eq('id', req.advertiserId)
             .single();
         if (advError || !advertiser) {
