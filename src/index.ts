@@ -1,4 +1,5 @@
 import dotenv from 'dotenv'
+dotenv.config({ path: '.env.local' })
 dotenv.config()
 
 import express from 'express'
@@ -29,6 +30,11 @@ import configRouter from './routes/config'
 import adminSettingsRouter from './routes/admin-settings'
 import adminPaymentsRouter from './routes/admin-payments'
 import institutionPortal from './routes/institution-portal'
+import partnersRouter from './routes/partners'
+import referralsRouter from './routes/referrals'
+import selfServeAdsRouter from './routes/self-serve-ads'
+import authRouter from './routes/auth'
+import searchRouter from './routes/search'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -71,6 +77,11 @@ app.use('/api/config', configRouter)
 app.use('/api/admin/settings', adminSettingsRouter)
 app.use('/api/admin/payments', adminPaymentsRouter)
 app.use('/api/institution-portal', institutionPortal)
+app.use('/api/partners', partnersRouter)
+app.use('/api/referrals', referralsRouter)
+app.use('/api/self-serve-ads', selfServeAdsRouter)
+app.use('/api/auth', authRouter)
+app.use('/api/search', searchRouter)
 
 app.get('/', (req, res) => {
   res.json({
