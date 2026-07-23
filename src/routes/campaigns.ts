@@ -77,7 +77,7 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
         }
 
         // ELIMUX 22: Per-click billing - no upfront deduction
-        let status = 'pending';
+        let status = 'pending_review';
         let balanceDeducted = 0;
 
         if (!billingEnabled) {
