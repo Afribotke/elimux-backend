@@ -9,14 +9,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return openai;
+}
 
 // Generate embedding
 router.post("/embed", async (req, res) => {
   try {
     const { text } = req.body;
 
-    const response = await openai.embeddings.create({
+    const response = await getOpenAI().embeddings.create({
       model: "text-embedding-3-small",
       input: text,
     });
@@ -33,7 +37,7 @@ router.post("/semantic", async (req, res) => {
     const { query, filters } = req.body;
 
     // Generate embedding for query
-    const embedResponse = await openai.embeddings.create({
+    const embedResponse = await getOpenAI().embeddings.create({
       model: "text-embedding-3-small",
       input: query,
     });
@@ -130,7 +134,7 @@ router.post("/hybrid", async (req, res) => {
     const { query, filters } = req.body;
 
     // Get vector results
-    const embedResponse = await openai.embeddings.create({
+    const embedResponse = await getOpenAI().embeddings.create({
       model: "text-embedding-3-small",
       input: query,
     });
