@@ -28,7 +28,8 @@ export class AnthropicProvider implements AIProvider {
     const response = await client.messages.create({
       model: 'claude-opus-4-8', // matches the model already used in lib/ai/providers/anthropic.ts
       max_tokens: options.maxTokens ?? 2000,
-      temperature: options.temperature ?? 0.7,
+      // claude-opus-4-8 rejects `temperature` outright ("deprecated for this
+      // model") - lib/ai/providers/anthropic.ts never sends it either.
       ...(systemMessage ? { system: systemMessage } : {}),
       messages: conversation,
     })
