@@ -34,7 +34,7 @@ export class OpenAIProvider implements AIProvider {
     }
   }
 
-  async embeddings(text: string) {
+  async embeddings(text: string): Promise<{ embedding: number[]; usage?: any }> {
     // Same model routes/search.ts already uses for semantic search - keeping
     // this consistent means embeddings produced via either path are
     // comparable/interchangeable in the vector index.
@@ -43,7 +43,7 @@ export class OpenAIProvider implements AIProvider {
       model: 'text-embedding-3-small',
       input: text,
     })
-    return response.data[0].embedding
+    return { embedding: response.data[0].embedding, usage: response.usage }
   }
 
   getCostEstimate(inputTokens: number, outputTokens: number): number {

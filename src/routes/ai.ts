@@ -43,16 +43,16 @@ router.post('/chat', adminMiddleware, async (req, res) => {
   }
 })
 
-// POST /api/ai/embed - { text: string, provider?: providerName }
+// POST /api/ai/embed - { text: string } - always OpenAI, no provider override (see AIClient.embeddings)
 router.post('/embed', adminMiddleware, async (req, res) => {
   try {
-    const { text, provider } = req.body
+    const { text } = req.body
 
     if (!text || typeof text !== 'string') {
       return res.status(400).json({ error: 'text is required' })
     }
 
-    const embedding = await aiClient.embeddings(text, provider)
+    const embedding = await aiClient.embeddings(text)
     res.json({ embedding })
   } catch (error: any) {
     console.error('AI embed error:', error)

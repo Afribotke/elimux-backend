@@ -37,16 +37,11 @@ export class DeepSeekProvider implements AIProvider {
     }
   }
 
-  async embeddings(text: string) {
-    // DeepSeek does not currently publish an embeddings endpoint - this call
-    // is expected to fail and the AIClient falls back to the next provider
-    // (OpenAI, per AI_MODE ordering) rather than treating it as fatal.
-    const client = this.getClient()
-    const response = await client.embeddings.create({
-      model: 'deepseek-embedding',
-      input: text,
-    })
-    return response.data[0].embedding
+  async embeddings(_text: string): Promise<{ embedding: number[]; usage?: any }> {
+    // Confirmed live 2026-07-24: `deepseek-embedding` returns a real 404 -
+    // DeepSeek does not publish an embeddings endpoint. Embeddings are
+    // OpenAI-only (see AIClient.embeddings) - this always fails over.
+    throw new Error('DeepSeek does not support embeddings')
   }
 
   getCostEstimate(inputTokens: number, outputTokens: number): number {

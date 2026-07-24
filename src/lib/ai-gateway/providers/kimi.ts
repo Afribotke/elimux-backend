@@ -40,9 +40,9 @@ export class KimiProvider implements AIProvider {
     }
   }
 
-  async embeddings(_text: string): Promise<number[]> {
-    // Kimi/Moonshot does not publish an embeddings endpoint - always fails
-    // over to the next provider in the chain.
+  async embeddings(_text: string): Promise<{ embedding: number[]; usage?: any }> {
+    // Kimi/Moonshot does not publish an embeddings endpoint. Embeddings are
+    // OpenAI-only (see AIClient.embeddings).
     throw new Error('Kimi does not support embeddings')
   }
 

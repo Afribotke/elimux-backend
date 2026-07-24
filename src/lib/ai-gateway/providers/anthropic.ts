@@ -44,9 +44,9 @@ export class AnthropicProvider implements AIProvider {
     }
   }
 
-  async embeddings(_text: string): Promise<number[]> {
-    // Anthropic does not offer an embeddings API - always fails over to the
-    // next provider (OpenAI) in the chain.
+  async embeddings(_text: string): Promise<{ embedding: number[]; usage?: any }> {
+    // Anthropic does not offer an embeddings API. Embeddings are OpenAI-only
+    // (see AIClient.embeddings).
     throw new Error('Anthropic does not support embeddings')
   }
 

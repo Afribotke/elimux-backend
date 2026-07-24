@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto'
+import { supabase } from '../supabase'
 import { DeepSeekProvider } from './providers/deepseek'
 import { KimiProvider } from './providers/kimi'
 import { OpenAIProvider } from './providers/openai'
@@ -6,7 +8,7 @@ import { AnthropicProvider } from './providers/anthropic'
 export interface AIProvider {
   name: string
   chat(messages: any[], options?: any): Promise<any>
-  embeddings(text: string): Promise<number[]>
+  embeddings(text: string): Promise<{ embedding: number[]; usage?: any }>
   isAvailable(): boolean
   getCostEstimate(inputTokens: number, outputTokens: number): number
 }
@@ -14,9 +16,11 @@ export interface AIProvider {
 export type AIMode = 'launch' | 'scale'
 
 // launch = quality-first (Anthropic primary) for the pre-scale phase.
+// DeepSeek is deliberately excluded here - it's reserved for scale mode's
+// cost-first chat path, not used at all during launch.
 // scale = cost-first (DeepSeek primary) once volume makes per-call cost matter.
-const MODE_ORDERS: Record<AIMode, string[]> = {
-  launch: ['anthropic', 'openai', 'kimi', 'deepseek'],
+const CHAT_MODE_ORDERS: Record<AIMode, string[]> = {
+  launch: ['anthropic', 'openai', 'kimi'],
   scale: ['deepseek', 'openai', 'kimi', 'anthropic'],
 }
 
@@ -26,6 +30,28 @@ const ALL_PROVIDERS: AIProvider[] = [
   new KimiProvider(),
   new DeepSeekProvider(),
 ]
+
+function normalizeUsage(providerName: string, usage: any): { inputTokens: number; outputTokens: number } {
+  if (!usage) return { inputTokens: 0, outputTokens: 0 }
+  if (providerName === 'anthropic') {
+    return { inputTokens: usage.input_tokens ?? 0, outputTokens: usage.output_tokens ?? 0 }
+  }
+  // OpenAI-compatible SDK shape (openai, deepseek, kimi all go through the
+  // `openai` package's chat.completions.create)
+  return { inputTokens: usage.prompt_tokens ?? 0, outputTokens: usage.completion_tokens ?? 0 }
+}
+
+interface UsageLogEntry {
+  requestId: string
+  provider: string
+  model: string | null
+  endpoint: 'chat' | 'embed'
+  inputTokens: number
+  outputTokens: number
+  costUsd: number
+  status: 'success' | 'error'
+  errorMessage?: string
+}
 
 export class AIClient {
   private allProviders: AIProvider[]
@@ -51,19 +77,72 @@ export class AIClient {
     return this.mode
   }
 
-  private orderedAvailableProviders(): AIProvider[] {
+  private orderedChatProviders(): AIProvider[] {
     const order =
       process.env.AI_FALLBACK_ORDER?.split(',').map((s) => s.trim()).filter(Boolean) ??
-      MODE_ORDERS[this.mode]
+      CHAT_MODE_ORDERS[this.mode]
 
+    // Filter to providers actually in the order list (not just sort by it) -
+    // indexOf(-1) for an excluded provider would otherwise sort it first.
     return this.allProviders
-      .filter((p) => p.isAvailable())
+      .filter((p) => p.isAvailable() && order.includes(p.name))
       .sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name))
+  }
+
+  private async logUsage(entry: UsageLogEntry) {
+    try {
+      await supabase.from('ai_usage').insert({
+        request_id: entry.requestId,
+        provider: entry.provider,
+        model: entry.model,
+        endpoint: entry.endpoint,
+        input_tokens: entry.inputTokens,
+        output_tokens: entry.outputTokens,
+        cost_usd: entry.costUsd,
+        status: entry.status,
+        error_message: entry.errorMessage ?? null,
+      })
+    } catch (err: any) {
+      // Logging must never break the actual AI call.
+      console.error('[AI] Failed to log ai_usage:', err.message)
+    }
+  }
+
+  private async chatAndLog(provider: AIProvider, messages: any[], options: any, requestId: string) {
+    try {
+      const result = await provider.chat(messages, options)
+      const { inputTokens, outputTokens } = normalizeUsage(provider.name, result.usage)
+      await this.logUsage({
+        requestId,
+        provider: provider.name,
+        model: result.model ?? null,
+        endpoint: 'chat',
+        inputTokens,
+        outputTokens,
+        costUsd: provider.getCostEstimate(inputTokens, outputTokens),
+        status: 'success',
+      })
+      return result
+    } catch (error: any) {
+      await this.logUsage({
+        requestId,
+        provider: provider.name,
+        model: null,
+        endpoint: 'chat',
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        status: 'error',
+        errorMessage: error.message,
+      })
+      throw error
+    }
   }
 
   async chat(options: { messages: any[]; model?: string; temperature?: number }) {
     const { messages, model = 'auto', temperature = 0.7 } = options
-    const providers = this.orderedAvailableProviders()
+    const providers = this.orderedChatProviders()
+    const requestId = randomUUID()
 
     if (providers.length === 0) {
       throw new Error('No AI providers configured - set at least one *_API_KEY env var')
@@ -72,14 +151,14 @@ export class AIClient {
     if (model !== 'auto') {
       const provider = providers.find((p) => p.name === model)
       if (!provider) throw new Error(`Provider ${model} not available`)
-      return provider.chat(messages, { temperature })
+      return this.chatAndLog(provider, messages, { temperature }, requestId)
     }
 
     const errors: string[] = []
     for (const provider of providers) {
       try {
         console.log(`[AI] Trying ${provider.name}...`)
-        const result = await provider.chat(messages, { temperature })
+        const result = await this.chatAndLog(provider, messages, { temperature }, requestId)
         console.log(`[AI] Success with ${provider.name}`)
         return result
       } catch (error: any) {
@@ -91,28 +170,62 @@ export class AIClient {
     throw new Error(`All AI providers failed: ${errors.join('; ')}`)
   }
 
-  async embeddings(text: string, preferredProvider?: string) {
-    const providers = this.orderedAvailableProviders()
+  // Embeddings are OpenAI-only: Anthropic has no embeddings API, and
+  // DeepSeek/Kimi don't publish one either (DeepSeek's documented-looking
+  // `deepseek-embedding` model 404s in practice, confirmed live 2026-07-24).
+  // No fallback chain - if OpenAI isn't configured, this fails outright.
+  async embeddings(text: string): Promise<number[]> {
+    const provider = this.allProviders.find((p) => p.name === 'openai')
+    const requestId = randomUUID()
 
-    if (preferredProvider) {
-      const idx = providers.findIndex((p) => p.name === preferredProvider)
-      if (idx > 0) {
-        const [provider] = providers.splice(idx, 1)
-        providers.unshift(provider)
-      }
+    if (!provider || !provider.isAvailable()) {
+      await this.logUsage({
+        requestId,
+        provider: 'openai',
+        model: null,
+        endpoint: 'embed',
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        status: 'error',
+        errorMessage: 'OPENAI_API_KEY not set',
+      })
+      throw new Error('OpenAI not configured - OPENAI_API_KEY required for embeddings')
     }
 
-    const errors: string[] = []
-    for (const provider of providers) {
-      try {
-        return await provider.embeddings(text)
-      } catch (error: any) {
-        console.error(`[AI] ${provider.name} embeddings failed: ${error.message}`)
-        errors.push(`${provider.name}: ${error.message}`)
-      }
-    }
+    try {
+      const { embedding, usage } = await provider.embeddings(text)
+      const inputTokens = usage?.prompt_tokens ?? Math.ceil(text.length / 4)
+      // text-embedding-3-small: $0.02 / 1M input tokens, no output tokens.
+      // Not provider.getCostEstimate() - that method is calibrated for this
+      // provider's chat model (gpt-4o-mini), a very different price point.
+      const costUsd = (inputTokens * 0.02) / 1_000_000
 
-    throw new Error(`All embedding providers failed: ${errors.join('; ')}`)
+      await this.logUsage({
+        requestId,
+        provider: provider.name,
+        model: 'text-embedding-3-small',
+        endpoint: 'embed',
+        inputTokens,
+        outputTokens: 0,
+        costUsd,
+        status: 'success',
+      })
+      return embedding
+    } catch (error: any) {
+      await this.logUsage({
+        requestId,
+        provider: provider.name,
+        model: null,
+        endpoint: 'embed',
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: 0,
+        status: 'error',
+        errorMessage: error.message,
+      })
+      throw error
+    }
   }
 
   getAvailableProviders() {
@@ -122,7 +235,8 @@ export class AIClient {
   getStatus() {
     return {
       mode: this.mode,
-      order: MODE_ORDERS[this.mode],
+      order: CHAT_MODE_ORDERS[this.mode],
+      embeddingsProvider: 'openai',
       providers: this.getAvailableProviders(),
     }
   }
