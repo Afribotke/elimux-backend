@@ -43,7 +43,9 @@ router.post('/chat', adminMiddleware, async (req, res) => {
   }
 })
 
-// POST /api/ai/embed - { text: string } - always OpenAI, no provider override (see AIClient.embeddings)
+// POST /api/ai/embed - { text: string } - tries OpenAI then Together AI (see
+// AIClient.embeddings). Response includes provider/model since the two
+// produce different vector dimensions - don't mix them in a shared index.
 router.post('/embed', adminMiddleware, async (req, res) => {
   try {
     const { text } = req.body
@@ -52,8 +54,8 @@ router.post('/embed', adminMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'text is required' })
     }
 
-    const embedding = await aiClient.embeddings(text)
-    res.json({ embedding })
+    const { embedding, provider, model } = await aiClient.embeddings(text)
+    res.json({ embedding, provider, model, dimensions: embedding.length })
   } catch (error: any) {
     console.error('AI embed error:', error)
     res.status(502).json({ error: error.message || 'AI embed failed' })

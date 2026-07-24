@@ -24,7 +24,10 @@ export class DeepSeekProvider implements AIProvider {
   async chat(messages: any[], options: any = {}) {
     const client = this.getClient()
     const response = await client.chat.completions.create({
-      model: 'deepseek-chat',
+      // 'deepseek-chat' is no longer in DeepSeek's own /v1/models listing as
+      // of 2026-07-24 (confirmed live) - v4-flash is their current cheap/fast
+      // tier and what "DeepSeek as the cheapest option" is meant to mean here.
+      model: 'deepseek-v4-flash',
       messages,
       temperature: options.temperature ?? 0.7,
       max_tokens: options.maxTokens ?? 2000,
@@ -45,6 +48,9 @@ export class DeepSeekProvider implements AIProvider {
   }
 
   getCostEstimate(inputTokens: number, outputTokens: number): number {
+    // deepseek-v4-flash cache-miss pricing, confirmed 2026-07-24: $0.14/1M in, $0.28/1M out.
+    // (Cache-hit input is far cheaper at $0.0028/1M but we don't track cache
+    // status here, so this estimate is worst-case/cache-miss.)
     return (inputTokens * 0.14 + outputTokens * 0.28) / 1_000_000
   }
 }

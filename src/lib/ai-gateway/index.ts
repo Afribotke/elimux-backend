@@ -4,6 +4,7 @@ import { DeepSeekProvider } from './providers/deepseek'
 import { KimiProvider } from './providers/kimi'
 import { OpenAIProvider } from './providers/openai'
 import { AnthropicProvider } from './providers/anthropic'
+import { TogetherProvider } from './providers/together'
 
 export interface AIProvider {
   name: string
@@ -29,7 +30,23 @@ const ALL_PROVIDERS: AIProvider[] = [
   new OpenAIProvider(),
   new KimiProvider(),
   new DeepSeekProvider(),
+  new TogetherProvider(),
 ]
+
+// Embeddings fallback: OpenAI primary, Together AI as backup when OpenAI is
+// down/rate-limited/out of quota. DeepSeek/Kimi/Anthropic don't have a
+// working embeddings API (see their embeddings() stubs).
+//
+// WARNING: these two produce different vector dimensions (OpenAI
+// text-embedding-3-small = 1536, Together BAAI/bge-base-en-v1.5 = 768).
+// Fine for one-off /api/ai/embed calls, but if this ever feeds a shared
+// similarity index, falling over mid-stream would silently corrupt it -
+// the response always reports which provider/model actually ran.
+const EMBEDDINGS_ORDER = ['openai', 'together']
+const EMBEDDINGS_MODELS: Record<string, { model: string; costPerMillionInput: number }> = {
+  openai: { model: 'text-embedding-3-small', costPerMillionInput: 0.02 },
+  together: { model: 'BAAI/bge-base-en-v1.5', costPerMillionInput: 0.008 },
+}
 
 function normalizeUsage(providerName: string, usage: any): { inputTokens: number; outputTokens: number } {
   if (!usage) return { inputTokens: 0, outputTokens: 0 }
@@ -170,62 +187,52 @@ export class AIClient {
     throw new Error(`All AI providers failed: ${errors.join('; ')}`)
   }
 
-  // Embeddings are OpenAI-only: Anthropic has no embeddings API, and
-  // DeepSeek/Kimi don't publish one either (DeepSeek's documented-looking
-  // `deepseek-embedding` model 404s in practice, confirmed live 2026-07-24).
-  // No fallback chain - if OpenAI isn't configured, this fails outright.
-  async embeddings(text: string): Promise<number[]> {
-    const provider = this.allProviders.find((p) => p.name === 'openai')
+  async embeddings(text: string): Promise<{ embedding: number[]; provider: string; model: string }> {
     const requestId = randomUUID()
+    const providers = this.allProviders
+      .filter((p) => EMBEDDINGS_ORDER.includes(p.name) && p.isAvailable())
+      .sort((a, b) => EMBEDDINGS_ORDER.indexOf(a.name) - EMBEDDINGS_ORDER.indexOf(b.name))
 
-    if (!provider || !provider.isAvailable()) {
-      await this.logUsage({
-        requestId,
-        provider: 'openai',
-        model: null,
-        endpoint: 'embed',
-        inputTokens: 0,
-        outputTokens: 0,
-        costUsd: 0,
-        status: 'error',
-        errorMessage: 'OPENAI_API_KEY not set',
-      })
-      throw new Error('OpenAI not configured - OPENAI_API_KEY required for embeddings')
+    if (providers.length === 0) {
+      throw new Error('No embeddings provider configured - set OPENAI_API_KEY or TOGETHER_API_KEY')
     }
 
-    try {
-      const { embedding, usage } = await provider.embeddings(text)
-      const inputTokens = usage?.prompt_tokens ?? Math.ceil(text.length / 4)
-      // text-embedding-3-small: $0.02 / 1M input tokens, no output tokens.
-      // Not provider.getCostEstimate() - that method is calibrated for this
-      // provider's chat model (gpt-4o-mini), a very different price point.
-      const costUsd = (inputTokens * 0.02) / 1_000_000
+    const errors: string[] = []
+    for (const provider of providers) {
+      const { model, costPerMillionInput } = EMBEDDINGS_MODELS[provider.name]
+      try {
+        const { embedding, usage } = await provider.embeddings(text)
+        const inputTokens = usage?.prompt_tokens ?? Math.ceil(text.length / 4)
+        const costUsd = (inputTokens * costPerMillionInput) / 1_000_000
 
-      await this.logUsage({
-        requestId,
-        provider: provider.name,
-        model: 'text-embedding-3-small',
-        endpoint: 'embed',
-        inputTokens,
-        outputTokens: 0,
-        costUsd,
-        status: 'success',
-      })
-      return embedding
-    } catch (error: any) {
-      await this.logUsage({
-        requestId,
-        provider: provider.name,
-        model: null,
-        endpoint: 'embed',
-        inputTokens: 0,
-        outputTokens: 0,
-        costUsd: 0,
-        status: 'error',
-        errorMessage: error.message,
-      })
-      throw error
+        await this.logUsage({
+          requestId,
+          provider: provider.name,
+          model,
+          endpoint: 'embed',
+          inputTokens,
+          outputTokens: 0,
+          costUsd,
+          status: 'success',
+        })
+        return { embedding, provider: provider.name, model }
+      } catch (error: any) {
+        await this.logUsage({
+          requestId,
+          provider: provider.name,
+          model: null,
+          endpoint: 'embed',
+          inputTokens: 0,
+          outputTokens: 0,
+          costUsd: 0,
+          status: 'error',
+          errorMessage: error.message,
+        })
+        errors.push(`${provider.name}: ${error.message}`)
+      }
     }
+
+    throw new Error(`All embedding providers failed: ${errors.join('; ')}`)
   }
 
   getAvailableProviders() {
@@ -236,7 +243,7 @@ export class AIClient {
     return {
       mode: this.mode,
       order: CHAT_MODE_ORDERS[this.mode],
-      embeddingsProvider: 'openai',
+      embeddingsOrder: EMBEDDINGS_ORDER,
       providers: this.getAvailableProviders(),
     }
   }
