@@ -444,6 +444,78 @@ router.delete('/reviews/:id', adminMiddleware, async (req, res) => {
   }
 })
 
+// GET /api/admin/messages?status=new — list contact form submissions, defaults to new
+router.get('/messages', adminMiddleware, async (req, res) => {
+  try {
+    const { status = 'new' } = req.query
+
+    let query = supabase
+      .from('contact_messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (status !== 'all') query = query.eq('status', status as string)
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    res.json({ data: data || [] })
+  } catch (error: any) {
+    console.error('List admin messages error:', error)
+    res.status(500).json({ error: 'Failed to fetch messages' })
+  }
+})
+
+// PATCH /api/admin/messages/:id — set status to read/archived
+router.patch('/messages/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+
+    if (!['new', 'read', 'archived'].includes(status)) {
+      return res.status(400).json({ error: 'status must be new, read, or archived' })
+    }
+
+    const { data, error } = await supabase
+      .from('contact_messages')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Message not found' })
+
+    res.json({ data, message: `Message marked ${status}` })
+  } catch (error: any) {
+    console.error('Update message status error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// DELETE /api/admin/messages/:id — permanently remove a message
+router.delete('/messages/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const { data, error } = await supabase
+      .from('contact_messages')
+      .delete()
+      .eq('id', id)
+      .select()
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Message not found' })
+
+    res.json({ data, message: 'Message deleted' })
+  } catch (error: any) {
+    console.error('Delete message error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // POST /api/admin/scholarships — create a scholarship
 router.post('/scholarships', adminMiddleware, async (req, res) => {
   try {
