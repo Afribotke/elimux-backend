@@ -36,6 +36,7 @@ import selfServeAdsRouter from './routes/self-serve-ads'
 import authRouter from './routes/auth'
 import searchRouter from './routes/search'
 import contactRouter from './routes/contact'
+import aiRouter from './routes/ai'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -84,6 +85,7 @@ app.use('/api/self-serve-ads', selfServeAdsRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/contact', contactRouter)
+app.use('/api/ai', aiRouter)
 
 app.get('/', (req, res) => {
   res.json({
