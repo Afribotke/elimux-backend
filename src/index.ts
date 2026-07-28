@@ -37,6 +37,7 @@ import authRouter from './routes/auth'
 import searchRouter from './routes/search'
 import contactRouter from './routes/contact'
 import aiRouter from './routes/ai'
+import applicationsRouter from './routes/applications'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -86,6 +87,7 @@ app.use('/api/auth', authRouter)
 app.use('/api/search', searchRouter)
 app.use('/api/contact', contactRouter)
 app.use('/api/ai', aiRouter)
+app.use('/api/applications', applicationsRouter)
 
 app.get('/', (req, res) => {
   res.json({
