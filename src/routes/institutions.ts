@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
       const { data: links, error: linksError } = await supabase
         .from('institution_accreditations')
         .select('institution_id')
-        .eq('body_id', accreditation_body_id as string);
+        .eq('accreditation_body_id', accreditation_body_id as string);
 
       if (linksError) {
         console.error('Error fetching accreditation links:', linksError);

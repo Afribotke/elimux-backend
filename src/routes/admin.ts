@@ -646,7 +646,12 @@ router.post('/accreditation-bodies', adminMiddleware, async (req, res) => {
 // POST /api/admin/institution-accreditations — link an institution to an accreditation body
 router.post('/institution-accreditations', adminMiddleware, async (req, res) => {
   try {
-    const { institution_id, body_id, accreditation_number, accreditation_status, valid_from, valid_until, document_url } = req.body
+    // The request field stays `body_id` for backwards compatibility with
+    // CreateInstitutionAccreditationInput in the frontend's lib/api.ts;
+    // `accreditation_body_id` is accepted too. The live column is
+    // accreditation_body_id, despite what 14_accreditation_bodies.sql declares.
+    const { institution_id, accreditation_number, accreditation_status, valid_from, valid_until, document_url } = req.body
+    const body_id = req.body.body_id || req.body.accreditation_body_id
 
     if (!institution_id || !body_id) {
       return res.status(400).json({ error: 'Missing required fields', required: ['institution_id', 'body_id'] })
@@ -656,7 +661,7 @@ router.post('/institution-accreditations', adminMiddleware, async (req, res) => 
       .from('institution_accreditations')
       .insert({
         institution_id,
-        body_id,
+        accreditation_body_id: body_id,
         accreditation_number: accreditation_number || null,
         accreditation_status: accreditation_status || 'active',
         valid_from: valid_from || null,

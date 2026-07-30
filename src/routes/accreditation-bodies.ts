@@ -55,7 +55,7 @@ router.get('/:id', async (req, res) => {
       .select(
         'id, accreditation_number, accreditation_status, valid_from, valid_until, document_url, institution:institutions(id, name, slug, logo_url, city, type:institution_types(name))'
       )
-      .eq('body_id', id)
+      .eq('accreditation_body_id', id)
       .order('created_at', { ascending: false });
 
     if (institutionsError) {
