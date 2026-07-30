@@ -38,6 +38,7 @@ import searchRouter from './routes/search'
 import contactRouter from './routes/contact'
 import aiRouter from './routes/ai'
 import applicationsRouter from './routes/applications'
+import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -51,8 +52,15 @@ app.use(
   })
 )
 
+// `status` stays a pure liveness signal (and always HTTP 200) so Railway's
+// healthcheck and any uptime monitor keep behaving as before. Configuration
+// problems are reported alongside it rather than by failing the check.
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    supabase: { configured: supabaseConfigOk, key_role: supabaseKeyRole },
+  })
 })
 
 app.use('/api/institutions', institutionsRouter)

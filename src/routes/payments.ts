@@ -156,8 +156,10 @@ router.post('/initialize', async (req, res) => {
       message: 'Payment initialized',
     })
   } catch (error: any) {
+    // Detail stays in the server log — leaking error.message here is how a raw
+    // Postgres RLS string ended up rendered in the browser.
     console.error('Initialize payment error:', error)
-    res.status(500).json({ error: error.message || 'Failed to initialize payment' })
+    res.status(500).json({ error: 'Failed to initialize payment' })
   }
 })
 
@@ -196,7 +198,7 @@ router.get('/verify/:reference', async (req, res) => {
     res.json({ data: { status: result.status, payment: updatedPayment } })
   } catch (error: any) {
     console.error('Verify payment error:', error)
-    res.status(500).json({ error: error.message || 'Failed to verify payment' })
+    res.status(500).json({ error: 'Failed to verify payment' })
   }
 })
 
@@ -218,7 +220,7 @@ router.get('/receipt/:reference', async (req, res) => {
     res.json({ data: payment })
   } catch (error: any) {
     console.error('Fetch receipt error:', error)
-    res.status(500).json({ error: error.message || 'Failed to fetch receipt' })
+    res.status(500).json({ error: 'Failed to fetch receipt' })
   }
 })
 
@@ -300,7 +302,7 @@ router.post('/retry', async (req, res) => {
     })
   } catch (error: any) {
     console.error('Retry payment error:', error)
-    res.status(500).json({ error: error.message || 'Failed to retry payment' })
+    res.status(500).json({ error: 'Failed to retry payment' })
   }
 })
 
