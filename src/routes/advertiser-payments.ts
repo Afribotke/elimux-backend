@@ -6,6 +6,7 @@ import express, { Request, Response } from 'express';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { initializeTransaction, verifyTransaction, verifyWebhookSignature, toSubunit } from '../lib/paystack';
+import { sendEmail, receiptEmailHtml, receiptEmailSubject } from '../lib/email';
 import { advertiserAuth, AdvertiserAuthRequest } from '../middleware/advertiser-auth';
 import { CreatePaymentRequest } from '../types/advertiser';
 
@@ -39,7 +40,7 @@ async function applySuccessfulPayment(payment: any, paystackStatus: string): Pro
 
     const { data: advertiser } = await supabaseAdmin
         .from('advertisers')
-        .select('balance')
+        .select('balance, email, organization_name')
         .eq('id', payment.advertiser_id)
         .single();
 
@@ -47,6 +48,21 @@ async function applySuccessfulPayment(payment: any, paystackStatus: string): Pro
         .from('advertisers')
         .update({ balance: (advertiser?.balance || 0) + payment.amount })
         .eq('id', payment.advertiser_id);
+
+    if (advertiser?.email) {
+        await sendEmail({
+            to: advertiser.email,
+            subject: receiptEmailSubject(payment.paystack_reference),
+            html: receiptEmailHtml({
+                recipientName: advertiser.organization_name || null,
+                description: 'ElimuX Ad Wallet Top-up',
+                amount: payment.amount,
+                currency: 'KES',
+                reference: payment.paystack_reference,
+                receiptUrl: `${FRONTEND_URL}/receipts/${payment.paystack_reference}`,
+            }),
+        });
+    }
 }
 
 // POST /api/advertiser/payments/paystack/create - Initialize a Paystack top-up
@@ -172,6 +188,125 @@ router.get('/paystack/verify/:reference', async (req: Request, res: Response): P
     } catch (error: any) {
         console.error('Paystack verify error:', error);
         res.status(500).json({ error: 'Failed to verify payment', details: error.message });
+    }
+});
+
+// GET /api/advertiser/payments/paystack/receipt/:reference - public, read-only, paid payments only
+router.get('/paystack/receipt/:reference', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { reference } = req.params;
+
+        const { data: payment, error } = await supabaseAdmin
+            .from('ad_payments')
+            .select('*, advertiser:advertisers(organization_name, email)')
+            .eq('paystack_reference', reference)
+            .eq('status', 'paid')
+            .maybeSingle();
+
+        if (error) {
+            res.status(500).json({ error: 'Failed to fetch receipt', details: error.message });
+            return;
+        }
+        if (!payment) {
+            res.status(404).json({ error: 'Receipt not found' });
+            return;
+        }
+
+        res.json({ success: true, data: payment });
+    } catch (error: any) {
+        console.error('Fetch ad payment receipt error:', error);
+        res.status(500).json({ error: 'Failed to fetch receipt', details: error.message });
+    }
+});
+
+// POST /api/advertiser/payments/paystack/retry/:reference - Re-attempt a failed top-up
+// Authed and ownership-checked: the amount comes off the original row rather
+// than the request body, so a retry can't be used to mint an arbitrary charge.
+router.post('/paystack/retry/:reference', advertiserAuth, async (req: AdvertiserAuthRequest, res: Response): Promise<void> => {
+    try {
+        const { reference } = req.params;
+
+        const { data: advertiser } = await supabaseAdmin
+            .from('advertisers')
+            .select('id, email')
+            .eq('user_id', req.userId)
+            .single();
+
+        if (!advertiser) {
+            res.status(404).json({ error: 'Advertiser profile not found' });
+            return;
+        }
+
+        const { data: payment } = await supabaseAdmin
+            .from('ad_payments')
+            .select('*')
+            .eq('paystack_reference', reference)
+            .eq('advertiser_id', advertiser.id)
+            .maybeSingle();
+
+        if (!payment) {
+            res.status(404).json({ error: 'Payment not found' });
+            return;
+        }
+
+        if (payment.status === 'paid') {
+            res.status(409).json({ error: 'Payment already completed', reference });
+            return;
+        }
+
+        // Close out the previous attempt so it can't sit as 'pending' forever.
+        if (payment.status === 'pending') {
+            await supabaseAdmin
+                .from('ad_payments')
+                .update({ status: 'failed' })
+                .eq('id', payment.id);
+        }
+
+        const retryReference = `ELXAD_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+
+        const { data: retryPayment, error: retryError } = await supabaseAdmin
+            .from('ad_payments')
+            .insert({
+                advertiser_id: advertiser.id,
+                campaign_id: payment.campaign_id || null,
+                amount: payment.amount,
+                status: 'pending',
+                paystack_reference: retryReference
+            })
+            .select()
+            .single();
+
+        if (retryError) {
+            res.status(500).json({ error: 'Failed to record retry payment', details: retryError.message });
+            return;
+        }
+
+        const paystackData = await initializeTransaction({
+            email: advertiser.email,
+            amountSubunit: toSubunit(payment.amount),
+            currency: 'KES',
+            reference: retryReference,
+            callbackUrl: `${FRONTEND_URL}/advertiser/billing/callback`,
+            metadata: {
+                advertiser_id: advertiser.id,
+                campaign_id: payment.campaign_id || null,
+                payment_id: retryPayment.id,
+                retry_of: payment.paystack_reference
+            }
+        });
+
+        res.json({
+            success: true,
+            data: {
+                payment_id: retryPayment.id,
+                authorization_url: paystackData.authorization_url,
+                reference: retryReference,
+                amount: payment.amount
+            }
+        });
+    } catch (error: any) {
+        console.error('Paystack retry error:', error);
+        res.status(500).json({ error: 'Failed to retry payment', details: error.message });
     }
 });
 

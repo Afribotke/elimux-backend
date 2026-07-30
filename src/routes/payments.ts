@@ -2,10 +2,12 @@ import { Router } from 'express'
 import crypto from 'crypto'
 import { supabase } from '../lib/supabase'
 import { initializeTransaction, verifyTransaction, verifyWebhookSignature, toSubunit } from '../lib/paystack'
+import { sendEmail, receiptEmailHtml, receiptEmailSubject } from '../lib/email'
 
 const router = Router()
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://www.elimux.ke'
+const PAYMENT_SELECT = '*, subscriber:subscribers(name, email), subscription:subscriptions(*, plan:subscription_plans(*))'
 
 function activePeriodEnd(durationMonths: number): string {
   const end = new Date()
@@ -166,7 +168,7 @@ router.get('/verify/:reference', async (req, res) => {
 
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('*, subscription:subscriptions(*, plan:subscription_plans(*))')
+      .select(PAYMENT_SELECT)
       .eq('paystack_reference', reference)
       .maybeSingle()
 
@@ -187,7 +189,7 @@ router.get('/verify/:reference', async (req, res) => {
 
     const { data: updatedPayment } = await supabase
       .from('payments')
-      .select('*, subscription:subscriptions(*, plan:subscription_plans(*))')
+      .select(PAYMENT_SELECT)
       .eq('id', payment.id)
       .single()
 
@@ -195,6 +197,110 @@ router.get('/verify/:reference', async (req, res) => {
   } catch (error: any) {
     console.error('Verify payment error:', error)
     res.status(500).json({ error: error.message || 'Failed to verify payment' })
+  }
+})
+
+// GET /api/payments/receipt/:reference — public, read-only, success payments only
+router.get('/receipt/:reference', async (req, res) => {
+  try {
+    const { reference } = req.params
+
+    const { data: payment, error } = await supabase
+      .from('payments')
+      .select(PAYMENT_SELECT)
+      .eq('paystack_reference', reference)
+      .eq('status', 'success')
+      .maybeSingle()
+
+    if (error) throw error
+    if (!payment) return res.status(404).json({ error: 'Receipt not found' })
+
+    res.json({ data: payment })
+  } catch (error: any) {
+    console.error('Fetch receipt error:', error)
+    res.status(500).json({ error: error.message || 'Failed to fetch receipt' })
+  }
+})
+
+// POST /api/payments/retry — body: { reference }
+// Re-attempts a failed or abandoned payment by opening a fresh Paystack
+// transaction against the SAME subscription row. Going back through
+// /initialize would insert another subscription on every retry, leaving a
+// trail of orphaned 'pending' ones; this reuses the original.
+router.post('/retry', async (req, res) => {
+  try {
+    const { reference } = req.body
+
+    if (!reference) {
+      return res.status(400).json({ error: 'Missing required fields', required: ['reference'] })
+    }
+
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select(PAYMENT_SELECT)
+      .eq('paystack_reference', reference)
+      .maybeSingle()
+
+    if (paymentError) throw paymentError
+    if (!payment) return res.status(404).json({ error: 'Payment not found' })
+    if (payment.status === 'success') {
+      return res.status(409).json({ error: 'Payment already completed', reference })
+    }
+
+    const plan = payment.subscription?.plan
+    const email = payment.subscriber?.email
+
+    if (!plan || !email) {
+      return res.status(422).json({ error: 'This payment cannot be retried — start over from the pricing page' })
+    }
+
+    // Close out the previous attempt so it can't sit as 'pending' forever.
+    if (payment.status === 'pending') {
+      await supabase.from('payments').update({ status: 'failed' }).eq('id', payment.id)
+    }
+
+    const retryReference = `ELX_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`
+
+    const { data: retryPayment, error: retryError } = await supabase
+      .from('payments')
+      .insert({
+        subscriber_id: payment.subscriber_id,
+        subscription_id: payment.subscription_id,
+        amount: plan.price_kes,
+        currency: plan.currency || 'KES',
+        paystack_reference: retryReference,
+        status: 'pending',
+        metadata: { plan_slug: plan.slug, retry_of: payment.paystack_reference },
+      })
+      .select()
+      .single()
+
+    if (retryError) throw retryError
+
+    const paystackData = await initializeTransaction({
+      email,
+      amountSubunit: toSubunit(plan.price_kes),
+      currency: plan.currency || 'KES',
+      reference: retryReference,
+      callbackUrl: `${FRONTEND_URL}/payments/callback`,
+      metadata: {
+        subscription_id: payment.subscription_id,
+        plan_slug: plan.slug,
+        retry_of: payment.paystack_reference,
+      },
+    })
+
+    res.json({
+      data: {
+        authorization_url: paystackData.authorization_url,
+        reference: retryReference,
+        payment: retryPayment,
+      },
+      message: 'Payment retry initialized',
+    })
+  } catch (error: any) {
+    console.error('Retry payment error:', error)
+    res.status(500).json({ error: error.message || 'Failed to retry payment' })
   }
 })
 
@@ -217,6 +323,23 @@ async function applySuccessfulPayment(payment: any, transactionId: string, chann
       })
       .eq('id', payment.subscription_id)
   }
+
+  const recipientEmail = payment.subscriber?.email
+  if (recipientEmail) {
+    const planName = payment.subscription?.plan?.name || 'Subscription'
+    await sendEmail({
+      to: recipientEmail,
+      subject: receiptEmailSubject(payment.paystack_reference),
+      html: receiptEmailHtml({
+        recipientName: payment.subscriber?.name || null,
+        description: `ElimuX ${planName} Subscription`,
+        amount: payment.amount,
+        currency: payment.currency,
+        reference: payment.paystack_reference,
+        receiptUrl: `${FRONTEND_URL}/receipts/${payment.paystack_reference}`,
+      }),
+    })
+  }
 }
 
 // POST /api/payments/webhook — Paystack server-to-server event delivery
@@ -236,7 +359,7 @@ router.post('/webhook', async (req, res) => {
 
       const { data: payment } = await supabase
         .from('payments')
-        .select('*, subscription:subscriptions(*, plan:subscription_plans(*))')
+        .select(PAYMENT_SELECT)
         .eq('paystack_reference', reference)
         .maybeSingle()
 

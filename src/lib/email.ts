@@ -1,0 +1,101 @@
+// Thin wrapper over the Resend HTTP API — no SDK dependency.
+// No-ops (logs and returns) when RESEND_API_KEY isn't configured, so this
+// is safe to call unconditionally from payment success paths.
+
+const RESEND_API_URL = 'https://api.resend.com/emails'
+const FROM_ADDRESS = process.env.RECEIPTS_FROM_EMAIL || 'ElimuX <receipts@elimux.ke>'
+
+// Resend rate-limits at 2 req/s and can return transient 5xx. A receipt is
+// worth a few retries, but never worth failing the payment it belongs to —
+// every path here swallows the error and returns.
+const MAX_ATTEMPTS = 3
+const BACKOFF_MS = [500, 1500]
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function isRetryable(status: number): boolean {
+  return status === 429 || status >= 500
+}
+
+interface SendEmailParams {
+  to: string
+  subject: string
+  html: string
+}
+
+export async function sendEmail({ to, subject, html }: SendEmailParams): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.log(`[EMAIL] RESEND_API_KEY not set — skipping email to ${to} (${subject})`)
+    return false
+  }
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(RESEND_API_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ from: FROM_ADDRESS, to, subject, html }),
+      })
+
+      if (res.ok) {
+        if (attempt > 1) console.log(`[EMAIL] Sent to ${to} on attempt ${attempt}`)
+        return true
+      }
+
+      const body = await res.text()
+
+      if (!isRetryable(res.status) || attempt === MAX_ATTEMPTS) {
+        console.error(`[EMAIL] Resend request failed (${res.status}) after ${attempt} attempt(s): ${body}`)
+        return false
+      }
+
+      console.warn(`[EMAIL] Resend ${res.status} on attempt ${attempt}, retrying: ${body}`)
+    } catch (error: any) {
+      if (attempt === MAX_ATTEMPTS) {
+        console.error(`[EMAIL] Failed to send email after ${attempt} attempt(s):`, error.message)
+        return false
+      }
+      console.warn(`[EMAIL] Network error on attempt ${attempt}, retrying:`, error.message)
+    }
+
+    await sleep(BACKOFF_MS[attempt - 1])
+  }
+
+  return false
+}
+
+function money(amount: number, currency: string): string {
+  return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+export function receiptEmailHtml(params: {
+  recipientName: string | null
+  description: string
+  amount: number
+  currency: string
+  reference: string
+  receiptUrl: string
+}): string {
+  const { recipientName, description, amount, currency, reference, receiptUrl } = params
+  return `
+    <div style="font-family: -apple-system, Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+      <h1 style="font-size: 20px; color: #111;">Thank you${recipientName ? `, ${recipientName}` : ''}!</h1>
+      <p style="color: #444; font-size: 14px;">Your payment was received successfully.</p>
+      <table style="width: 100%; margin: 16px 0; font-size: 14px; color: #333;">
+        <tr><td style="padding: 4px 0; color: #777;">Description</td><td style="text-align: right;">${description}</td></tr>
+        <tr><td style="padding: 4px 0; color: #777;">Amount</td><td style="text-align: right; font-weight: 600;">${money(amount, currency)}</td></tr>
+        <tr><td style="padding: 4px 0; color: #777;">Reference</td><td style="text-align: right;">${reference}</td></tr>
+      </table>
+      <a href="${receiptUrl}" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;">View Receipt</a>
+      <p style="color: #999; font-size: 12px; margin-top: 24px;">ElimuX &middot; support@elimux.ke</p>
+    </div>
+  `
+}
+
+export function receiptEmailSubject(reference: string): string {
+  return `Your ElimuX Receipt #${reference}`
+}
