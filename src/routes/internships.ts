@@ -61,8 +61,11 @@ router.post('/employers/register', requireUser, async (req: UserAuthRequest, res
     }
 
     const b = req.body || {};
-    if (!b.company_name || !b.company_email) {
-      res.status(400).json({ success: false, error: 'company_name and company_email are required' });
+    // industry is NOT NULL on the live employers table - reject up front
+    // with a clear message instead of letting a null through to a raw
+    // Postgres constraint-violation error.
+    if (!b.company_name || !b.company_email || !b.industry) {
+      res.status(400).json({ success: false, error: 'company_name, company_email and industry are required' });
       return;
     }
 
@@ -77,7 +80,7 @@ router.post('/employers/register', requireUser, async (req: UserAuthRequest, res
         company_phone: b.company_phone || null,
         registration_number: b.registration_number || null,
         kra_pin: b.kra_pin || null,
-        industry: b.industry || null,
+        industry: b.industry,
         company_size: b.company_size || null,
         website_url: b.website_url || null,
         description: b.description || null,
