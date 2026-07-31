@@ -38,6 +38,7 @@ import searchRouter from './routes/search'
 import contactRouter from './routes/contact'
 import aiRouter from './routes/ai'
 import applicationsRouter from './routes/applications'
+import internshipsRouter from './routes/internships'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 
 const app = express()
@@ -96,6 +97,7 @@ app.use('/api/search', searchRouter)
 app.use('/api/contact', contactRouter)
 app.use('/api/ai', aiRouter)
 app.use('/api/applications', applicationsRouter)
+app.use('/api', internshipsRouter)
 
 app.get('/', (req, res) => {
   res.json({

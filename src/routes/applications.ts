@@ -1,13 +1,10 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import { adminMiddleware } from '../middleware/auth';
+import { requireUser, UserAuthRequest } from '../middleware/user-auth';
 
 const router = Router();
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // Helper: Calculate priority score
 function calculatePriorityScore(studentType: string, source: string, isVerified: boolean): number {
@@ -19,10 +16,15 @@ function calculatePriorityScore(studentType: string, source: string, isVerified:
 }
 
 // POST /api/applications — Student applies to internship
-router.post('/', async (req, res) => {
+//
+// `applications.student_id` is a foreign key to `student_profiles.id`, NOT to
+// the auth user id - inserting the caller's auth uid here (as this endpoint
+// used to) violates that FK for every real user and fails silently from the
+// frontend's point of view (a generic "Failed to submit" toast). The student
+// profile row must be looked up first and its own id used everywhere.
+router.post('/', requireUser, async (req: UserAuthRequest, res: Response) => {
   try {
     const schema = z.object({
-      student_id: z.string().uuid(),
       internship_id: z.string().uuid(),
       cover_letter: z.string().max(5000).optional(),
       portfolio_links: z.array(z.string().url()).optional(),
@@ -33,11 +35,11 @@ router.post('/', async (req, res) => {
 
     const body = schema.parse(req.body);
 
-    // Fetch student profile to determine type and verification
+    // Fetch student profile to determine type, verification, and its own id
     const { data: student, error: studentError } = await supabase
       .from('student_profiles')
-      .select('student_type, is_university_verified, university_name')
-      .eq('user_id', body.student_id)
+      .select('id, student_type, is_university_verified, university_name')
+      .eq('user_id', req.userId)
       .single();
 
     if (studentError || !student) {
@@ -84,7 +86,7 @@ router.post('/', async (req, res) => {
     const { data: existing } = await supabase
       .from('applications')
       .select('id')
-      .eq('student_id', body.student_id)
+      .eq('student_id', student.id)
       .eq('internship_id', body.internship_id)
       .single();
 
@@ -99,11 +101,27 @@ router.post('/', async (req, res) => {
       student.is_university_verified || false
     );
 
+    // Claim a slot before inserting, with an optimistic-concurrency guard:
+    // the conditional `eq('remaining_slots', ...)` only succeeds if no other
+    // request has already claimed a slot since we read it above, closing the
+    // race window a plain select-then-update would leave open.
+    const { data: claimed, error: claimError } = await supabase
+      .from('internships')
+      .update({ remaining_slots: internship.remaining_slots - 1 })
+      .eq('id', body.internship_id)
+      .eq('remaining_slots', internship.remaining_slots)
+      .select('id')
+      .single();
+
+    if (claimError || !claimed) {
+      return res.status(409).json({ success: false, error: 'This position just filled up. Please try another listing.' });
+    }
+
     // Create application
     const { data: application, error: insertError } = await supabase
       .from('applications')
       .insert({
-        student_id: body.student_id,
+        student_id: student.id,
         internship_id: body.internship_id,
         student_type: student.student_type,
         source: body.enrollment_letter_url ? 'university_upload' : 'self_applied',
@@ -120,13 +138,17 @@ router.post('/', async (req, res) => {
       .select()
       .single();
 
-    if (insertError) throw insertError;
-
-    // Decrement remaining slots
-    await supabase
-      .from('internships')
-      .update({ remaining_slots: internship.remaining_slots - 1 })
-      .eq('id', body.internship_id);
+    if (insertError) {
+      // Insert failed after the slot was already claimed (e.g. a duplicate
+      // slipped past the check above under concurrent requests) - give the
+      // slot back rather than leaking it.
+      await supabase
+        .from('internships')
+        .update({ remaining_slots: internship.remaining_slots })
+        .eq('id', body.internship_id)
+        .eq('remaining_slots', internship.remaining_slots - 1);
+      throw insertError;
+    }
 
     res.status(201).json({ success: true, data: application });
 
@@ -135,8 +157,36 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/applications — List applications (for student or employer)
-router.get('/', async (req, res) => {
+// GET /api/applications/me — the logged-in student's own applications
+router.get('/me', requireUser, async (req: UserAuthRequest, res: Response) => {
+  try {
+    const { data: student } = await supabase
+      .from('student_profiles')
+      .select('id')
+      .eq('user_id', req.userId)
+      .single();
+
+    if (!student) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*, internships:internship_id (title, employer_id, location_county, profession_category, status)')
+      .eq('student_id', student.id)
+      .order('submitted_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ success: true, data: data || [] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
+
+// GET /api/applications — Admin-only listing across all applications/employers.
+// (Employer and student views should use /api/applications/me and
+// /api/employers/me/applications, which are ownership-scoped.)
+router.get('/', adminMiddleware, async (req, res) => {
   try {
     const { student_id, employer_id, internship_id, status } = req.query;
     let query = supabase.from('applications').select(`
@@ -169,20 +219,29 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/applications/:id — Single application detail
-router.get('/:id', async (req, res) => {
+// GET /api/applications/:id — Single application detail, restricted to the
+// owning student or an admin key.
+// (Employers reach the same data ownership-scoped via
+// /api/employers/me/applications instead.)
+router.get('/:id', requireUser, async (req: UserAuthRequest, res: Response) => {
   try {
     const { data, error } = await supabase
       .from('applications')
       .select(`
         *,
         internships:internship_id (*),
-        student_profiles:student_id (full_name, email, phone, university_name, course_name, year_of_study, skills, resume_url)
+        student_profiles:student_id (user_id, full_name, email, phone, university_name, course_name, year_of_study, skills, resume_url)
       `)
       .eq('id', req.params.id)
       .single();
 
     if (error || !data) return res.status(404).json({ success: false, error: 'Application not found' });
+
+    const ownerUserId = (data as any).student_profiles?.user_id;
+    if (ownerUserId !== req.userId) {
+      return res.status(403).json({ success: false, error: 'Not your application' });
+    }
+
     res.json({ success: true, data });
 
   } catch (err) {
@@ -190,69 +249,21 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// PATCH /api/applications/:id/status — Employer updates status
-router.patch('/:id/status', async (req, res) => {
+// DELETE /api/applications/:id — Student withdraws their own application
+router.delete('/:id', requireUser, async (req: UserAuthRequest, res: Response) => {
   try {
-    const schema = z.object({
-      status: z.enum(['reviewing', 'shortlisted', 'interview_scheduled', 'offered', 'accepted', 'rejected', 'withdrawn']),
-      employer_notes: z.string().max(2000).optional(),
-      interview_date: z.string().datetime().optional(),
-      interview_location: z.string().optional(),
-      interview_link: z.string().url().optional(),
-      offer_details: z.record(z.string(), z.any()).optional(),
-    });
-
-    const body = schema.parse(req.body);
-
     const { data: application } = await supabase
       .from('applications')
-      .select('status')
+      .select('internship_id, status, student_profiles:student_id (user_id)')
       .eq('id', req.params.id)
       .single();
 
     if (!application) return res.status(404).json({ success: false, error: 'Application not found' });
 
-    // Prevent changing status if already final
-    if (['accepted', 'rejected', 'withdrawn'].includes(application.status)) {
-      return res.status(400).json({ success: false, error: 'Cannot modify a finalized application' });
+    const ownerUserId = (application as any).student_profiles?.user_id;
+    if (ownerUserId !== req.userId) {
+      return res.status(403).json({ success: false, error: 'Not your application' });
     }
-
-    const updateData: any = {
-      status: body.status,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (body.employer_notes) updateData.employer_notes = body.employer_notes;
-    if (body.interview_date) updateData.interview_date = body.interview_date;
-    if (body.interview_location) updateData.interview_location = body.interview_location;
-    if (body.interview_link) updateData.interview_link = body.interview_link;
-    if (body.offer_details) updateData.offer_details = body.offer_details;
-
-    const { data, error } = await supabase
-      .from('applications')
-      .update(updateData)
-      .eq('id', req.params.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json({ success: true, data });
-
-  } catch (err) {
-    res.status(400).json({ success: false, error: (err as Error).message });
-  }
-});
-
-// DELETE /api/applications/:id — Student withdraws application
-router.delete('/:id', async (req, res) => {
-  try {
-    const { data: application } = await supabase
-      .from('applications')
-      .select('internship_id, status')
-      .eq('id', req.params.id)
-      .single();
-
-    if (!application) return res.status(404).json({ success: false, error: 'Application not found' });
 
     if (['accepted', 'rejected'].includes(application.status)) {
       return res.status(400).json({ success: false, error: 'Cannot withdraw a finalized application' });
