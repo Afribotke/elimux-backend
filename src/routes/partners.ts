@@ -86,6 +86,31 @@ router.get("/:id/stats", async (req, res) => {
 router.patch("/:id/approve", async (req, res) => {
   try {
     const { id } = req.params;
+
+    // AUTH GUARD: Only admins can approve partners
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const role = userData?.role || user.user_metadata?.role || "student";
+    if (role !== "admin" && role !== "super_admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
     const { data, error } = await supabase
       .from("partner_clients")
       .update({ status: "active", updated_at: new Date().toISOString() })
