@@ -1,9 +1,13 @@
 import dotenv from 'dotenv'
+import stripePayments from './routes/payments-stripe';
+import mpesaPayments from './routes/payments-mpesa';
 dotenv.config({ path: '.env.local' })
 dotenv.config()
 
 import express from 'express'
 import cors from 'cors'
+import stripePayments from './routes/payments-stripe';
+import mpesaPayments from './routes/payments-mpesa';
 
 import institutionsRouter from './routes/institutions'
 import programsRouter from './routes/programs'
@@ -40,6 +44,8 @@ import aiRouter from './routes/ai'
 import applicationsRouter from './routes/applications'
 import internshipsRouter from './routes/internships'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
+import stripePayments from './routes/payments-stripe';
+import mpesaPayments from './routes/payments-mpesa';
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -122,4 +128,8 @@ if (require.main === module) {
   })
 }
 
+app.use('/api/payments/stripe', stripePayments);
+app.use('/api/payments/mpesa', mpesaPayments);
+
 export default app
+
