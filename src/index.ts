@@ -1,13 +1,9 @@
 import dotenv from 'dotenv'
-import stripePayments from './routes/payments-stripe';
-import mpesaPayments from './routes/payments-mpesa';
 dotenv.config({ path: '.env.local' })
 dotenv.config()
 
 import express from 'express'
 import cors from 'cors'
-import stripePayments from './routes/payments-stripe';
-import mpesaPayments from './routes/payments-mpesa';
 
 import institutionsRouter from './routes/institutions'
 import programsRouter from './routes/programs'
