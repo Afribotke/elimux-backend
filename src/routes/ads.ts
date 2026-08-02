@@ -265,7 +265,7 @@ router.post('/impression', async (req: Request, res: Response): Promise<void> =>
             return;
         }
         const campaignId = ad_id as string;
-        const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+        const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || req.socket.remoteAddress || 'unknown';
         const userDeviceId = req.query.user_device_id as string || `anon_${ipAddress}`;
 
         // RATE LIMIT: Same IP + ad_id within 5 minutes = deduplicate
@@ -309,7 +309,7 @@ router.post('/conversion', async (req: Request, res: Response): Promise<void> =>
             return;
         }
         const campaignId = ad_id as string;
-        const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+        const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || req.socket.remoteAddress || 'unknown';
         const userDeviceId = req.query.user_device_id as string || `anon_${ipAddress}`;
 
         // RATE LIMIT: Same IP + ad_id within 1 hour = deduplicate
