@@ -30,6 +30,23 @@ router.post("/track", async (req, res) => {
 router.post("/convert", async (req, res) => {
   try {
     const { click_id, amount, description } = req.body;
+
+    // AUTH GUARD: Only admins can convert referrals
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    const token = authHeader.split(" ")[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+    const { data: userData } = await supabase.from("users").select("role").eq("id", user.id).single();
+    const role = userData?.role || user.user_metadata?.role || "student";
+    if (role !== "admin" && role !== "super_admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
     const { data: click } = await supabase.from("partner_clicks").select("*, partner_clients(id, commission_rate)").eq("id", click_id).single();
     if (!click) return res.status(404).json({ error: "Click not found" });
 

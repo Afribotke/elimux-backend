@@ -268,6 +268,20 @@ router.post('/impression', async (req: Request, res: Response): Promise<void> =>
         const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
         const userDeviceId = req.query.user_device_id as string || `anon_${ipAddress}`;
 
+        // RATE LIMIT: Same IP + ad_id within 5 minutes = deduplicate
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data: recent } = await supabaseAdmin.from("campaign_clicks")
+          .select("id")
+          .eq("ad_id", campaignId)
+          .eq("ip_address", ipAddress)
+          .eq("click_type", "impression")
+          .gte("created_at", fiveMinutesAgo)
+          .limit(1);
+        if (recent && recent.length > 0) {
+          res.json({ success: true, billed: false, deduplicated: true });
+          return;
+        }
+
         const { data: costData } = await supabaseAdmin.rpc('deduct_click_cost', {
             p_campaign_id: campaignId, p_click_type: 'impression'
         });
@@ -297,6 +311,20 @@ router.post('/conversion', async (req: Request, res: Response): Promise<void> =>
         const campaignId = ad_id as string;
         const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
         const userDeviceId = req.query.user_device_id as string || `anon_${ipAddress}`;
+
+        // RATE LIMIT: Same IP + ad_id within 1 hour = deduplicate
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const { data: recent } = await supabaseAdmin.from("campaign_clicks")
+          .select("id")
+          .eq("ad_id", campaignId)
+          .eq("ip_address", ipAddress)
+          .eq("click_type", "conversion")
+          .gte("created_at", oneHourAgo)
+          .limit(1);
+        if (recent && recent.length > 0) {
+          res.json({ success: true, billed: false, deduplicated: true });
+          return;
+        }
 
         const { data: costData } = await supabaseAdmin.rpc('deduct_click_cost', {
             p_campaign_id: campaignId, p_click_type: 'conversion'
