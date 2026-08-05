@@ -94,7 +94,22 @@ router.patch("/:id/approve", async (req, res) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    let authResult;
+    try {
+      authResult = await Promise.race([
+        supabase.auth.getUser(token),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Auth service timeout")), 8000)
+        )
+      ]);
+    } catch (raceErr: any) {
+      if (raceErr?.message === "Auth service timeout") {
+        return res.status(503).json({ error: "Authentication service temporarily unavailable. Please try again." });
+      }
+      throw raceErr;
+    }
+    const { data: { user }, error: authError } = authResult as any;
 
     if (authError || !user) {
       return res.status(401).json({ error: "Invalid token" });

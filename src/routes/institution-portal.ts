@@ -26,7 +26,23 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         }
 
         const token = authHeader.split(' ')[1];
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+        let authResult;
+        try {
+            authResult = await Promise.race([
+                supabaseAdmin.auth.getUser(token),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Auth service timeout')), 8000)
+                )
+            ]);
+        } catch (raceErr: any) {
+            if (raceErr?.message === 'Auth service timeout') {
+                res.status(503).json({ error: 'Authentication service temporarily unavailable. Please try again.' });
+                return;
+            }
+            throw raceErr;
+        }
+        const { data: { user }, error: authError } = authResult as any;
 
         if (authError || !user) {
             res.status(401).json({ error: 'Invalid token' });

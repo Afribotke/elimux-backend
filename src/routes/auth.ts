@@ -15,7 +15,21 @@ router.get("/me", async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) return res.status(401).json({ error: "No token" });
 
-    const { data: { user }, error } = await supabase.auth.getUser(authHeader.split(" ")[1]);
+    let authResult;
+    try {
+      authResult = await Promise.race([
+        supabase.auth.getUser(authHeader.split(" ")[1]),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Auth service timeout")), 8000)
+        )
+      ]);
+    } catch (raceErr: any) {
+      if (raceErr?.message === "Auth service timeout") {
+        return res.status(503).json({ error: "Authentication service temporarily unavailable. Please try again." });
+      }
+      throw raceErr;
+    }
+    const { data: { user }, error } = authResult as any;
     if (error || !user) return res.status(401).json({ error: "Invalid token" });
 
     // admin_users is keyed by its own uuid PK with email as the UNIQUE
