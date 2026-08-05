@@ -21,6 +21,8 @@ export interface UserAuthRequest extends Request {
     userEmail?: string;
 }
 
+const AUTH_TIMEOUT_MS = 8000; // 8 seconds max
+
 export const requireUser = async (req: UserAuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const authHeader = req.headers.authorization;
@@ -30,7 +32,26 @@ export const requireUser = async (req: UserAuthRequest, res: Response, next: Nex
         }
 
         const token = authHeader.split(' ')[1];
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+        // Without this race, a slow/hung Supabase auth API leaves the request
+        // (and the frontend's awaiting fetch()) stuck forever with no response.
+        let authResult;
+        try {
+            authResult = await Promise.race([
+                supabaseAdmin.auth.getUser(token),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Auth service timeout')), AUTH_TIMEOUT_MS)
+                )
+            ]);
+        } catch (raceErr: any) {
+            if (raceErr?.message === 'Auth service timeout') {
+                res.status(503).json({ error: 'Authentication service temporarily unavailable. Please try again.' });
+                return;
+            }
+            throw raceErr;
+        }
+
+        const { data: { user }, error } = authResult as any;
 
         if (error || !user) {
             res.status(401).json({ success: false, error: 'Unauthorized - Invalid token' });
