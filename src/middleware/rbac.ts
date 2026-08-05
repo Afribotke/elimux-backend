@@ -16,6 +16,8 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
+const AUTH_TIMEOUT_MS = 8000; // 8 seconds max
+
 export async function authenticateToken(
   req: AuthenticatedRequest,
   res: Response,
@@ -29,7 +31,24 @@ export async function authenticateToken(
 
     const token = authHeader.split(" ")[1];
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    // Without this race, a slow/hung Supabase auth API leaves the request
+    // stuck forever with no response.
+    let authResult;
+    try {
+      authResult = await Promise.race([
+        supabase.auth.getUser(token),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Auth service timeout")), AUTH_TIMEOUT_MS)
+        )
+      ]);
+    } catch (raceErr: any) {
+      if (raceErr?.message === "Auth service timeout") {
+        return res.status(503).json({ error: "Authentication service temporarily unavailable. Please try again." });
+      }
+      throw raceErr;
+    }
+
+    const { data: { user }, error } = authResult as any;
     if (error || !user) {
       return res.status(401).json({ error: "Invalid token" });
     }

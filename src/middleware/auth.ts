@@ -31,7 +31,14 @@ export async function adminAuth(req: Request, res: Response, next: NextFunction)
   }
 
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(authHeader.slice(7))
+    // Timeout-race so a slow/hung Supabase auth API can't hang this request
+    // forever - falls into the same catch below, preserving the "always 401
+    // on failure" invariant above (no distinguishable timeout status).
+    const authResult = await Promise.race([
+      supabase.auth.getUser(authHeader.slice(7)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Auth service timeout')), 8000))
+    ])
+    const { data: { user }, error } = authResult as any
     if (error || !user) return res.status(401).json({ error: 'Unauthorized' })
 
     // admin_users has no user_id column - its PK is its own uuid and the
