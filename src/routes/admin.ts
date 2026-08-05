@@ -1,6 +1,13 @@
 import { Router } from 'express'
 import { adminMiddleware } from '../middleware/auth'
 import { supabase } from '../lib/supabase'
+import {
+  sendEmail,
+  applicationApprovedEmailHtml,
+  applicationApprovedEmailSubject,
+  applicationRejectedEmailHtml,
+  applicationRejectedEmailSubject,
+} from '../lib/email'
 
 const router = Router()
 
@@ -253,6 +260,17 @@ router.post('/applications/:id/approve', adminMiddleware, async (req, res) => {
 
     if (updateError) throw updateError
 
+    if (application.email) {
+      await sendEmail({
+        to: application.email,
+        subject: applicationApprovedEmailSubject(application.name),
+        html: applicationApprovedEmailHtml({
+          institutionName: application.name,
+          adminNotes: admin_notes || undefined,
+        }),
+      })
+    }
+
     res.json({ data: updatedApplication, institution, message: 'Application approved' })
   } catch (error: any) {
     console.error('Approve application error:', error)
@@ -282,6 +300,17 @@ router.post('/applications/:id/reject', adminMiddleware, async (req, res) => {
       .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
       .eq('institution_application_id', id)
       .eq('status', 'pending')
+
+    if (data.email) {
+      await sendEmail({
+        to: data.email,
+        subject: applicationRejectedEmailSubject(data.name),
+        html: applicationRejectedEmailHtml({
+          institutionName: data.name,
+          adminNotes: admin_notes || undefined,
+        }),
+      })
+    }
 
     res.json({ data, message: 'Application rejected' })
   } catch (error: any) {

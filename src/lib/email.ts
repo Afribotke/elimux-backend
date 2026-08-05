@@ -99,3 +99,39 @@ export function receiptEmailHtml(params: {
 export function receiptEmailSubject(reference: string): string {
   return `Your ElimuX Receipt #${reference}`
 }
+
+// ── Application Status Notifications ──
+
+export function applicationApprovedEmailHtml({ institutionName, adminNotes }: { institutionName: string; adminNotes?: string }): string {
+  return `
+    <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1a1a1a;">
+      <h2 style="color: #eab308; margin-bottom: 16px;">Application Approved 🎉</h2>
+      <p>Congratulations! Your application for <strong>${institutionName}</strong> has been approved on ElimuX.</p>
+      ${adminNotes ? `<div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; margin: 16px 0;"><strong>Note from admin:</strong> ${adminNotes}</div>` : ''}
+      <p style="margin-top: 24px;">You can now log in to your institution dashboard to manage your programs and listings.</p>
+      <a href="https://www.elimux.ke/institution/login" style="display: inline-block; background: #eab308; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-top: 16px;">Go to Dashboard</a>
+      <p style="color: #999; font-size: 12px; margin-top: 24px;">ElimuX &middot; support@elimux.ke</p>
+    </div>
+  `
+}
+
+export function applicationApprovedEmailSubject(institutionName: string): string {
+  return `Your application for ${institutionName} has been approved`
+}
+
+export function applicationRejectedEmailHtml({ institutionName, adminNotes }: { institutionName: string; adminNotes?: string }): string {
+  return `
+    <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1a1a1a;">
+      <h2 style="color: #dc2626; margin-bottom: 16px;">Application Update</h2>
+      <p>We regret to inform you that your application for <strong>${institutionName}</strong> has not been approved at this time.</p>
+      ${adminNotes ? `<div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px; margin: 16px 0;"><strong>Reason:</strong> ${adminNotes}</div>` : ''}
+      <p style="margin-top: 24px;">If you believe this was an error or have questions, please contact our support team.</p>
+      <a href="https://www.elimux.ke/contact" style="display: inline-block; background: #eab308; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-top: 16px;">Contact Support</a>
+      <p style="color: #999; font-size: 12px; margin-top: 24px;">ElimuX &middot; support@elimux.ke</p>
+    </div>
+  `
+}
+
+export function applicationRejectedEmailSubject(institutionName: string): string {
+  return `Update on your application for ${institutionName}`
+}
