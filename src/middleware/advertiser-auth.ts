@@ -18,6 +18,8 @@ export interface AdvertiserAuthRequest extends Request {
     isAdmin?: boolean;
 }
 
+const AUTH_TIMEOUT_MS = 8000; // 8 seconds max
+
 export const advertiserAuth = async (req: AdvertiserAuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const authHeader = req.headers.authorization;
@@ -28,7 +30,25 @@ export const advertiserAuth = async (req: AdvertiserAuthRequest, res: Response, 
 
         const token = authHeader.split(' ')[1];
 
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+        // Without this race, a slow/hung Supabase auth API leaves the request
+        // (and the frontend's awaiting fetch()) stuck forever with no response.
+        let authResult;
+        try {
+            authResult = await Promise.race([
+                supabaseAdmin.auth.getUser(token),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Auth service timeout')), AUTH_TIMEOUT_MS)
+                )
+            ]);
+        } catch (raceErr: any) {
+            if (raceErr?.message === 'Auth service timeout') {
+                res.status(503).json({ error: 'Authentication service temporarily unavailable. Please try again.' });
+                return;
+            }
+            throw raceErr;
+        }
+
+        const { data: { user }, error: authError } = authResult as any;
 
         if (authError || !user) {
             res.status(401).json({ error: 'Unauthorized - Invalid token' });
@@ -72,7 +92,15 @@ export const optionalAuth = async (req: AdvertiserAuthRequest, res: Response, ne
         const authHeader = req.headers.authorization;
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
-            const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+            // Same untimeouted-call risk as advertiserAuth above, but this
+            // middleware treats any auth failure as "proceed unauthenticated" -
+            // a timeout here should fall through to next() too, not hang.
+            const { data: { user } } = await Promise.race([
+                supabaseAdmin.auth.getUser(token),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Auth service timeout')), AUTH_TIMEOUT_MS)
+                )
+            ]) as any;
             if (user) {
                 req.userId = user.id;
                 req.isAdmin = user.user_metadata?.role === 'admin';

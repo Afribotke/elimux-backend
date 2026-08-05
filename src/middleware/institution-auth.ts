@@ -20,6 +20,8 @@ export interface InstitutionAuthRequest extends Request {
     userId?: string;
 }
 
+const AUTH_TIMEOUT_MS = 8000; // 8 seconds max
+
 export const institutionAuth = async (req: InstitutionAuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const authHeader = req.headers.authorization;
@@ -30,7 +32,25 @@ export const institutionAuth = async (req: InstitutionAuthRequest, res: Response
 
         const token = authHeader.split(' ')[1];
 
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+        // Without this race, a slow/hung Supabase auth API leaves the request
+        // (and the frontend's awaiting fetch()) stuck forever with no response.
+        let authResult;
+        try {
+            authResult = await Promise.race([
+                supabaseAdmin.auth.getUser(token),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Auth service timeout')), AUTH_TIMEOUT_MS)
+                )
+            ]);
+        } catch (raceErr: any) {
+            if (raceErr?.message === 'Auth service timeout') {
+                res.status(503).json({ error: 'Authentication service temporarily unavailable. Please try again.' });
+                return;
+            }
+            throw raceErr;
+        }
+
+        const { data: { user }, error: authError } = authResult as any;
 
         if (authError || !user) {
             res.status(401).json({ error: 'Unauthorized - Invalid token' });
