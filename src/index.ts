@@ -49,7 +49,7 @@ const PORT = process.env.PORT || 3001
 
 app.use(cors())
 app.use(
-  express.json({
+  express.json({ limit: '5mb',
     verify: (req, _res, buf) => {
       ;(req as any).rawBody = buf
     },
@@ -130,4 +130,5 @@ app.use('/api/payments/stripe', stripePayments);
 app.use('/api/payments/mpesa', mpesaPayments);
 
 export default app
+
 
