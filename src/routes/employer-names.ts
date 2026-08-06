@@ -4,22 +4,43 @@ import { adminMiddleware } from '../middleware/auth';
 
 const router = Router();
 
-// Initialize Supabase with service role
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
-// ── HELPER: Normalize company name for URL guessing ──
+// ── Title Case Normalizer ──
+// KENYA POWER LIMITED → Kenya Power Limited
+// safaricom limited → Safaricom Limited
+function toTitleCase(name: string): string {
+  const minorWords = new Set(['and', 'or', 'of', 'for', 'in', 'on', 'at', 'to', 'by', 'a', 'an', 'the', 'with']);
+  const alwaysUpper = new Set(['epz', 'ltd', 'llc', 'plc', 'inc', 'corp', 'co', 'llp', 'kg', 'gmbh', 'sa', 'bv', 'nv']);
+
+  return name
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word, i) => {
+      const clean = word.replace(/[^a-z0-9]/gi, '').toLowerCase();
+      // Suffixes like LTD, EPZ, LLC always uppercase
+      if (alwaysUpper.has(clean)) return word.toUpperCase();
+      // Minor words (and, of, for) lowercase unless first word
+      if (i > 0 && minorWords.has(clean)) return clean;
+      // Default: capitalize first letter
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}
+
+// ── Normalize for URL guessing ──
 function normalizeForUrl(name: string): string {
   return name
     .toLowerCase()
-    .replace(/(?:limited|ltd|inc|incorporated|plc|llc|corp|corporation|group|holdings)\b/gi, '')
+    .replace(/\b(?:limited|ltd|inc|incorporated|plc|llc|corp|corporation|group|holdings)\b/gi, '')
     .replace(/[^a-z0-9]/g, '')
     .trim();
 }
 
-// ── HELPER: Safe URL discovery (HEAD request, no scraping) ──
+// ── Safe URL discovery (HEAD request, no scraping) ──
 async function discoverWebsite(name: string): Promise<{ url: string | null; source: string }> {
   const normalized = normalizeForUrl(name);
   if (!normalized) return { url: null, source: 'heuristic' };
@@ -46,12 +67,10 @@ async function discoverWebsite(name: string): Promise<{ url: string | null; sour
       });
       clearTimeout(timeout);
 
-      // Accept 200-399 status codes
       if (resp.status >= 200 && resp.status < 400) {
         return { url, source: 'heuristic' };
       }
     } catch {
-      // Timeout or network error — try next candidate
       continue;
     }
   }
@@ -60,7 +79,6 @@ async function discoverWebsite(name: string): Promise<{ url: string | null; sour
 }
 
 // ── POST /api/employer-names/bulk-upload ──
-// Admin uploads CSV/array of names
 router.post('/bulk-upload', adminMiddleware, async (req, res) => {
   try {
     const { names } = req.body as { names: string[] };
@@ -68,48 +86,60 @@ router.post('/bulk-upload', adminMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'names array required' });
     }
 
-    // Deduplicate and normalize
-    const uniqueNames = [...new Set(names.map(n => n.trim()).filter(n => n.length > 0))];
-
+    const rawNames = [...new Set(names.map(n => n.trim()).filter(n => n.length > 0))];
+    const total = rawNames.length;
     const results = [];
-    for (const name of uniqueNames) {
-      const normalized = normalizeForUrl(name);
+    let created = 0;
+    let skipped = 0;
+    let errors = 0;
 
-      // Skip if already exists
+    for (const rawName of rawNames) {
+      const normalizedName = toTitleCase(rawName);
+      const normalizedKey = normalizeForUrl(rawName);
+
+      // Skip if already exists (check by normalized key)
       const { data: existing } = await supabase
         .from('employer_names')
         .select('id')
-        .eq('normalized_name', normalized)
+        .eq('normalized_name', normalizedKey)
         .single();
 
       if (existing) {
-        results.push({ name, status: 'skipped', reason: 'already_exists' });
+        skipped++;
+        results.push({ name: normalizedName, status: 'skipped', reason: 'already_exists' });
         continue;
       }
 
       // Discover website safely
-      const { url, source } = await discoverWebsite(name);
+      const { url, source } = await discoverWebsite(rawName);
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('employer_names')
         .insert({
-          name,
-          normalized_name: normalized,
+          name: normalizedName,
+          normalized_name: normalizedKey,
           website_url: url,
           discovery_source: source,
           discovery_status: url ? 'found' : 'not_found',
-        })
-        .select()
-        .single();
+        });
 
       if (error) {
-        results.push({ name, status: 'error', error: error.message });
+        errors++;
+        results.push({ name: normalizedName, status: 'error', error: error.message });
       } else {
-        results.push({ name, status: 'created', website_url: url, discovery_status: url ? 'found' : 'not_found' });
+        created++;
+        results.push({ name: normalizedName, status: 'created', website_url: url, discovery_status: url ? 'found' : 'not_found' });
       }
     }
 
-    return res.json({ success: true, processed: results.length, results });
+    return res.json({
+      success: true,
+      total,
+      created,
+      skipped,
+      errors,
+      results,
+    });
   } catch (err: any) {
     console.error('[Employer Names Bulk Upload]', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -117,7 +147,6 @@ router.post('/bulk-upload', adminMiddleware, async (req, res) => {
 });
 
 // ── GET /api/employer-names/search?q=abc ──
-// Auto-complete for employer registration (min 3 chars)
 router.get('/search', async (req, res) => {
   try {
     const q = (req.query.q as string || '').trim();
@@ -125,7 +154,6 @@ router.get('/search', async (req, res) => {
       return res.status(400).json({ error: 'Query must be at least 3 characters' });
     }
 
-    // Use pg_trgm for fuzzy matching, or ILIKE fallback
     const { data, error } = await supabase
       .from('employer_names')
       .select('id, name, website_url, discovery_status')
@@ -146,7 +174,6 @@ router.get('/search', async (req, res) => {
 });
 
 // ── GET /api/employer-names/:id ──
-// Get single employer name details
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -167,7 +194,6 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── PATCH /api/employer-names/:id/verify ──
-// Admin confirms/corrects the discovered website URL
 router.patch('/:id/verify', adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
