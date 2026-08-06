@@ -11,7 +11,7 @@ const supabase = createClient(
 
 function toTitleCase(name: string): string {
   const minorWords = new Set(['and', 'or', 'of', 'for', 'in', 'on', 'at', 'to', 'by', 'a', 'an', 'the', 'with']);
-  const alwaysUpper = new Set(['epz', 'ltd', 'llc', 'plc', 'inc', 'corp', 'co', 'llp', 'kg', 'gmbh', 'sa', 'bv', 'nv', 'go', 'ke', 'or', 'ac']);
+  const alwaysUpper = new Set(['epz', 'ltd', 'llc', 'plc', 'inc', 'corp', 'co', 'llp', 'kg', 'gmbh', 'sa', 'bv', 'nv']);
   return name.toLowerCase().split(/\s+/).map((word, i) => {
     const clean = word.replace(/[^a-z0-9]/gi, '').toLowerCase();
     if (alwaysUpper.has(clean)) return word.toUpperCase();
@@ -26,37 +26,8 @@ function normalizeForUrl(name: string): string {
     .replace(/[^a-z0-9]/g, '').trim();
 }
 
-// ── Optional: Safe URL suggestion (NOT stored as fact) ──
-// Result is marked "suggested" — never displayed publicly until an admin verifies it.
-async function suggestWebsite(name: string): Promise<string | null> {
-  const normalized = normalizeForUrl(name);
-  if (!normalized) return null;
-
-  const candidates = [
-    `https://www.${normalized}.com`,
-    `https://${normalized}.com`,
-    `https://www.${normalized}.co.ke`,
-    `https://${normalized}.co.ke`,
-  ];
-
-  for (const url of candidates) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const resp = await fetch(url, {
-        method: 'HEAD',
-        signal: controller.signal,
-        redirect: 'follow',
-        headers: { 'User-Agent': 'ElimuX-Bot/1.0 (+https://www.elimux.ke)' }
-      });
-      clearTimeout(timeout);
-      if (resp.status >= 200 && resp.status < 400) return url;
-    } catch { continue; }
-  }
-  return null;
-}
-
 // ── POST /api/employer-names/bulk-upload ──
+// FAST: No HTTP calls, just insert names. Returns in seconds even for 3000 names.
 router.post('/bulk-upload', adminMiddleware, async (req, res) => {
   try {
     const { names } = req.body as { names: string[] };
@@ -65,6 +36,7 @@ router.post('/bulk-upload', adminMiddleware, async (req, res) => {
     }
 
     const rawNames = [...new Set(names.map(n => n.trim()).filter(n => n.length > 0))];
+    const total = rawNames.length;
     const results = [];
     let created = 0, skipped = 0, errors = 0;
 
@@ -84,16 +56,10 @@ router.post('/bulk-upload', adminMiddleware, async (req, res) => {
         continue;
       }
 
-      // Optional suggestion — NOT stored as verified fact
-      const suggestedUrl = await suggestWebsite(rawName);
-
       const { error } = await supabase.from('employer_names').insert({
         name: normalizedName,
         normalized_name: normalizedKey,
-        suggested_website_url: suggestedUrl,  // ← MARKED AS SUGGESTION ONLY
-        verified_website_url: null,              // ← EMPTY until employer verifies
         verification_status: 'unverified',
-        discovery_source: suggestedUrl ? 'heuristic' : null,
       });
 
       if (error) {
@@ -101,24 +67,90 @@ router.post('/bulk-upload', adminMiddleware, async (req, res) => {
         results.push({ name: normalizedName, status: 'error', error: error.message });
       } else {
         created++;
-        results.push({
-          name: normalizedName,
-          status: 'created',
-          suggested_url: suggestedUrl,
-          note: 'URL is a suggestion only — employer must verify during registration'
-        });
+        results.push({ name: normalizedName, status: 'created' });
       }
     }
 
-    return res.json({ success: true, total: rawNames.length, created, skipped, errors, results });
+    return res.json({ success: true, total, created, skipped, errors, results });
   } catch (err: any) {
     console.error('[Employer Names Bulk Upload]', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+// ── POST /api/employer-names/:id/discover-url ──
+// SEPARATE: Discover URL for a single employer (admin-triggered, one at a time)
+router.post('/:id/discover-url', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: employer, error: fetchError } = await supabase
+      .from('employer_names')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !employer) {
+      return res.status(404).json({ error: 'Employer not found' });
+    }
+
+    // Simple URL discovery
+    const normalized = normalizeForUrl(employer.name);
+    let foundUrl: string | null = null;
+
+    if (normalized) {
+      const candidates = [
+        `https://www.${normalized}.com`,
+        `https://${normalized}.com`,
+        `https://www.${normalized}.co.ke`,
+        `https://${normalized}.co.ke`,
+      ];
+
+      for (const url of candidates) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const resp = await fetch(url, {
+            method: 'HEAD',
+            signal: controller.signal,
+            redirect: 'follow',
+            headers: { 'User-Agent': 'ElimuX-Bot/1.0 (+https://www.elimux.ke)' }
+          });
+          clearTimeout(timeout);
+          if (resp.status >= 200 && resp.status < 400) {
+            foundUrl = url;
+            break;
+          }
+        } catch { continue; }
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('employer_names')
+      .update({
+        suggested_website_url: foundUrl,
+        discovery_source: foundUrl ? 'heuristic' : null,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    return res.json({
+      data,
+      discovered: !!foundUrl,
+      url: foundUrl,
+      note: 'URL is a suggestion only — employer must verify during registration'
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── GET /api/employer-names/search?q=abc ──
-// Returns names + suggested URLs (for employer to see during registration)
 router.get('/search', async (req, res) => {
   try {
     const q = (req.query.q as string || '').trim();
@@ -145,18 +177,17 @@ router.get('/search', async (req, res) => {
 });
 
 // ── PATCH /api/employer-names/:id/verify ──
-// Admin-only for now: sets the publicly-displayed URL for an employer entry.
-// No employer-facing auth exists yet in this codebase — opening this up to
-// unauthenticated callers would let anyone set verified_website_url (and the
-// public-facing URL) on any row by ID.
+// Admin-only: sets the publicly-displayed URL for an employer entry. No
+// employer-facing auth exists yet in this codebase — opening this up to
+// unauthenticated callers would let anyone set the public-facing URL on any
+// row by ID.
 router.patch('/:id/verify', adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { website_url } = req.body;
 
-    // Basic URL validation
     if (!website_url || !website_url.match(/^https?:\/\/.+/)) {
-      return res.status(400).json({ error: 'Valid website URL required (must start with http:// or https://)' });
+      return res.status(400).json({ error: 'Valid website URL required' });
     }
 
     const { data, error } = await supabase
@@ -174,10 +205,7 @@ router.patch('/:id/verify', adminMiddleware, async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    return res.json({
-      data,
-      message: 'Website URL verified successfully. This URL will now be displayed publicly.'
-    });
+    return res.json({ data, message: 'Website URL verified successfully' });
   } catch (err: any) {
     return res.status(500).json({ error: 'Internal server error' });
   }
