@@ -47,7 +47,7 @@ import mpesaPayments from './routes/payments-mpesa';
 const app = express()
 const PORT = process.env.PORT || 3001
 
-app.use(cors())
+app.use(cors({ allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key'] }))
 app.use(
   express.json({ limit: '5mb',
     verify: (req, _res, buf) => {
