@@ -40,6 +40,7 @@ import aiRouter from './routes/ai'
 import applicationsRouter from './routes/applications'
 import internshipsRouter from './routes/internships'
 import employerNamesRouter from './routes/employer-names'
+import tvetaRouter from './routes/tveta'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 import stripePayments from './routes/payments-stripe';
 import mpesaPayments from './routes/payments-mpesa';
@@ -102,12 +103,13 @@ app.use('/api/ai', aiRouter)
 app.use('/api/applications', applicationsRouter)
 app.use('/api', internshipsRouter)
 app.use('/api/employer-names', employerNamesRouter)
+app.use('/api/tveta', tvetaRouter)
 
 app.get('/', (req, res) => {
   res.json({
     name: 'ElimuX API',
     version: '1.0.0',
-    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/analytics', '/api/gamification', '/api/sponsor-ads', '/api/pwa', '/api/admin/scraper', '/api/scholarships', '/api/accreditation-bodies', '/api/major-sponsor', '/api/advertiser', '/api/advertiser/payments', '/api/campaigns', '/api/ads', '/api/institution-portal']
+    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/analytics', '/api/gamification', '/api/sponsor-ads', '/api/pwa', '/api/admin/scraper', '/api/scholarships', '/api/accreditation-bodies', '/api/major-sponsor', '/api/advertiser', '/api/advertiser/payments', '/api/campaigns', '/api/ads', '/api/institution-portal', '/api/tveta']
   })
 })
 
