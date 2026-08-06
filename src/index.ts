@@ -39,6 +39,7 @@ import contactRouter from './routes/contact'
 import aiRouter from './routes/ai'
 import applicationsRouter from './routes/applications'
 import internshipsRouter from './routes/internships'
+import employerNamesRouter from './routes/employer-names'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 import stripePayments from './routes/payments-stripe';
 import mpesaPayments from './routes/payments-mpesa';
@@ -100,6 +101,7 @@ app.use('/api/contact', contactRouter)
 app.use('/api/ai', aiRouter)
 app.use('/api/applications', applicationsRouter)
 app.use('/api', internshipsRouter)
+app.use('/api/employer-names', employerNamesRouter)
 
 app.get('/', (req, res) => {
   res.json({
