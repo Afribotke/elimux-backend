@@ -5,6 +5,17 @@ import { runTvetaScrape, checkRobotsTxt } from '../services/tvetaScraper'
 
 const router = Router()
 
+// supabase-js calls have no built-in timeout, so a single hung request can
+// block a sequential loop forever with no error. Races the call against a
+// deadline instead, so a stuck row fails (and gets caught/logged/skipped)
+// rather than freezing every row after it.
+function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms)),
+  ])
+}
+
 // ── GET /api/tveta/public-search ──
 // Public, unauthenticated lookup so students can check whether an
 // institution is TVETA-accredited before enrolling. Registered ahead of
@@ -318,62 +329,69 @@ router.post('/bulk-approve', adminMiddleware, async (req, res) => {
           let typeId: string | null = null
 
           if (mappedTypeName) {
-            const { data: existingType } = await supabase
-              .from('institution_types')
-              .select('id')
-              .ilike('name', mappedTypeName)
-              .single()
+            const { data: existingType } = await withTimeout(
+              supabase.from('institution_types').select('id').ilike('name', mappedTypeName).single(),
+              10000
+            )
 
             if (existingType) typeId = existingType.id
           }
 
           // Check if institution already exists
-          const { data: existing } = await supabase
-            .from('institutions')
-            .select('id')
-            .ilike('name', scraped.name)
-            .single()
+          const { data: existing } = await withTimeout(
+            supabase.from('institutions').select('id').ilike('name', scraped.name).single(),
+            10000
+          )
 
           let institutionId: string
 
           if (existing) {
-            const { data: updated } = await supabase
-              .from('institutions')
-              .update({
-                tveta_registration_number: scraped.registration_number,
-                tveta_accredited: true,
-                tveta_status: scraped.status,
-                city: scraped.county,
-                type_id: typeId,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', existing.id)
-              .select()
-              .single()
+            const { data: updated } = await withTimeout(
+              supabase
+                .from('institutions')
+                .update({
+                  tveta_registration_number: scraped.registration_number,
+                  tveta_accredited: true,
+                  tveta_status: scraped.status,
+                  city: scraped.county,
+                  type_id: typeId,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', existing.id)
+                .select()
+                .single(),
+              10000
+            )
             institutionId = updated!.id
           } else {
-            const { data: created } = await supabase
-              .from('institutions')
-              .insert({
-                name: scraped.name,
-                city: scraped.county,
-                country: 'Kenya',
-                tveta_registration_number: scraped.registration_number,
-                tveta_accredited: true,
-                tveta_status: scraped.status,
-                type_id: typeId,
-                is_active: true,
-              })
-              .select()
-              .single()
+            const { data: created } = await withTimeout(
+              supabase
+                .from('institutions')
+                .insert({
+                  name: scraped.name,
+                  city: scraped.county,
+                  country: 'Kenya',
+                  tveta_registration_number: scraped.registration_number,
+                  tveta_accredited: true,
+                  tveta_status: scraped.status,
+                  type_id: typeId,
+                  is_active: true,
+                })
+                .select()
+                .single(),
+              10000
+            )
             institutionId = created!.id
           }
 
           // Mark scraped as approved
-          await supabase
-            .from('tveta_scraped_institutions')
-            .update({ review_status: 'approved', mapped_to_institution_id: institutionId })
-            .eq('id', scraped.id)
+          await withTimeout(
+            supabase
+              .from('tveta_scraped_institutions')
+              .update({ review_status: 'approved', mapped_to_institution_id: institutionId })
+              .eq('id', scraped.id),
+            10000
+          )
 
           approved++
         } catch (err: any) {
