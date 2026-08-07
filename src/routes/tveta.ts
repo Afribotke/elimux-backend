@@ -99,7 +99,6 @@ router.post('/run', async (req, res) => {
         county: inst.county,
         status: inst.status,
         source_url: inst.sourceUrl,
-        raw_text_snippet: inst.rawText,
         review_status: 'pending',
       }))
 
