@@ -197,22 +197,26 @@ router.post('/approve/:id', async (req, res) => {
 
     // TVETA's registry uses short category codes; institution_types uses
     // full descriptive names for its curated, icon-bearing list. Map known
-    // codes onto existing type rows rather than fuzzy-matching or creating
-    // new ones — an unmapped code leaves type_id null instead of spawning a
-    // junk institution_types row with no icon/description.
-    const TVETA_CATEGORY_TO_TYPE: Record<string, string> = {
+    // codes (and their full-length variants, in case a future scrape source
+    // uses them) onto existing type rows — an unmapped code leaves type_id
+    // null instead of spawning a junk institution_types row.
+    const CATEGORY_MAP: Record<string, string> = {
       NP: 'Polytechnic',
+      'National Polytechnic': 'Polytechnic',
       TVC: 'TVET Institute',
+      'Technical Vocational College': 'TVET Institute',
       VTC: 'Vocational School',
+      'Vocational Training Centre': 'Vocational School',
     }
 
     let typeId: string | null = null
-    const typeName = scraped.category ? TVETA_CATEGORY_TO_TYPE[scraped.category] : null
-    if (typeName) {
+    if (scraped.category) {
+      const mappedTypeName = CATEGORY_MAP[scraped.category] || scraped.category
+
       const { data: existingType } = await supabase
         .from('institution_types')
         .select('id')
-        .eq('name', typeName)
+        .ilike('name', mappedTypeName)
         .maybeSingle()
 
       if (existingType) typeId = existingType.id
