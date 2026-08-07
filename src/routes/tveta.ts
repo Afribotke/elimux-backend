@@ -58,24 +58,40 @@ router.post('/run', async (req, res) => {
       return res.status(400).json({ error: 'Scrape failed', details: result.errors })
     }
 
+    console.log(`[tveta] run: scraped ${result.institutions.length} institutions, checking for duplicates`)
+
+    // Batch the duplicate check into a handful of `IN (...)` queries instead of
+    // one SELECT per institution — the per-row version was doing 1000+
+    // sequential round trips and blowing past request timeouts.
+    const regNumbers = result.institutions
+      .map((inst) => inst.registrationNumber)
+      .filter((v): v is string => !!v)
+
+    const existingRegNumbers = new Set<string>()
+    const CHECK_BATCH = 500 // keep each `.in()` list well under Postgres/URL limits
+    for (let i = 0; i < regNumbers.length; i += CHECK_BATCH) {
+      const chunk = regNumbers.slice(i, i + CHECK_BATCH)
+      const { data: existing, error } = await supabase
+        .from('tveta_scraped_institutions')
+        .select('registration_number')
+        .in('registration_number', chunk)
+
+      if (error) throw error
+      existing?.forEach((row) => row.registration_number && existingRegNumbers.add(row.registration_number))
+    }
+
+    const toInsert = result.institutions.filter(
+      (inst) => !inst.registrationNumber || !existingRegNumbers.has(inst.registrationNumber)
+    )
+    const duplicates = result.institutions.length - toInsert.length
+
+    console.log(`[tveta] run: ${toInsert.length} new, ${duplicates} duplicates — inserting in batches of 100`)
+
     let inserted = 0
-    let duplicates = 0
-
-    for (const inst of result.institutions) {
-      if (inst.registrationNumber) {
-        const { data: existing } = await supabase
-          .from('tveta_scraped_institutions')
-          .select('id')
-          .eq('registration_number', inst.registrationNumber)
-          .maybeSingle()
-
-        if (existing) {
-          duplicates++
-          continue
-        }
-      }
-
-      const { error } = await supabase.from('tveta_scraped_institutions').insert({
+    const INSERT_BATCH = 100
+    for (let i = 0; i < toInsert.length; i += INSERT_BATCH) {
+      const batchNum = i / INSERT_BATCH + 1
+      const batch = toInsert.slice(i, i + INSERT_BATCH).map((inst) => ({
         name: inst.name,
         registration_number: inst.registrationNumber,
         category: inst.category,
@@ -85,9 +101,16 @@ router.post('/run', async (req, res) => {
         source_url: inst.sourceUrl,
         raw_text_snippet: inst.rawText,
         review_status: 'pending',
-      })
+      }))
 
-      if (!error) inserted++
+      const { error } = await supabase.from('tveta_scraped_institutions').insert(batch)
+      if (error) {
+        console.error(`[tveta] run: batch ${batchNum} failed:`, error.message)
+        continue
+      }
+
+      inserted += batch.length
+      console.log(`[tveta] run: batch ${batchNum} inserted (${inserted}/${toInsert.length})`)
     }
 
     return res.json({
