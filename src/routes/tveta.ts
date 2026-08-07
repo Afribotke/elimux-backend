@@ -4,7 +4,45 @@ import { adminMiddleware } from '../middleware/auth'
 import { runTvetaScrape, checkRobotsTxt } from '../services/tvetaScraper'
 
 const router = Router()
-router.use(adminMiddleware) // every /api/tveta/* route is admin-only
+
+// ── GET /api/tveta/public-search ──
+// Public, unauthenticated lookup so students can check whether an
+// institution is TVETA-accredited before enrolling. Registered ahead of
+// adminMiddleware below so this one route is exempt from the admin gate.
+router.get('/public-search', async (req, res) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
+    if (q.length < 3) {
+      return res.status(400).json({ error: 'Query must be at least 3 characters' })
+    }
+
+    const { data, error } = await supabase
+      .from('institutions')
+      .select('id, name, tveta_registration_number, tveta_accredited, city, type:institution_types(name)')
+      .eq('tveta_accredited', true)
+      .eq('is_active', true)
+      .ilike('name', `%${q}%`)
+      .limit(10)
+
+    if (error) throw error
+
+    const results = (data || []).map((inst: any) => ({
+      id: inst.id,
+      name: inst.name,
+      registrationNumber: inst.tveta_registration_number,
+      accredited: inst.tveta_accredited,
+      category: inst.type?.name || null,
+      county: inst.city || null,
+    }))
+
+    return res.json({ data: results })
+  } catch (err: any) {
+    console.error('[tveta] public-search:', err)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+router.use(adminMiddleware) // every other /api/tveta/* route is admin-only
 
 // ── POST /api/tveta/run ──
 // Trigger a scrape of the TVETA accreditation registry.
