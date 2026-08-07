@@ -195,6 +195,29 @@ router.post('/approve/:id', async (req, res) => {
       })
     }
 
+    // TVETA's registry uses short category codes; institution_types uses
+    // full descriptive names for its curated, icon-bearing list. Map known
+    // codes onto existing type rows rather than fuzzy-matching or creating
+    // new ones — an unmapped code leaves type_id null instead of spawning a
+    // junk institution_types row with no icon/description.
+    const TVETA_CATEGORY_TO_TYPE: Record<string, string> = {
+      NP: 'Polytechnic',
+      TVC: 'TVET Institute',
+      VTC: 'Vocational School',
+    }
+
+    let typeId: string | null = null
+    const typeName = scraped.category ? TVETA_CATEGORY_TO_TYPE[scraped.category] : null
+    if (typeName) {
+      const { data: existingType } = await supabase
+        .from('institution_types')
+        .select('id')
+        .eq('name', typeName)
+        .maybeSingle()
+
+      if (existingType) typeId = existingType.id
+    }
+
     const { data: existing } = await supabase
       .from('institutions')
       .select('id')
@@ -211,6 +234,7 @@ router.post('/approve/:id', async (req, res) => {
           tveta_accredited: true,
           tveta_status: scraped.status,
           city: scraped.county,
+          ...(typeId ? { type_id: typeId } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
@@ -226,6 +250,7 @@ router.post('/approve/:id', async (req, res) => {
           name: scraped.name,
           city: scraped.county,
           country: 'Kenya',
+          type_id: typeId,
           tveta_registration_number: scraped.registration_number,
           tveta_accredited: true,
           tveta_status: scraped.status,
