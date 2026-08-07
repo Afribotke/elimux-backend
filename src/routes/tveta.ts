@@ -68,7 +68,7 @@ router.post('/run', async (req, res) => {
       .filter((v): v is string => !!v)
 
     const existingRegNumbers = new Set<string>()
-    const CHECK_BATCH = 500 // keep each `.in()` list well under Postgres/URL limits
+    const CHECK_BATCH = 100 // keep each `.in()` list well under Postgres/URL limits
     for (let i = 0; i < regNumbers.length; i += CHECK_BATCH) {
       const chunk = regNumbers.slice(i, i + CHECK_BATCH)
       const { data: existing, error } = await supabase
