@@ -279,6 +279,123 @@ router.post('/approve/:id', async (req, res) => {
   }
 })
 
+// ── POST /api/tveta/bulk-approve ──
+// Approve all pending institutions with Active status (skip Expired License)
+router.post('/bulk-approve', adminMiddleware, async (req, res) => {
+  try {
+    const { data: pending, error: fetchError } = await supabase
+      .from('tveta_scraped_institutions')
+      .select('*')
+      .eq('review_status', 'pending')
+
+    if (fetchError) {
+      return res.status(500).json({ error: fetchError.message })
+    }
+
+    const toApprove = (pending || []).filter((inst: any) => inst.status !== 'Expired License')
+    const skipped = (pending || []).filter((inst: any) => inst.status === 'Expired License')
+
+    let approved = 0
+    let errors = 0
+    const BATCH_SIZE = 100
+
+    for (let i = 0; i < toApprove.length; i += BATCH_SIZE) {
+      const batch = toApprove.slice(i, i + BATCH_SIZE)
+
+      for (const scraped of batch) {
+        try {
+          // Map category to type_id
+          const CATEGORY_MAP: Record<string, string> = {
+            NP: 'Polytechnic',
+            'National Polytechnic': 'Polytechnic',
+            TVC: 'TVET Institute',
+            'Technical Vocational College': 'TVET Institute',
+            VTC: 'Vocational School',
+            'Vocational Training Centre': 'Vocational School',
+          }
+
+          const mappedTypeName = CATEGORY_MAP[scraped.category] || scraped.category
+          let typeId: string | null = null
+
+          if (mappedTypeName) {
+            const { data: existingType } = await supabase
+              .from('institution_types')
+              .select('id')
+              .ilike('name', mappedTypeName)
+              .single()
+
+            if (existingType) typeId = existingType.id
+          }
+
+          // Check if institution already exists
+          const { data: existing } = await supabase
+            .from('institutions')
+            .select('id')
+            .ilike('name', scraped.name)
+            .single()
+
+          let institutionId: string
+
+          if (existing) {
+            const { data: updated } = await supabase
+              .from('institutions')
+              .update({
+                tveta_registration_number: scraped.registration_number,
+                tveta_accredited: true,
+                tveta_status: scraped.status,
+                city: scraped.county,
+                type_id: typeId,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existing.id)
+              .select()
+              .single()
+            institutionId = updated!.id
+          } else {
+            const { data: created } = await supabase
+              .from('institutions')
+              .insert({
+                name: scraped.name,
+                city: scraped.county,
+                country: 'Kenya',
+                tveta_registration_number: scraped.registration_number,
+                tveta_accredited: true,
+                tveta_status: scraped.status,
+                type_id: typeId,
+                is_active: true,
+              })
+              .select()
+              .single()
+            institutionId = created!.id
+          }
+
+          // Mark scraped as approved
+          await supabase
+            .from('tveta_scraped_institutions')
+            .update({ review_status: 'approved', mapped_to_institution_id: institutionId })
+            .eq('id', scraped.id)
+
+          approved++
+        } catch (err: any) {
+          console.error(`[Bulk Approve Error] ${scraped.name}:`, err.message)
+          errors++
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      totalPending: pending?.length || 0,
+      approved,
+      skipped: skipped.length,
+      errors,
+    })
+  } catch (err: any) {
+    console.error('[Bulk Approve]', err)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // ── POST /api/tveta/reject/:id ──
 router.post('/reject/:id', async (req, res) => {
   try {
