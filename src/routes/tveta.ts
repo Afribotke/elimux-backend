@@ -182,6 +182,19 @@ router.post('/approve/:id', async (req, res) => {
       return res.status(404).json({ error: 'Scraped institution not found' })
     }
 
+    // Expired licenses don't count as currently accredited — reject instead
+    // of approving, so verify-college can't surface a stale claim.
+    if (scraped.status === 'Expired License') {
+      await supabase
+        .from('tveta_scraped_institutions')
+        .update({ review_status: 'rejected' })
+        .eq('id', id)
+      return res.status(400).json({
+        error: 'Cannot approve institution with expired TVETA license',
+        status: scraped.status,
+      })
+    }
+
     const { data: existing } = await supabase
       .from('institutions')
       .select('id')
@@ -196,6 +209,8 @@ router.post('/approve/:id', async (req, res) => {
         .update({
           tveta_registration_number: scraped.registration_number,
           tveta_accredited: true,
+          tveta_status: scraped.status,
+          city: scraped.county,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
@@ -209,8 +224,11 @@ router.post('/approve/:id', async (req, res) => {
         .from('institutions')
         .insert({
           name: scraped.name,
+          city: scraped.county,
+          country: 'Kenya',
           tveta_registration_number: scraped.registration_number,
           tveta_accredited: true,
+          tveta_status: scraped.status,
           is_active: true,
         })
         .select('id')
