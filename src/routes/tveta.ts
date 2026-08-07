@@ -294,17 +294,36 @@ router.post('/approve/:id', async (req, res) => {
 // Approve all pending institutions with Active status (skip Expired License)
 router.post('/bulk-approve', adminMiddleware, async (req, res) => {
   try {
-    const { data: pending, error: fetchError } = await supabase
-      .from('tveta_scraped_institutions')
-      .select('*')
-      .eq('review_status', 'pending')
+    // PostgREST caps a single select at 1000 rows by default - page through
+    // until exhausted instead of silently only seeing the first 1000 pending.
+    let pending: any[] = []
+    const PAGE_SIZE = 1000
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data: page, error: fetchError } = await supabase
+        .from('tveta_scraped_institutions')
+        .select('*')
+        .eq('review_status', 'pending')
+        .range(offset, offset + PAGE_SIZE - 1)
 
-    if (fetchError) {
-      return res.status(500).json({ error: fetchError.message })
+      if (fetchError) {
+        return res.status(500).json({ error: fetchError.message })
+      }
+      if (!page || page.length === 0) break
+      pending = pending.concat(page)
+      if (page.length < PAGE_SIZE) break
     }
 
-    const toApprove = (pending || []).filter((inst: any) => inst.status !== 'Expired License')
-    const skipped = (pending || []).filter((inst: any) => inst.status === 'Expired License')
+    const toApprove = pending.filter((inst: any) => inst.status !== 'Expired License')
+    const skipped = pending.filter((inst: any) => inst.status === 'Expired License')
+
+    // Resolve skipped rows immediately so they leave the pending pool -
+    // otherwise the next bulk-approve call re-fetches the same expired rows
+    // instead of making progress on the rest of the queue.
+    const SKIP_BATCH = 100
+    for (let i = 0; i < skipped.length; i += SKIP_BATCH) {
+      const ids = skipped.slice(i, i + SKIP_BATCH).map((s: any) => s.id)
+      await supabase.from('tveta_scraped_institutions').update({ review_status: 'rejected' }).in('id', ids)
+    }
 
     let approved = 0
     let errors = 0
@@ -403,7 +422,7 @@ router.post('/bulk-approve', adminMiddleware, async (req, res) => {
 
     return res.json({
       success: true,
-      totalPending: pending?.length || 0,
+      totalPending: pending.length,
       approved,
       skipped: skipped.length,
       errors,
