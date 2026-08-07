@@ -71,13 +71,40 @@ export async function scrapeTvetaPage(pageUrl: string): Promise<ScrapedInstituti
 
     rows.each((_, elem) => {
       const $row = $(elem)
+      const cells = $row.find('td')
+
+      // Structured table row: S/N(0), Name(1), Reg No(2), Category(3), Type(4), County(5), Expiry Date(6), Status(7)
+      if (cells.length >= 6) {
+        const name = $(cells[1]).text().trim()
+        if (!name || name.length < 3) return
+
+        const registrationNumber = $(cells[2]).text().trim() || null
+        const category = $(cells[3]).text().trim() || null
+        const type = $(cells[4]).text().trim() || null
+        const county = $(cells[5]).text().trim() || null
+        const status = cells.length >= 8 ? $(cells[7]).text().trim() || 'Active' : 'Active'
+
+        results.push({
+          name,
+          registrationNumber,
+          category,
+          type,
+          county,
+          status,
+          sourceUrl: pageUrl,
+          rawText: $row.text().trim().substring(0, 200),
+        })
+        return
+      }
+
+      // Fallback for non-tabular markup (.institution-list .item, .accredited-item, article)
       const text = $row.text().trim()
       if (!text || text.length < 5) return
 
       const regMatch = text.match(/TVETA\/[A-Z]+\/[A-Z]{2}\/\d{4}\/\d{4}/i)
       const registrationNumber = regMatch ? regMatch[0].toUpperCase() : null
 
-      let name = $row.find('strong, b, h3, h4, .title, td:first-child').first().text().trim()
+      let name = $row.find('strong, b, h3, h4, .title').first().text().trim()
       if (!name) name = text.split('\n')[0].trim()
       if (!name || name.length < 3) return
 
