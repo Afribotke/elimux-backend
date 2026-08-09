@@ -17,7 +17,7 @@ async function requireNitaAdmin(req: Request, res: Response, next: Function) {
 router.get('/dashboard', requireUser, requireNitaAdmin, async (req: Request, res: Response) => {
   try {
     const { data: attachments } = await supabase.from('attachments').select('status, evaluation_score');
-    const { data: employers } = await supabase.from('employers').select('nita_verified, nita_registration_number');
+    const { data: employers } = await supabase.from('employers').select('nita_verified, nita_employer_number');
     const { data: flags } = await supabase.from('nita_compliance_flags').select('*').eq('resolved', false);
     const { data: latestSnapshot } = await supabase.from('nita_stats_snapshots').select('*').order('snapshot_date', { ascending: false }).limit(1).single();
 
@@ -45,7 +45,7 @@ router.get('/dashboard', requireUser, requireNitaAdmin, async (req: Request, res
 
 router.get('/compliance', requireUser, requireNitaAdmin, async (req: Request, res: Response) => {
   try {
-    const { data, error } = await supabase.from('nita_compliance_flags').select(`*, employer:employer_id(id, company_name, nita_registration_number, user_id)`).eq('resolved', false).order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('nita_compliance_flags').select(`*, employer:employer_id(id, company_name, nita_employer_number, user_id)`).eq('resolved', false).order('created_at', { ascending: false });
     if (error) throw error;
     res.json({ data: data || [] });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -88,7 +88,7 @@ router.post('/sync-employers', requireUser, requireNitaAdmin, async (req: Reques
 router.get('/employer/:id/status', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { data: employer, error } = await supabase.from('employers').select('id, company_name, nita_registration_number, nita_verified, nita_verified_at, verification_status, is_verified').eq('id', id).single();
+    const { data: employer, error } = await supabase.from('employers').select('id, company_name, nita_employer_number, nita_verified, nita_verified_at, verification_status, is_verified').eq('id', id).single();
     if (error || !employer) return res.status(404).json({ error: 'Employer not found' });
     const { data: flags } = await supabase.from('nita_compliance_flags').select('*').eq('employer_id', id).eq('resolved', false);
     res.json({ employer, nita_compliant: employer.nita_verified === true && (flags?.length || 0) === 0, open_flags: flags || [] });
