@@ -6,9 +6,11 @@ const router = Router();
 
 async function requireNitaAdmin(req: Request, res: Response, next: Function) {
   const userId = (req as any).userId;
-  const { data } = await supabase.from('user_roles').select('role').eq('user_id', userId).single();
-  const role = data?.role;
-  if (!['nita_admin', 'elimux_admin', 'admin'].includes(role)) {
+  // A user can hold multiple roles (e.g. this test account has both
+  // elimux_admin and nita_admin) - .single() errors when more than one row
+  // matches, so check for any matching row instead of fetching exactly one.
+  const { data } = await supabase.from('user_roles').select('role').eq('user_id', userId).in('role', ['nita_admin', 'elimux_admin', 'admin']);
+  if (!data || data.length === 0) {
     return res.status(403).json({ error: 'NITA admin access required' });
   }
   next();
