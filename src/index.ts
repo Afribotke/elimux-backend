@@ -13,6 +13,7 @@ import favoritesRouter from './routes/favorites'
 import shareRouter from './routes/share'
 import reviewsRouter from './routes/reviews'
 import adminRouter from './routes/admin'
+import adminDashboardRouter from './routes/admin-dashboard'
 import gamificationRouter from './routes/gamification'
 import sponsorAdsRouter from './routes/sponsor-ads'
 import adminAnalyticsRouter from './routes/admin-analytics'
@@ -79,6 +80,7 @@ app.use('/api/favorites', favoritesRouter)
 app.use('/api/share', shareRouter)
 app.use('/api/reviews', reviewsRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/admin/dashboard', adminDashboardRouter)
 app.use('/api/admin/analytics', adminAnalyticsRouter)
 app.use('/api/analytics', searchAnalyticsRouter)
 app.use('/api/gamification', gamificationRouter)
@@ -115,7 +117,7 @@ app.get('/', (req, res) => {
   res.json({
     name: 'ElimuX API',
     version: '1.0.0',
-    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/analytics', '/api/analytics', '/api/gamification', '/api/sponsor-ads', '/api/pwa', '/api/admin/scraper', '/api/scholarships', '/api/accreditation-bodies', '/api/major-sponsor', '/api/advertiser', '/api/advertiser/payments', '/api/campaigns', '/api/ads', '/api/institution-portal', '/api/tveta']
+    endpoints: ['/health', '/api/institutions', '/api/programs', '/api/payments', '/api/ai-search', '/api/favorites', '/api/share', '/api/reviews', '/api/admin', '/api/admin/dashboard', '/api/admin/analytics', '/api/analytics', '/api/gamification', '/api/sponsor-ads', '/api/pwa', '/api/admin/scraper', '/api/scholarships', '/api/accreditation-bodies', '/api/major-sponsor', '/api/advertiser', '/api/advertiser/payments', '/api/campaigns', '/api/ads', '/api/institution-portal', '/api/tveta']
   })
 })
 
