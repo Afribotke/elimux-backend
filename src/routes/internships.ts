@@ -110,7 +110,7 @@ router.get('/employers', requireUser, async (req: UserAuthRequest, res: Response
       .from('employers')
       .select('id, company_name, location_county, industry')
       .eq('is_active', true)
-      .eq('verification_status', 'verified')
+      .eq('verification_status', 'approved')
       .order('company_name', { ascending: true });
 
     if (error) throw error;
