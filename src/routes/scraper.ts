@@ -237,6 +237,18 @@ router.post('/run', async (req, res) => {
 
     if (updateJobError) throw updateJobError
 
+    // Best-effort: mark the matching scraping_sources row (if this run came
+    // from one, rather than an ad-hoc institution_id+source_url) as freshly
+    // crawled, so a cron loop over `is_active` sources knows what's due. A
+    // lookup miss or update failure here shouldn't fail an otherwise-
+    // successful scrape, so it's logged rather than thrown.
+    const { error: lastCrawledError } = await supabase
+      .from('scraping_sources')
+      .update({ last_crawled_at: new Date().toISOString() })
+      .eq('institution_id', institution_id)
+      .eq('url', source_url)
+    if (lastCrawledError) console.error('Failed to update scraping_sources.last_crawled_at:', lastCrawledError)
+
     res.json({ data: { job: updatedJob, changes_filed: changeRows.length, suspicious_entries_filtered: suspiciousCount } })
   } catch (error: any) {
     console.error('Scraper run error:', error)

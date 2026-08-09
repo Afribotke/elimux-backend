@@ -1,0 +1,45 @@
+name: Weekly Data Scraper
+
+on:
+  schedule:
+    # Every Sunday at 2:00 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  scrape-tveta:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger TVETA registry scrape
+        run: |
+          curl -sSf -X POST "https://api.elimux.ke/api/tveta/run" \
+            -H "x-admin-key: ${{ secrets.ADMIN_KEY }}"
+
+  scrape-universities:
+    runs-on: ubuntu-latest
+    steps:
+      # POST /api/admin/scraper/run takes one institution_id+source_url per
+      # call, not a bulk trigger - loop over the active scraping_sources rows
+      # (the same ones managed at /admin/scraper) instead of guessing a body.
+      - name: Fetch active scraping sources and run each
+        run: |
+          sources=$(curl -sSf "https://api.elimux.ke/api/admin/scraper/sources" \
+            -H "x-admin-key: ${{ secrets.ADMIN_KEY }}" | jq -c '.data[] | select(.is_active == true)')
+
+          if [ -z "$sources" ]; then
+            echo "No active scraping sources - nothing to run."
+            exit 0
+          fi
+
+          echo "$sources" | while IFS= read -r source; do
+            institution_id=$(echo "$source" | jq -r '.institution_id')
+            url=$(echo "$source" | jq -r '.url')
+            name=$(echo "$source" | jq -r '.institution.name // "unknown institution"')
+
+            echo "Running scraper for $name ($url)"
+            curl -sS -X POST "https://api.elimux.ke/api/admin/scraper/run" \
+              -H "x-admin-key: ${{ secrets.ADMIN_KEY }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"institution_id\": \"$institution_id\", \"source_url\": \"$url\"}" \
+              -w "\nStatus: %{http_code}\n"
+          done
