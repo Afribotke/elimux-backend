@@ -4,9 +4,18 @@ import { requireUser } from '../middleware/user-auth';
 
 const router = Router();
 
-async function getUserRole(userId: string): Promise<string> {
-  const { data } = await supabase.from('user_roles').select('role').eq('user_id', userId).single();
-  return data?.role || 'student';
+// Employers and university admins aren't recorded in user_roles (that table
+// is only populated for platform admin-tier accounts) - they're identified
+// by owning a row in employers/institutions instead. Checking those first
+// avoids misclassifying every real employer/university account as 'student'.
+async function getUserRole(userId: string): Promise<'student' | 'employer' | 'university_admin'> {
+  const { data: emp } = await supabase.from('employers').select('id').eq('user_id', userId).maybeSingle();
+  if (emp) return 'employer';
+
+  const { data: inst } = await supabase.from('institutions').select('id').eq('admin_user_id', userId).maybeSingle();
+  if (inst) return 'university_admin';
+
+  return 'student';
 }
 
 router.get('/', requireUser, async (req: Request, res: Response) => {
@@ -44,13 +53,21 @@ router.post('/', requireUser, async (req: Request, res: Response) => {
     const role = await getUserRole(userId);
     if (role !== 'university_admin') return res.status(403).json({ error: 'Only university admins can create attachments' });
 
-    const { student_id, university_id, employer_id, department, supervisor_name, supervisor_email, supervisor_phone, start_date, end_date } = req.body;
-    if (!student_id || !university_id || !employer_id || !start_date) {
-      return res.status(400).json({ error: 'student_id, university_id, employer_id, and start_date are required' });
+    // university_id is derived from the caller's own institution, never
+    // trusted from the request body - otherwise any university_admin could
+    // submit an arbitrary university_id and create placements attributed to
+    // an institution they don't actually manage.
+    const { data: inst } = await supabase.from('institutions').select('id').eq('admin_user_id', userId).maybeSingle();
+    if (!inst) return res.status(403).json({ error: 'No institution is associated with this account' });
+    const university_id = inst.id;
+
+    const { student_id, employer_id, department, supervisor_name, supervisor_email, supervisor_phone, start_date, end_date } = req.body;
+    if (!student_id || !employer_id || !start_date) {
+      return res.status(400).json({ error: 'student_id, employer_id, and start_date are required' });
     }
 
     const { data: eligible, error: eligError } = await supabase
-      .from('attachment_eligible_students').select('id').eq('student_id', student_id).eq('university_id', university_id).single();
+      .from('attachment_eligible_students').select('id').eq('user_id', student_id).eq('institution_id', university_id).maybeSingle();
     if (eligError || !eligible) return res.status(400).json({ error: 'Student is not eligible for attachment at this university' });
 
     const { data, error } = await supabase.from('attachments').insert({

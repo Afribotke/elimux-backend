@@ -102,6 +102,24 @@ router.post('/employers/register', requireUser, async (req: UserAuthRequest, res
   }
 });
 
+// GET /employers — list active, verified employers (any logged-in user, e.g.
+// a university admin picking one when creating an attachment placement)
+router.get('/employers', requireUser, async (req: UserAuthRequest, res: Response): Promise<void> => {
+  try {
+    const { data, error } = await supabase
+      .from('employers')
+      .select('id, company_name, location_county, industry')
+      .eq('is_active', true)
+      .eq('verification_status', 'verified')
+      .order('company_name', { ascending: true });
+
+    if (error) throw error;
+    res.json({ success: true, data: data || [] });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /employers/me — own employer profile + role
 router.get('/employers/me', employerAuth, async (req: EmployerAuthRequest, res: Response): Promise<void> => {
   try {
