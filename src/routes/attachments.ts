@@ -18,13 +18,28 @@ async function getUserRole(userId: string): Promise<'student' | 'employer' | 'un
   return 'student';
 }
 
+// attachments.student_id references auth.users, which PostgREST can't
+// embed via the student:student_id(...) select syntax (it only auto-joins
+// within the public schema, so that select 500s with "Could not find a
+// relationship" the moment a row exists to try it on). Fetching student
+// info separately through the GoTrue admin API instead.
+async function attachStudentInfo<T extends { student_id: string }>(rows: T[]): Promise<(T & { student: { id: string; email?: string; raw_user_meta_data?: Record<string, any> } | null })[]> {
+  const uniqueIds = [...new Set(rows.map(r => r.student_id))];
+  const users = await Promise.all(uniqueIds.map(id => supabase.auth.admin.getUserById(id).catch(() => null)));
+  const byId = new Map(uniqueIds.map((id, i) => [id, users[i]?.data?.user || null]));
+  return rows.map(r => {
+    const u = byId.get(r.student_id);
+    return { ...r, student: u ? { id: r.student_id, email: u.email, raw_user_meta_data: u.user_metadata } : null };
+  });
+}
+
 router.get('/', requireUser, async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const role = await getUserRole(userId);
-    let query = supabase.from('attachments').select(`*, student:student_id(id, email, raw_user_meta_data), university:university_id(id, name), employer:employer_id(id, company_name)`);
+    let query = supabase.from('attachments').select(`*, university:university_id(id, name), employer:employer_id(id, company_name)`);
 
     if (role === 'student') {
       query = query.eq('student_id', userId);
@@ -40,7 +55,7 @@ router.get('/', requireUser, async (req: Request, res: Response) => {
 
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
-    return res.json({ data: data || [] });
+    return res.json({ data: data?.length ? await attachStudentInfo(data) : [] });
   } catch (err: any) {
     console.error('GET /api/attachments error:', err);
     return res.status(500).json({ error: err.message || 'Server error' });
@@ -84,9 +99,10 @@ router.post('/', requireUser, async (req: Request, res: Response) => {
 router.get('/:id', requireUser, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { data, error } = await supabase.from('attachments').select(`*, student:student_id(id, email), university:university_id(id, name), employer:employer_id(id, company_name)`).eq('id', id).single();
+    const { data, error } = await supabase.from('attachments').select(`*, university:university_id(id, name), employer:employer_id(id, company_name)`).eq('id', id).single();
     if (error) return res.status(404).json({ error: 'Attachment not found' });
-    return res.json({ data });
+    const [withStudent] = await attachStudentInfo([data]);
+    return res.json({ data: withStudent });
   } catch (err: any) { return res.status(500).json({ error: err.message }); }
 });
 
