@@ -649,6 +649,169 @@ router.post('/students/bulk-upload', adminMiddleware, async (req, res) => {
   }
 })
 
+// GET /api/admin/compliance-flags?resolved=false&severity=high&source=admin
+// ElimuX's own trust/safety flags on employers - separate from NITA's
+// regulatory nita_compliance_flags (elimux-sql/37_compliance_layer.sql).
+router.get('/compliance-flags', adminMiddleware, async (req, res) => {
+  try {
+    const { resolved, severity, source, limit = '50', offset = '0' } = req.query
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit as string) || 50))
+    const offsetNum = Math.max(0, parseInt(offset as string) || 0)
+
+    let query = supabase
+      .from('compliance_flags')
+      .select('*, employer:employer_id(id, company_name, company_email)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offsetNum, offsetNum + limitNum - 1)
+
+    if (resolved !== undefined) query = query.eq('resolved', resolved === 'true')
+    if (severity) query = query.eq('severity', severity as string)
+    if (source) query = query.eq('source', source as string)
+
+    const { data, error, count } = await query
+    if (error) throw error
+
+    res.json({ data: data || [], count: count || 0 })
+  } catch (error: any) {
+    console.error('List compliance flags error:', error)
+    res.status(500).json({ error: error.message || 'Failed to load compliance flags' })
+  }
+})
+
+// POST /api/admin/compliance-flags — create a flag
+router.post('/compliance-flags', adminMiddleware, async (req, res) => {
+  try {
+    const { employer_id, flag_type, flag_reason, severity, source } = req.body
+
+    if (!employer_id || !flag_type || !flag_reason) {
+      res.status(400).json({ error: 'employer_id, flag_type, and flag_reason are required' })
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('compliance_flags')
+      .insert({
+        employer_id,
+        flag_type,
+        flag_reason,
+        severity: severity || 'warning',
+        source: source || 'admin',
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    res.status(201).json({ data, message: 'Compliance flag created' })
+  } catch (error: any) {
+    console.error('Create compliance flag error:', error)
+    res.status(500).json({ error: error.message || 'Failed to create compliance flag' })
+  }
+})
+
+// PATCH /api/admin/compliance-flags/:id — resolve or update a flag
+router.patch('/compliance-flags/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { resolved, resolution_notes, resolved_by } = req.body
+
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (resolved !== undefined) {
+      update.resolved = resolved
+      if (resolved) {
+        update.resolved_at = new Date().toISOString()
+        if (resolved_by) update.resolved_by = resolved_by
+      }
+    }
+    if (resolution_notes !== undefined) update.resolution_notes = resolution_notes
+
+    const { data, error } = await supabase
+      .from('compliance_flags')
+      .update(update)
+      .eq('id', id)
+      .select()
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) {
+      res.status(404).json({ error: 'Compliance flag not found' })
+      return
+    }
+
+    res.json({ data, message: 'Compliance flag updated' })
+  } catch (error: any) {
+    console.error('Update compliance flag error:', error)
+    res.status(500).json({ error: error.message || 'Failed to update compliance flag' })
+  }
+})
+
+// GET /api/admin/verified-employers?is_active=true — list verification
+// records. Not a replacement for employers.is_verified/verification_status
+// (untouched, still drives the existing Verify/Reject employers page) -
+// this is ElimuX's separate verification audit trail.
+router.get('/verified-employers', adminMiddleware, async (req, res) => {
+  try {
+    const { employer_id, is_active, limit = '50', offset = '0' } = req.query
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit as string) || 50))
+    const offsetNum = Math.max(0, parseInt(offset as string) || 0)
+
+    let query = supabase
+      .from('verified_employers')
+      .select('*, employer:employer_id(id, company_name, company_email, industry, location_county)', { count: 'exact' })
+      .order('verified_at', { ascending: false })
+      .range(offsetNum, offsetNum + limitNum - 1)
+
+    if (employer_id) query = query.eq('employer_id', employer_id as string)
+    if (is_active !== undefined) query = query.eq('is_active', is_active === 'true')
+
+    const { data, error, count } = await query
+    if (error) throw error
+
+    res.json({ data: data || [], count: count || 0 })
+  } catch (error: any) {
+    console.error('List verified employers error:', error)
+    res.status(500).json({ error: error.message || 'Failed to load verified employers' })
+  }
+})
+
+// POST /api/admin/verified-employers — record a new verification, replacing
+// any existing active one for the same employer (matches the partial
+// unique index on verified_employers(employer_id) WHERE is_active).
+router.post('/verified-employers', adminMiddleware, async (req, res) => {
+  try {
+    const { employer_id, verified_by, verification_method, verification_notes, documents_reviewed, tier } = req.body
+
+    if (!employer_id || !verification_method) {
+      res.status(400).json({ error: 'employer_id and verification_method are required' })
+      return
+    }
+
+    await supabase
+      .from('verified_employers')
+      .update({ is_active: false })
+      .eq('employer_id', employer_id)
+      .eq('is_active', true)
+
+    const { data, error } = await supabase
+      .from('verified_employers')
+      .insert({
+        employer_id,
+        verified_by: verified_by || null,
+        verification_method,
+        verification_notes: verification_notes || null,
+        documents_reviewed: documents_reviewed || [],
+        tier: tier || 'standard',
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    res.status(201).json({ data, message: 'Employer verified' })
+  } catch (error: any) {
+    console.error('Create verified employer error:', error)
+    res.status(500).json({ error: error.message || 'Failed to record verification' })
+  }
+})
+
 // POST /api/admin/scholarships — create a scholarship
 router.post('/scholarships', adminMiddleware, async (req, res) => {
   try {
