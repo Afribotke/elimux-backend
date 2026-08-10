@@ -38,6 +38,19 @@ router.get('/stats', adminMiddleware, async (req, res) => {
       supabase.from('internships').select('id', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo),
     ])
 
+    const [{ data: recentMessages }, { data: recentInstitutions }] = await Promise.all([
+      supabase
+        .from('contact_messages')
+        .select('id, name, email, subject, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('institutions')
+        .select('id, name, country, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ])
+
     res.json({
       data: {
         totals: {
@@ -54,6 +67,10 @@ router.get('/stats', adminMiddleware, async (req, res) => {
           institutions: newInstitutions || 0,
           employers: newEmployers || 0,
           internships: newInternships || 0,
+        },
+        recent: {
+          contact_messages: recentMessages || [],
+          institutions: recentInstitutions || [],
         },
       },
     })
