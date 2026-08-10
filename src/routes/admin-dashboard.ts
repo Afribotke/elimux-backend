@@ -19,6 +19,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
       { count: internships },
       { count: reviews },
       { count: attachments },
+      { count: contactMessages },
       { count: openNitaFlags },
       { count: newInstitutions },
       { count: newEmployers },
@@ -30,6 +31,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
       supabase.from('internships').select('id', { count: 'exact', head: true }),
       supabase.from('reviews').select('id', { count: 'exact', head: true }),
       supabase.from('attachments').select('id', { count: 'exact', head: true }),
+      supabase.from('contact_messages').select('id', { count: 'exact', head: true }),
       supabase.from('nita_compliance_flags').select('id', { count: 'exact', head: true }).eq('resolved', false),
       supabase.from('institutions').select('id', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo),
       supabase.from('employers').select('id', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo),
@@ -45,6 +47,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
           internships: internships || 0,
           reviews: reviews || 0,
           attachments: attachments || 0,
+          contact_messages: contactMessages || 0,
           open_nita_flags: openNitaFlags || 0,
         },
         growth_30d: {
