@@ -14,6 +14,7 @@ import shareRouter from './routes/share'
 import reviewsRouter from './routes/reviews'
 import adminRouter from './routes/admin'
 import adminDashboardRouter from './routes/admin-dashboard'
+import adminStudentAssignmentsRoutes from './routes/admin-student-assignments';
 import gamificationRouter from './routes/gamification'
 import sponsorAdsRouter from './routes/sponsor-ads'
 import adminAnalyticsRouter from './routes/admin-analytics'
@@ -81,6 +82,7 @@ app.use('/api/share', shareRouter)
 app.use('/api/reviews', reviewsRouter)
 app.use('/api/admin', adminRouter)
 app.use('/api/admin/dashboard', adminDashboardRouter)
+app.use('/api/admin/student-assignments', adminStudentAssignmentsRoutes);
 app.use('/api/admin/analytics', adminAnalyticsRouter)
 app.use('/api/analytics', searchAnalyticsRouter)
 app.use('/api/gamification', gamificationRouter)
