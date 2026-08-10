@@ -545,6 +545,110 @@ router.delete('/messages/:id', adminMiddleware, async (req, res) => {
   }
 })
 
+// GET /api/admin/potential-employers?status=pending — list employer sign-up
+// interest submissions, defaults to pending
+router.get('/potential-employers', adminMiddleware, async (req, res) => {
+  try {
+    const { status = 'pending' } = req.query
+
+    let query = supabase
+      .from('potential_employers')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (status !== 'all') query = query.eq('status', status as string)
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    res.json({ data: data || [] })
+  } catch (error: any) {
+    console.error('List potential employers error:', error)
+    res.status(500).json({ error: 'Failed to fetch potential employers' })
+  }
+})
+
+// PATCH /api/admin/potential-employers/:id — set status and/or admin notes
+router.patch('/potential-employers/:id', adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status, admin_notes } = req.body
+
+    if (status && !['pending', 'contacted', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'status must be pending, contacted, approved, or rejected' })
+    }
+
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (status) update.status = status
+    if (admin_notes !== undefined) update.admin_notes = admin_notes
+
+    const { data, error } = await supabase
+      .from('potential_employers')
+      .update(update)
+      .eq('id', id)
+      .select()
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Potential employer not found' })
+
+    res.json({ data, message: `Potential employer marked ${status ?? 'updated'}` })
+  } catch (error: any) {
+    console.error('Update potential employer error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/admin/students/bulk-upload — upsert pre-verified student records
+// by registration_number. Uses the service-role key: student_profiles RLS
+// only allows a row's own auth.uid() or an authenticated admin (via
+// user_roles), neither of which this admin panel has, since it authenticates
+// via the shared admin key rather than a Supabase Auth session.
+router.post('/students/bulk-upload', adminMiddleware, async (req, res) => {
+  try {
+    const students = req.body?.students
+    if (!Array.isArray(students)) {
+      return res.status(400).json({ error: 'Body must be { students: [...] }' })
+    }
+
+    let success = 0
+    let failed = 0
+    const errors: string[] = []
+
+    for (const student of students) {
+      const { error } = await supabase
+        .from('student_profiles')
+        .upsert(
+          {
+            registration_number: student.registration_number,
+            full_name: student.full_name,
+            email: student.email,
+            phone: student.phone,
+            university_name: student.university_name,
+            course_name: student.course_name,
+            course_category: student.course_category,
+            year_of_study: student.year_of_study || 1,
+            is_university_verified: true,
+          },
+          { onConflict: 'registration_number' }
+        )
+
+      if (error) {
+        failed++
+        errors.push(`${student.registration_number}: ${error.message}`)
+      } else {
+        success++
+      }
+    }
+
+    res.json({ success, failed, errors })
+  } catch (error: any) {
+    console.error('Bulk student upload error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // POST /api/admin/scholarships — create a scholarship
 router.post('/scholarships', adminMiddleware, async (req, res) => {
   try {
