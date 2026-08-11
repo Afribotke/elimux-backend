@@ -42,29 +42,35 @@ router.get("/", adminMiddleware, async (req, res) => {
     const from = (parseInt(page as string) - 1) * parseInt(limit as string);
     const to = from + parseInt(limit as string) - 1;
 
+    // Base table stays employer_names (not employer_outreach) so employers
+    // that don't yet have an outreach row still show up by default - every
+    // current row happens to have one (verified live 2026-08-11), but that's
+    // a backfill artifact, not a guarantee the upload/discover pipeline
+    // creates one for every future employer. !inner is added to the embed
+    // only when a filter is active, which both makes the filter actually
+    // narrow the outer rows (PostgREST embed filters are no-ops on outer
+    // rows without !inner) and makes count/pagination reflect the filtered
+    // set - with no filter, behavior is unchanged from before.
+    const hasOutreachFilter = !!(status || priority || assigned_to);
+    const embedClause = hasOutreachFilter ? "outreach:employer_outreach!inner(*)" : "outreach:employer_outreach(*)";
+
     let query = supabase
       .from("employer_names")
-      .select(
-        `
-        id, name, created_at,
-        outreach:employer_outreach(
-          id, status, priority, notes, research_data, last_contact_date,
-          next_follow_up_date, invitation_sent_at, assigned_to, supervised_by
-        )
-      `,
-        { count: "exact" }
-      )
-      .order("name", { ascending: true })
-      .range(from, to);
+      .select(`id, name, created_at, ${embedClause}`, { count: "exact" })
+      .order("name", { ascending: true });
 
-    if (search) {
-      query = query.ilike("name", `%${search}%`);
-    }
+    if (search) query = query.ilike("name", `%${search}%`);
+    // Dot-notation must reference the select alias ("outreach"), not the
+    // underlying table name ("employer_outreach") - PostgREST resolves
+    // embed filters against the select graph, not raw table names.
+    if (status) query = query.eq("outreach.status", status);
+    if (priority) query = query.eq("outreach.priority", parseInt(priority as string));
+    if (assigned_to) query = query.eq("outreach.assigned_to", assigned_to);
 
-    const { data, error, count } = await query;
+    const { data, error, count } = await query.range(from, to);
     if (error) throw error;
 
-    let rows = data || [];
+    const rows = data || [];
 
     // employer_outreach.employer_name_id is UNIQUE, so PostgREST infers a
     // 1:1 relationship and embeds `outreach` as a single object, not an
@@ -72,7 +78,7 @@ router.get("/", adminMiddleware, async (req, res) => {
     const managerIds = rows.flatMap((e: any) => [e.outreach?.assigned_to, e.outreach?.supervised_by]);
     const managerMap = await fetchManagersByIds(managerIds);
 
-    let filtered = rows.map((e: any) => {
+    const result = rows.map((e: any) => {
       const out = e.outreach;
       if (!out) return e;
       return {
@@ -85,17 +91,7 @@ router.get("/", adminMiddleware, async (req, res) => {
       };
     });
 
-    if (status) {
-      filtered = filtered.filter((e: any) => e.outreach?.status === status);
-    }
-    if (assigned_to) {
-      filtered = filtered.filter((e: any) => e.outreach?.assigned_to === assigned_to);
-    }
-    if (priority) {
-      filtered = filtered.filter((e: any) => e.outreach?.priority === parseInt(priority as string));
-    }
-
-    res.json({ data: filtered, count: count || 0 });
+    res.json({ data: result, count: count || 0 });
   } catch (err: any) {
     console.error("outreach list error:", err);
     res.status(500).json({ error: err.message || "Failed to load outreach data" });
