@@ -226,8 +226,10 @@ router.post('/', async (req, res) => {
 
     const intent = await aiProvider.extractSearchIntent({ query, interests, careerGoal })
 
-    const countryResolution = await resolveCountryId(intent.country, body.countryId)
-    const categoryResolution = await resolveCategoryId(intent.category, body.categoryId)
+    const [countryResolution, categoryResolution] = await Promise.all([
+      resolveCountryId(intent.country, body.countryId),
+      resolveCategoryId(intent.category, body.categoryId),
+    ])
     const countryId = countryResolution.id
     const categoryId = categoryResolution.id
     const level = body.level || intent.level
@@ -261,9 +263,6 @@ router.post('/', async (req, res) => {
     if (maxBudget != null) programsQuery = programsQuery.lte('tuition_fees', maxBudget)
     if (modeTypeIds.length > 0) programsQuery = programsQuery.in('institution.type_id', modeTypeIds)
 
-    const { data: programsData, count: totalPrograms, error: programsError } = await programsQuery.limit(50)
-    if (programsError) throw programsError
-
     let institutionsQuery = supabase
       .from('institutions')
       .select('*, type:institution_types(name, icon), country:countries(name, flag_emoji)', { count: 'exact' })
@@ -272,7 +271,14 @@ router.post('/', async (req, res) => {
     if (countryId) institutionsQuery = institutionsQuery.eq('country_id', countryId)
     if (modeTypeIds.length > 0) institutionsQuery = institutionsQuery.in('type_id', modeTypeIds)
 
-    const { data: institutionsData, count: totalInstitutions, error: institutionsError } = await institutionsQuery.limit(50)
+    // Independent queries - built up above without executing (Supabase query
+    // builders don't hit the network until awaited), then run concurrently
+    // rather than one after another.
+    const [
+      { data: programsData, count: totalPrograms, error: programsError },
+      { data: institutionsData, count: totalInstitutions, error: institutionsError },
+    ] = await Promise.all([programsQuery.limit(50), institutionsQuery.limit(50)])
+    if (programsError) throw programsError
     if (institutionsError) throw institutionsError
 
     const rankedPrograms = (programsData || [])
