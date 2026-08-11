@@ -20,6 +20,7 @@ import employerEvaluationsRoutes from './routes/employer-evaluations';
 import gamificationRouter from './routes/gamification'
 import sponsorAdsRouter from './routes/sponsor-ads'
 import adminAnalyticsRouter from './routes/admin-analytics'
+import adminReportsRoutes from './routes/admin-reports';
 import searchAnalyticsRouter from './routes/search-analytics'
 import pwaRouter from './routes/pwa'
 import scraperRouter from './routes/scraper'
@@ -88,6 +89,7 @@ app.use('/api/admin/student-assignments', adminStudentAssignmentsRoutes);
 app.use('/api/student/trade-test', studentTradeTestRoutes);
 app.use('/api/employer/evaluations', employerEvaluationsRoutes);
 app.use('/api/admin/analytics', adminAnalyticsRouter)
+app.use('/api/admin/reports', adminReportsRoutes);
 app.use('/api/analytics', searchAnalyticsRouter)
 app.use('/api/gamification', gamificationRouter)
 app.use('/api/sponsor-ads', sponsorAdsRouter)
