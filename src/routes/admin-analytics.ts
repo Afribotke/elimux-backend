@@ -326,4 +326,53 @@ router.get('/institutions', adminMiddleware, async (req, res) => {
   }
 })
 
+// GET /api/admin/analytics/visitor-stats - today's + all-time visitor counts
+// and top pages, built entirely on the existing analytics_events table (no
+// new table). all_time.unique_visitors reuses getUniqueDeviceIds() - the
+// same metric already shown as /overview's total_users - rather than a
+// narrower page-view-only count, so this doesn't introduce a second,
+// slightly different "total visitors" figure alongside the existing one.
+router.get('/visitor-stats', adminMiddleware, async (req, res) => {
+  try {
+    const { today } = periodStarts()
+
+    const [{ data: todayViews, error: todayErr }, { count: totalViews, error: totalErr }, allDeviceIds] = await Promise.all([
+      supabase.from('analytics_events').select('user_device_id, metadata').eq('event_type', 'page_view').gte('created_at', today),
+      supabase.from('analytics_events').select('id', { count: 'exact', head: true }).eq('event_type', 'page_view'),
+      getUniqueDeviceIds(),
+    ])
+    if (todayErr) throw todayErr
+    if (totalErr) throw totalErr
+
+    const todayUnique = new Set((todayViews || []).map((r: any) => r.user_device_id).filter(Boolean)).size
+
+    const pageCounts: Record<string, number> = {}
+    for (const r of todayViews || []) {
+      const path = (r.metadata as { path?: string } | null)?.path || 'unknown'
+      pageCounts[path] = (pageCounts[path] || 0) + 1
+    }
+    const topPages = Object.entries(pageCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([path, count]) => ({ path, count }))
+
+    res.json({
+      data: {
+        today: {
+          unique_visitors: todayUnique,
+          page_views: (todayViews || []).length,
+          top_pages: topPages,
+        },
+        all_time: {
+          unique_visitors: allDeviceIds.size,
+          page_views: totalViews || 0,
+        },
+      },
+    })
+  } catch (error: any) {
+    console.error('Visitor stats error:', error)
+    res.status(500).json({ error: error.message || 'Failed to load visitor stats' })
+  }
+})
+
 export default router
