@@ -5,6 +5,28 @@ import { sendEmail } from "../lib/email";
 
 const router = Router();
 
+interface ManagerInfo {
+  id: string;
+  email: string;
+  role: string;
+}
+
+// Batch-resolves admin_users rows by id, separately from the row(s) that
+// reference them. PostgREST embeds (assigned:assigned_to(...)) depend on it
+// having a cached FK relationship for employer_outreach/outreach_team ->
+// admin_users, which has proven unreliable here (500s with "Could not find
+// a relationship" even though both tables are in the public schema - the
+// migration's FK apparently isn't visible to the schema cache yet). Doing
+// two plain queries and merging in JS sidesteps that entirely, matching the
+// existing attachStudentInfo pattern in attachments.ts.
+async function fetchManagersByIds(ids: Array<string | null | undefined>): Promise<Map<string, ManagerInfo>> {
+  const uniqueIds = [...new Set(ids.filter((id): id is string => !!id))];
+  if (uniqueIds.length === 0) return new Map();
+  const { data, error } = await supabase.from("admin_users").select("id, email, role").in("id", uniqueIds);
+  if (error) throw error;
+  return new Map((data || []).map((m: any) => [m.id, m as ManagerInfo]));
+}
+
 // List all employer_names with outreach data
 router.get("/", adminMiddleware, async (req, res) => {
   try {
@@ -27,9 +49,7 @@ router.get("/", adminMiddleware, async (req, res) => {
         id, name, created_at,
         outreach:employer_outreach(
           id, status, priority, notes, research_data, last_contact_date,
-          next_follow_up_date, invitation_sent_at, assigned_to, supervised_by,
-          assigned:assigned_to(id, email, role),
-          supervisor:supervised_by(id, email, role)
+          next_follow_up_date, invitation_sent_at, assigned_to, supervised_by
         )
       `,
         { count: "exact" }
@@ -44,8 +64,26 @@ router.get("/", adminMiddleware, async (req, res) => {
     const { data, error, count } = await query;
     if (error) throw error;
 
-    // Filter in JS for outreach fields (PostgREST can't filter on nested embeds)
-    let filtered = data || [];
+    let rows = data || [];
+
+    const managerIds = rows.flatMap((e: any) => [e.outreach?.[0]?.assigned_to, e.outreach?.[0]?.supervised_by]);
+    const managerMap = await fetchManagersByIds(managerIds);
+
+    let filtered = rows.map((e: any) => {
+      const out = e.outreach?.[0];
+      if (!out) return e;
+      return {
+        ...e,
+        outreach: [
+          {
+            ...out,
+            assigned: out.assigned_to ? managerMap.get(out.assigned_to) || null : null,
+            supervisor: out.supervised_by ? managerMap.get(out.supervised_by) || null : null,
+          },
+        ],
+      };
+    });
+
     if (status) {
       filtered = filtered.filter((e: any) => e.outreach?.[0]?.status === status);
     }
@@ -92,30 +130,44 @@ router.get("/:employerNameId", adminMiddleware, async (req, res) => {
 
     if (empErr) throw empErr;
 
-    const { data: outreach, error: outErr } = await supabase
+    const { data: outreachRow, error: outErr } = await supabase
       .from("employer_outreach")
-      .select("*, assigned:assigned_to(id, email, role), supervisor:supervised_by(id, email, role)")
+      .select("*")
       .eq("employer_name_id", employerNameId)
       .maybeSingle();
 
     if (outErr) throw outErr;
 
+    let outreach: any = outreachRow;
     let activities: any[] = [];
-    if (outreach?.id) {
+
+    if (outreach) {
+      const managerMap = await fetchManagersByIds([outreach.assigned_to, outreach.supervised_by]);
+      outreach = {
+        ...outreach,
+        assigned: outreach.assigned_to ? managerMap.get(outreach.assigned_to) || null : null,
+        supervisor: outreach.supervised_by ? managerMap.get(outreach.supervised_by) || null : null,
+      };
+
       const { data: activityData, error: actErr } = await supabase
         .from("outreach_activity_logs")
-        .select("*, performer:performed_by(id, email, role)")
-        .eq("employer_outreach_id", outreach.id)
+        .select("*")
+        .eq("employer_outreach_id", outreachRow!.id)
         .order("created_at", { ascending: false });
 
       if (actErr) throw actErr;
-      activities = activityData || [];
+
+      const performerMap = await fetchManagersByIds((activityData || []).map((a: any) => a.performed_by));
+      activities = (activityData || []).map((a: any) => ({
+        ...a,
+        performer: a.performed_by ? performerMap.get(a.performed_by) || null : null,
+      }));
     }
 
     res.json({
       data: {
         employer,
-        outreach: outreach || null,
+        outreach,
         activities,
       },
     });
@@ -394,12 +446,19 @@ router.post("/bulk-invite", adminMiddleware, async (req, res) => {
 // Team management
 router.get("/team/members", adminMiddleware, async (req, res) => {
   try {
-    const { data: team, error } = await supabase
-      .from("outreach_team")
-      .select("*, user:user_id(id, email, role), manager:reports_to(id, email, role)");
-
+    const { data: team, error } = await supabase.from("outreach_team").select("*");
     if (error) throw error;
-    res.json({ data: team || [] });
+
+    const rows = team || [];
+    const managerMap = await fetchManagersByIds(rows.flatMap((t: any) => [t.user_id, t.reports_to]));
+
+    const enriched = rows.map((t: any) => ({
+      ...t,
+      user: t.user_id ? managerMap.get(t.user_id) || null : null,
+      manager: t.reports_to ? managerMap.get(t.reports_to) || null : null,
+    }));
+
+    res.json({ data: enriched });
   } catch (err: any) {
     console.error("team error:", err);
     res.status(500).json({ error: err.message || "Failed to load team" });
@@ -451,15 +510,17 @@ router.get("/stats/dashboard", adminMiddleware, async (req, res) => {
 
     const { data: managerStats, error: mgrErr } = await supabase
       .from("employer_outreach")
-      .select("assigned_to, status, manager:assigned_to(email)")
+      .select("assigned_to, status")
       .not("assigned_to", "is", null);
 
     if (mgrErr) throw mgrErr;
 
+    const managerMap = await fetchManagersByIds((managerStats || []).map((r: any) => r.assigned_to));
+
     const byManager: Record<string, { email: string; total: number; by_status: Record<string, number> }> = {};
     (managerStats || []).forEach((r: any) => {
       const key = r.assigned_to;
-      if (!byManager[key]) byManager[key] = { email: r.manager?.email || key, total: 0, by_status: {} };
+      if (!byManager[key]) byManager[key] = { email: managerMap.get(key)?.email || key, total: 0, by_status: {} };
       byManager[key].total++;
       byManager[key].by_status[r.status] = (byManager[key].by_status[r.status] || 0) + 1;
     });
