@@ -1,9 +1,45 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
 import { aiProvider } from '../lib/ai'
+import type { SearchIntent } from '../lib/ai'
 import { getDeviceFingerprint } from '../lib/deviceFingerprint'
 
 const router = Router()
+
+// In-memory cache for extracted search intents. TTL keeps common repeated
+// queries (e.g. "medicine in Kenya") from paying a full Claude round-trip
+// every time, without serving stale intents indefinitely. Keyed on
+// interests too, not just query+careerGoal - interests are part of the
+// context sent to the model (see anthropic.ts's contextLines), so two
+// requests differing only in selected interests aren't the same call.
+const searchIntentCache = new Map<string, { intent: SearchIntent; expires: number }>()
+const CACHE_TTL_MS = 5 * 60 * 1000
+
+function getCacheKey(query: string, interests: string[], careerGoal: string | null): string {
+  const normalizedInterests = [...interests].map((i) => i.trim().toLowerCase()).sort().join(',')
+  return `${query.trim().toLowerCase()}::${normalizedInterests}::${(careerGoal || '').trim().toLowerCase()}`
+}
+
+function getCachedIntent(key: string): SearchIntent | null {
+  const entry = searchIntentCache.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expires) {
+    searchIntentCache.delete(key)
+    return null
+  }
+  return entry.intent
+}
+
+function setCachedIntent(key: string, intent: SearchIntent): void {
+  searchIntentCache.set(key, { intent, expires: Date.now() + CACHE_TTL_MS })
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ])
+}
 
 interface AISearchBody {
   query?: string
@@ -224,7 +260,16 @@ router.post('/', async (req, res) => {
     const interests = body.interests ?? []
     const careerGoal = body.careerGoal ?? null
 
-    const intent = await aiProvider.extractSearchIntent({ query, interests, careerGoal })
+    const cacheKey = getCacheKey(query, interests, careerGoal)
+    let intent = getCachedIntent(cacheKey)
+    if (!intent) {
+      intent = await withTimeout(
+        aiProvider.extractSearchIntent({ query, interests, careerGoal }),
+        15000,
+        'AI intent extraction'
+      )
+      setCachedIntent(cacheKey, intent)
+    }
 
     const [countryResolution, categoryResolution] = await Promise.all([
       resolveCountryId(intent.country, body.countryId),
