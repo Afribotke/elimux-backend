@@ -66,32 +66,33 @@ router.get("/", adminMiddleware, async (req, res) => {
 
     let rows = data || [];
 
-    const managerIds = rows.flatMap((e: any) => [e.outreach?.[0]?.assigned_to, e.outreach?.[0]?.supervised_by]);
+    // employer_outreach.employer_name_id is UNIQUE, so PostgREST infers a
+    // 1:1 relationship and embeds `outreach` as a single object, not an
+    // array - confirmed against the live response (verified live 2026-08-11).
+    const managerIds = rows.flatMap((e: any) => [e.outreach?.assigned_to, e.outreach?.supervised_by]);
     const managerMap = await fetchManagersByIds(managerIds);
 
     let filtered = rows.map((e: any) => {
-      const out = e.outreach?.[0];
+      const out = e.outreach;
       if (!out) return e;
       return {
         ...e,
-        outreach: [
-          {
-            ...out,
-            assigned: out.assigned_to ? managerMap.get(out.assigned_to) || null : null,
-            supervisor: out.supervised_by ? managerMap.get(out.supervised_by) || null : null,
-          },
-        ],
+        outreach: {
+          ...out,
+          assigned: out.assigned_to ? managerMap.get(out.assigned_to) || null : null,
+          supervisor: out.supervised_by ? managerMap.get(out.supervised_by) || null : null,
+        },
       };
     });
 
     if (status) {
-      filtered = filtered.filter((e: any) => e.outreach?.[0]?.status === status);
+      filtered = filtered.filter((e: any) => e.outreach?.status === status);
     }
     if (assigned_to) {
-      filtered = filtered.filter((e: any) => e.outreach?.[0]?.assigned_to === assigned_to);
+      filtered = filtered.filter((e: any) => e.outreach?.assigned_to === assigned_to);
     }
     if (priority) {
-      filtered = filtered.filter((e: any) => e.outreach?.[0]?.priority === parseInt(priority as string));
+      filtered = filtered.filter((e: any) => e.outreach?.priority === parseInt(priority as string));
     }
 
     res.json({ data: filtered, count: count || 0 });
