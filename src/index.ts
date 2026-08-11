@@ -45,6 +45,7 @@ import aiRouter from './routes/ai'
 import applicationsRouter from './routes/applications'
 import internshipsRouter from './routes/internships'
 import employerNamesRouter from './routes/employer-names'
+import adminEmployerNamesRouter from './routes/admin-employer-names'
 import tvetaRouter from './routes/tveta'
 import attachmentsRouter from './routes/attachments'
 import nitaRouter from './routes/nita'
@@ -116,6 +117,7 @@ app.use('/api/ai', aiRouter)
 app.use('/api/applications', applicationsRouter)
 app.use('/api', internshipsRouter)
 app.use('/api/employer-names', employerNamesRouter)
+app.use('/api/admin/employer-names', adminEmployerNamesRouter)
 app.use('/api/tveta', tvetaRouter)
 app.use('/api/attachments', attachmentsRouter)
 app.use('/api/nita', nitaRouter)
