@@ -13,7 +13,7 @@ router.post("/campaigns", async (req, res) => {
       title: name,
       description: description || "",
       image_url,
-      link_url: cta_url,
+      target_url: cta_url,
       status: "pending",
       start_date: new Date().toISOString(),
       end_date: new Date(Date.now() + duration_days * 24 * 60 * 60 * 1000).toISOString(),
