@@ -1172,13 +1172,14 @@ router.post('/campaigns/:id/approve', adminMiddleware, async (req, res) => {
       .single()
 
     if (fetchError || !campaign) return res.status(404).json({ error: 'Campaign not found' })
-    if (campaign.status !== 'pending_review') {
-      return res.status(400).json({ error: 'Only pending_review campaigns can be approved', current_status: campaign.status })
+    if (campaign.status !== 'pending') {
+      return res.status(400).json({ error: 'Only pending campaigns can be approved', current_status: campaign.status })
     }
 
     const startDate = new Date()
     const endDate = new Date()
-    endDate.setDate(endDate.getDate() + (campaign.duration_days || 30))
+    const originalDuration = Math.ceil((new Date(campaign.end_date).getTime() - new Date(campaign.start_date).getTime()) / 86400000)
+    endDate.setDate(endDate.getDate() + (originalDuration > 0 ? originalDuration : 30))
 
     const { data, error } = await supabase
       .from('ad_campaigns')
@@ -1218,13 +1219,13 @@ router.post('/campaigns/:id/reject', adminMiddleware, async (req, res) => {
       .single()
 
     if (fetchError || !campaign) return res.status(404).json({ error: 'Campaign not found' })
-    if (campaign.status !== 'pending_review' && campaign.status !== 'draft') {
-      return res.status(400).json({ error: 'Only pending_review or draft campaigns can be rejected', current_status: campaign.status })
+    if (campaign.status !== 'pending' && campaign.status !== 'draft') {
+      return res.status(400).json({ error: 'Only pending or draft campaigns can be rejected', current_status: campaign.status })
     }
 
     const { data, error } = await supabase
       .from('ad_campaigns')
-      .update({ status: 'rejected', rejection_reason: rejection_reason.trim(), updated_at: new Date().toISOString() })
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single()

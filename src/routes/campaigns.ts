@@ -77,7 +77,7 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
         }
 
         // ELIMUX 22: Per-click billing - no upfront deduction
-        let status = 'pending_review';
+        let status = 'pending';
         let balanceDeducted = 0;
 
         if (!billingEnabled) {
@@ -321,7 +321,7 @@ router.post('/:id/submit', advertiserAuth, async (req: AdvertiserAuthRequest, re
 
         const { data: campaign, error } = await supabaseAdmin
             .from('ad_campaigns')
-            .update({ status: 'pending_review' })
+            .update({ status: 'pending' })
             .eq('id', id)
             .select()
             .single();
