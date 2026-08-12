@@ -95,11 +95,8 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
             .from('ad_campaigns')
             .insert({
                 advertiser_id: req.advertiserId,
-                title, description: description || '', billing_model,
-                budget: parseFloat(budget),
-                daily_budget: daily_budget ? parseFloat(daily_budget) : null,
-                total_budget: total_budget ? parseFloat(total_budget) : null,
-                duration_days: parseInt(duration_days),
+                title, description: description || '',
+                total_budget: parseFloat(budget),
                 placement,
                 start_date: start_date || new Date().toISOString(),
                 end_date: end_date || new Date(Date.now() + parseInt(duration_days) * 86400000).toISOString(),
@@ -118,12 +115,6 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
             throw error;
         }
 
-        const { data: campaignWithCost } = await supabaseAdmin
-            .from('ad_campaigns')
-            .select('cost_per_unit, discount_applied_percent')
-            .eq('id', campaign.id)
-            .single();
-
         res.status(201).json({
             success: true,
             message: billingEnabled
@@ -131,8 +122,6 @@ router.post('/', advertiserAuth, async (req: AdvertiserAuthRequest, res: Respons
                 : 'Campaign created and activated (flat budget mode).',
             data: {
                 ...campaign,
-                cost_per_unit: campaignWithCost?.cost_per_unit,
-                discount_applied_percent: campaignWithCost?.discount_applied_percent,
                 billing_mode: billingEnabled ? 'per_click' : 'flat_budget'
             }
         });
@@ -453,7 +442,7 @@ router.get('/:id/analytics', advertiserAuth, async (req: AdvertiserAuthRequest, 
 
         const analytics: CampaignAnalytics = {
             campaign_id: id as string,
-            impressions: campaign.impressions || 0,
+            impressions: campaign.actual_impressions || 0,
             clicks: campaign.clicks || 0,
             ctr: (campaign.impressions || 0) > 0
                 ? ((campaign.clicks || 0) / campaign.impressions) * 100
