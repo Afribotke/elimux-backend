@@ -1206,11 +1206,6 @@ router.post('/campaigns/:id/approve', adminMiddleware, async (req, res) => {
 router.post('/campaigns/:id/reject', adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params
-    const { rejection_reason } = req.body
-
-    if (!rejection_reason || !rejection_reason.trim()) {
-      return res.status(400).json({ error: 'rejection_reason is required' })
-    }
 
     const { data: campaign, error: fetchError } = await supabase
       .from('ad_campaigns')
