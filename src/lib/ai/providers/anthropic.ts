@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
-import type { AIProvider, SearchIntent, ExtractedProgram } from '../types'
+import type { AIProvider, SearchIntent, ExtractedProgram, ExtractedScholarship } from '../types'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -60,6 +60,39 @@ Only extract programs actually described on the page - do not invent programs, a
 If the page contains only faculty/department/subject names (e.g. "School of Medicine", "Faculty of Engineering", "Psychiatry", "Human Anatomy") without specific degree programs (e.g. "Bachelor of Medicine and Bachelor of Surgery", "Master of Medicine in Psychiatry"), that is a directory or org-chart page, not a course catalog - do not synthesize plausible-sounding degree titles from those names. Return an empty programs array and set source_looks_like_directory to true. A bare subject or department name is never itself a program name.
 
 If the page lists no identifiable programs for any other reason, return an empty array and set source_looks_like_directory to false.`
+
+const ExtractedScholarshipSchema = z.object({
+  title: z.string(),
+  provider: z.string(),
+  description: z.string().nullable(),
+  eligibility: z.string().nullable(),
+  benefits: z.string().nullable(),
+  amount: z.string().nullable(),
+  currency: z.string().nullable(),
+  coverage_type: z.enum(['full', 'partial', 'stipend', 'variable']).nullable(),
+  application_deadline: z.string().nullable(),
+  application_url: z.string().nullable(),
+  required_documents: z.array(z.string()),
+  funding_amount: z.number().nullable(),
+  duration: z.number().nullable(),
+  duration_unit: z.enum(['months', 'years', 'one_time']).nullable(),
+})
+
+const ExtractedScholarshipsSchema = z.object({
+  scholarships: z.array(ExtractedScholarshipSchema),
+})
+
+const EXTRACT_SCHOLARSHIPS_SYSTEM_PROMPT = `You extract scholarship opportunities from a scraped web page's text content.
+
+- title: the scholarship's name, as written
+- provider: the organization offering it
+- coverage_type: exactly one of "full", "partial", "stipend", "variable" if determinable, else null - never any other value
+- application_deadline: ISO date (YYYY-MM-DD) if the page states one clearly, else the original deadline text verbatim, else null
+- funding_amount: a single numeric figure with no currency symbols, else null
+- duration_unit: one of "months", "years", "one_time" if stated, else null
+- required_documents: array of document names mentioned, else empty array
+
+Only extract scholarships actually described on the page - do not invent scholarships, and do not extract unrelated content (news items, staff bios, generic marketing copy, unrelated bursaries just mentioned in passing) as if it were a fully described scholarship on this page.`
 
 export const anthropicProvider: AIProvider = {
   async extractSearchIntent({ query, interests, careerGoal }): Promise<SearchIntent> {
@@ -126,5 +159,30 @@ export const anthropicProvider: AIProvider = {
     }
 
     return { programs: [], sourceLooksLikeDirectory: false }
+  },
+
+  async extractScholarships(pageText: string): Promise<{ scholarships: ExtractedScholarship[] }> {
+    for (const inputChars of [40_000, 15_000]) {
+      try {
+        const stream = client.messages.stream({
+          model: 'claude-opus-4-8',
+          max_tokens: 16_000,
+          thinking: { type: 'disabled' },
+          system: EXTRACT_SCHOLARSHIPS_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: pageText.slice(0, inputChars) }],
+          output_config: {
+            format: zodOutputFormat(ExtractedScholarshipsSchema),
+          },
+        })
+
+        const message = await stream.finalMessage()
+        return { scholarships: message.parsed_output?.scholarships ?? [] }
+      } catch (err: any) {
+        const isTruncatedJson = /Unterminated string|Expected .* after|Failed to parse structured output/i.test(err?.message || '')
+        if (!isTruncatedJson || inputChars === 15_000) throw err
+      }
+    }
+
+    return { scholarships: [] }
   },
 }

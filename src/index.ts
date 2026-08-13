@@ -25,6 +25,7 @@ import adminEmployerOutreachRoutes from './routes/admin-employer-outreach';
 import searchAnalyticsRouter from './routes/search-analytics'
 import pwaRouter from './routes/pwa'
 import scraperRouter from './routes/scraper'
+import adminScraperScholarshipsRouter from './routes/admin-scraper-scholarships'
 import scholarshipsRouter from './routes/scholarships'
 import adminScholarshipsRouter from './routes/admin-scholarships'
 import adminScholarshipSponsorsRouter from './routes/admin-scholarship-sponsors'
@@ -100,6 +101,7 @@ app.use('/api/gamification', gamificationRouter)
 app.use('/api/sponsor-ads', sponsorAdsRouter)
 app.use('/api/pwa', pwaRouter)
 app.use('/api/admin/scraper', scraperRouter)
+app.use('/api/admin/scraper', adminScraperScholarshipsRouter)
 app.use('/api/scholarships', scholarshipsRouter)
 app.use('/api/admin/scholarships', adminScholarshipsRouter)
 app.use('/api/admin/scholarship-sponsors', adminScholarshipSponsorsRouter)

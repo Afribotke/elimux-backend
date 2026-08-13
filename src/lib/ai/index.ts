@@ -5,4 +5,4 @@ import type { AIProvider } from './types'
 // call site depends only on the AIProvider interface, not on this choice.
 export const aiProvider: AIProvider = anthropicProvider
 
-export type { SearchIntent, AIProvider } from './types'
+export type { SearchIntent, AIProvider, ExtractedScholarship } from './types'
