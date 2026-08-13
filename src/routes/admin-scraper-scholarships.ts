@@ -88,14 +88,14 @@ router.get('/scholarships/changes', async (req: Request, res: Response) => {
 router.post('/scholarships/changes/:id/approve', async (req: Request, res: Response) => {
   try {
     const { id } = req.params
-    const { notes } = req.body
+    const { notes, application_deadline: deadlineOverride } = req.body
     const reviewedBy = (req as any).user?.id || null
 
     const { data: change, error: fetchError } = await supabase.from('scholarship_changes').select('*').eq('id', id).single()
     if (fetchError || !change) return res.status(404).json({ error: 'Change not found' })
     if (change.status !== 'pending') return res.status(400).json({ error: `Already ${change.status}` })
 
-    const deadlineResult = parseDeadline(change.application_deadline)
+    const deadlineResult = parseDeadline(deadlineOverride || change.application_deadline)
     if (deadlineResult.error) {
       return res.status(400).json({ error: 'Cannot approve: invalid deadline', detail: deadlineResult.error, change_id: id })
     }
