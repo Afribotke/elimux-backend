@@ -78,22 +78,34 @@ export async function scrapeScholarshipPage(
 
     const scholarships: ScholarshipExtract[] = []
     let validCount = 0
+    let partialCount = 0
 
     for (const item of extracted.scholarships || []) {
-      if (item.title && item.provider) {
-        const lowerText = rawText.toLowerCase()
-        const titleMatch = lowerText.includes(item.title.toLowerCase())
-        const providerMatch = lowerText.includes(item.provider.toLowerCase())
+      if (!item.title || !item.provider) continue
 
-        if (titleMatch && providerMatch) {
-          scholarships.push(item)
-          validCount++
-        }
+      const lowerText = rawText.toLowerCase()
+      const titleMatch = lowerText.includes(item.title.toLowerCase())
+      const providerMatch = lowerText.includes(item.provider.toLowerCase())
+
+      if (titleMatch && providerMatch) {
+        // Both match verbatim - high confidence.
+        scholarships.push(item)
+        validCount++
+      } else if (titleMatch) {
+        // Title matches but provider doesn't - usually a synthesized/combined
+        // provider name (e.g. two co-sponsors merged into one phrase) rather
+        // than a hallucination. Stage it at reduced confidence instead of
+        // dropping it outright, so a human reviewer decides rather than the
+        // scraper silently discarding a real scholarship.
+        scholarships.push(item)
+        partialCount++
       }
+      // Title not found verbatim at all - likely a hallucination, drop it.
     }
 
-    const confidenceScore = extracted.scholarships?.length > 0
-      ? Math.round((validCount / extracted.scholarships.length) * 100)
+    const totalExtracted = extracted.scholarships?.length || 0
+    const confidenceScore = totalExtracted > 0
+      ? Math.round(((validCount + partialCount * 0.5) / totalExtracted) * 100)
       : 0
 
     return { scholarships, rawText, confidenceScore }
