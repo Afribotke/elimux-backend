@@ -26,6 +26,8 @@ import searchAnalyticsRouter from './routes/search-analytics'
 import pwaRouter from './routes/pwa'
 import scraperRouter from './routes/scraper'
 import scholarshipsRouter from './routes/scholarships'
+import adminScholarshipsRouter from './routes/admin-scholarships'
+import adminScholarshipSponsorsRouter from './routes/admin-scholarship-sponsors'
 import accreditationBodiesRouter from './routes/accreditation-bodies'
 import majorSponsorRouter from './routes/major-sponsor'
 import advertiserRouter from './routes/advertiser'
@@ -99,6 +101,8 @@ app.use('/api/sponsor-ads', sponsorAdsRouter)
 app.use('/api/pwa', pwaRouter)
 app.use('/api/admin/scraper', scraperRouter)
 app.use('/api/scholarships', scholarshipsRouter)
+app.use('/api/admin/scholarships', adminScholarshipsRouter)
+app.use('/api/admin/scholarship-sponsors', adminScholarshipSponsorsRouter)
 app.use('/api/accreditation-bodies', accreditationBodiesRouter)
 app.use('/api/major-sponsor', majorSponsorRouter)
 app.use('/api/advertiser', advertiserRouter)
