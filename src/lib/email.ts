@@ -135,3 +135,46 @@ export function applicationRejectedEmailHtml({ institutionName, adminNotes }: { 
 export function applicationRejectedEmailSubject(institutionName: string): string {
   return `Update on your application for ${institutionName}`
 }
+
+// ── Scholarship Deadline Reminders ──
+
+export function deadlineReminderEmailHtml(
+  studentName: string,
+  scholarshipTitle: string,
+  daysLeft: number,
+  deadline: string,
+  applicationUrl: string
+): string {
+  const urgencyColor = daysLeft <= 3 ? '#dc2626' : daysLeft <= 7 ? '#d97706' : '#2563eb'
+  const urgencyText = daysLeft <= 3 ? 'URGENT' : daysLeft <= 7 ? 'Important' : 'Reminder'
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <div style="background: ${urgencyColor}; color: white; padding: 16px; border-radius: 8px 8px 0 0; text-align: center;">
+        <h1 style="margin: 0; font-size: 18px;">⏰ ${urgencyText}: Scholarship Deadline</h1>
+      </div>
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+        <p style="font-size: 16px; color: #374151;">Hi ${studentName},</p>
+        <p style="font-size: 16px; color: #374151;">
+          Your application for <strong>${scholarshipTitle}</strong> is due in
+          <strong style="color: ${urgencyColor}; font-size: 20px;">${daysLeft} days</strong>
+          (${deadline}).
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${applicationUrl}"
+             style="display: inline-block; background: ${urgencyColor}; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+            Continue Application →
+          </a>
+        </div>
+        <p style="font-size: 14px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+          You're receiving this because you started tracking this scholarship on ElimuX.
+          <a href="https://elimux.ke/applications" style="color: #2563eb;">Manage your applications</a>
+        </p>
+      </div>
+    </div>
+  `
+}
+
+export function deadlineReminderSubject(scholarshipTitle: string, daysLeft: number): string {
+  return `⏰ ${daysLeft} days left: ${scholarshipTitle}`
+}
