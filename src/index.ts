@@ -27,6 +27,7 @@ import pwaRouter from './routes/pwa'
 import scraperRouter from './routes/scraper'
 import adminScraperScholarshipsRouter from './routes/admin-scraper-scholarships'
 import scholarshipMatchingRouter from './routes/scholarship-matching'
+import scholarshipApplicationsRouter from './routes/scholarship-applications'
 import scholarshipsRouter from './routes/scholarships'
 import adminScholarshipsRouter from './routes/admin-scholarships'
 import adminScholarshipSponsorsRouter from './routes/admin-scholarship-sponsors'
@@ -64,7 +65,12 @@ const PORT = process.env.PORT || 3001
 
 app.use(cors({ allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key'] }))
 app.use(
-  express.json({ limit: '5mb',
+  // 8mb, not 5mb: scholarship-applications.ts uploads send files as base64
+  // inside this JSON body, which inflates a file at documentUpload.ts's own
+  // 5MB cap to ~6.65MB of JSON. This is the app-wide parser (mounted before
+  // any router), so a route-local override can't apply - a request that
+  // exceeds this limit never reaches any route handler.
+  express.json({ limit: '8mb',
     verify: (req, _res, buf) => {
       ;(req as any).rawBody = buf
     },
@@ -107,6 +113,8 @@ app.use('/api/admin/scraper', adminScraperScholarshipsRouter)
 // shadowed by its GET /:id catch-all.
 app.use('/api/scholarships', scholarshipMatchingRouter)
 app.use('/api/scholarships', scholarshipsRouter)
+// Not /api/applications - that's already the internship-applications router.
+app.use('/api/scholarship-applications', scholarshipApplicationsRouter)
 app.use('/api/admin/scholarships', adminScholarshipsRouter)
 app.use('/api/admin/scholarship-sponsors', adminScholarshipSponsorsRouter)
 app.use('/api/accreditation-bodies', accreditationBodiesRouter)
