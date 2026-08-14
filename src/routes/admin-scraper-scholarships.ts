@@ -34,7 +34,22 @@ router.post('/scholarships/run', async (req: Request, res: Response) => {
 
     const result = await scrapeScholarshipPage(targetUrl, extractScholarshipsFromText)
 
-    const inserts = result.scholarships.map(s => ({
+    // Skip anything already live or already staged for this source, so
+    // re-running the scraper on the same page doesn't create duplicates.
+    const [{ data: existingScholarships }, { data: existingChanges }] = await Promise.all([
+      supabase.from('scholarships').select('title, provider').eq('source_url', targetUrl),
+      supabase.from('scholarship_changes').select('title, provider').eq('source_url', targetUrl).eq('status', 'pending'),
+    ])
+    const seenKey = (title: string, provider: string) => `${title.trim().toLowerCase()}|${provider.trim().toLowerCase()}`
+    const alreadyKnown = new Set([
+      ...(existingScholarships || []).map(s => seenKey(s.title, s.provider)),
+      ...(existingChanges || []).map(c => seenKey(c.title, c.provider)),
+    ])
+
+    const newScholarships = result.scholarships.filter(s => !alreadyKnown.has(seenKey(s.title, s.provider)))
+    const duplicateCount = result.scholarships.length - newScholarships.length
+
+    const inserts = newScholarships.map(s => ({
       source_url: targetUrl,
       status: 'pending',
       title: s.title,
@@ -55,10 +70,19 @@ router.post('/scholarships/run', async (req: Request, res: Response) => {
       confidence_score: result.confidenceScore,
     }))
 
-    const { data, error } = await supabase.from('scholarship_changes').insert(inserts).select()
+    const { data, error } = inserts.length
+      ? await supabase.from('scholarship_changes').insert(inserts).select()
+      : { data: [], error: null }
     if (error) throw error
 
-    res.json({ success: true, extracted: result.scholarships.length, staged: data?.length || 0, confidence: result.confidenceScore, changes: data })
+    res.json({
+      success: true,
+      extracted: result.scholarships.length,
+      staged: data?.length || 0,
+      skippedDuplicates: duplicateCount,
+      confidence: result.confidenceScore,
+      changes: data,
+    })
   } catch (error: any) {
     console.error('Scraper error:', error)
     res.status(500).json({ error: error.message || 'Scraper failed' })
@@ -95,6 +119,20 @@ router.post('/scholarships/changes/:id/approve', async (req: Request, res: Respo
     if (fetchError || !change) return res.status(404).json({ error: 'Change not found' })
     if (change.status !== 'pending') return res.status(400).json({ error: `Already ${change.status}` })
 
+    const { data: duplicate } = await supabase
+      .from('scholarships')
+      .select('id')
+      .ilike('title', change.title)
+      .ilike('provider', change.provider)
+      .maybeSingle()
+    if (duplicate) {
+      return res.status(409).json({
+        error: 'A scholarship with this title and provider already exists',
+        existing_scholarship_id: duplicate.id,
+        change_id: id,
+      })
+    }
+
     const deadlineResult = parseDeadline(deadlineOverride || change.application_deadline)
     if (deadlineResult.error) {
       return res.status(400).json({ error: 'Cannot approve: invalid deadline', detail: deadlineResult.error, change_id: id })
@@ -130,7 +168,12 @@ router.post('/scholarships/changes/:id/approve', async (req: Request, res: Respo
     }
 
     const { data: scholarship, error: insertError } = await supabase.from('scholarships').insert(scholarshipPayload).select().single()
-    if (insertError) throw insertError
+    if (insertError) {
+      if (insertError.code === '23505') {
+        return res.status(409).json({ error: 'A scholarship with this title and provider already exists', change_id: id })
+      }
+      throw insertError
+    }
 
     await supabase.from('scholarship_changes').update({ status: 'approved', reviewed_by: reviewedBy, reviewed_at: new Date().toISOString(), review_notes: notes }).eq('id', id)
     res.json({ success: true, scholarship })
