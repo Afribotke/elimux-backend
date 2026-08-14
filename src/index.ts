@@ -26,6 +26,7 @@ import searchAnalyticsRouter from './routes/search-analytics'
 import pwaRouter from './routes/pwa'
 import scraperRouter from './routes/scraper'
 import adminScraperScholarshipsRouter from './routes/admin-scraper-scholarships'
+import scholarshipMatchingRouter from './routes/scholarship-matching'
 import scholarshipsRouter from './routes/scholarships'
 import adminScholarshipsRouter from './routes/admin-scholarships'
 import adminScholarshipSponsorsRouter from './routes/admin-scholarship-sponsors'
@@ -102,6 +103,9 @@ app.use('/api/sponsor-ads', sponsorAdsRouter)
 app.use('/api/pwa', pwaRouter)
 app.use('/api/admin/scraper', scraperRouter)
 app.use('/api/admin/scraper', adminScraperScholarshipsRouter)
+// Mounted before scholarshipsRouter so /match and /match/me can never be
+// shadowed by its GET /:id catch-all.
+app.use('/api/scholarships', scholarshipMatchingRouter)
 app.use('/api/scholarships', scholarshipsRouter)
 app.use('/api/admin/scholarships', adminScholarshipsRouter)
 app.use('/api/admin/scholarship-sponsors', adminScholarshipSponsorsRouter)
