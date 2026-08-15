@@ -23,23 +23,29 @@ router.get('/', adminMiddleware, async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 20
 
+    // Only review applications for partnered providers. scholarships.provider_id
+    // -> scholarship_providers has a real FK, but supabase-js can't reliably
+    // filter two embed levels deep (applications -> scholarship -> provider),
+    // so fetch the embed and filter/paginate in JS instead - same pattern as
+    // the student_profiles merge below, and the table is small enough that
+    // this isn't a performance concern.
     let query = supabase
       .from('scholarship_applications')
-      .select('*, scholarship:scholarships(*)', { count: 'exact' })
+      .select('*, scholarship:scholarships(*, provider:scholarship_providers(id, name, is_partner))')
       .in('status', ['submitted', 'under_review', 'awarded', 'rejected'])
 
     if (status) query = query.eq('status', status)
 
-    const from = (page - 1) * limit
-    const to = from + limit - 1
-
-    const { data, error, count } = await query
-      .order('created_at', { ascending: false })
-      .range(from, to)
+    const { data, error } = await query.order('created_at', { ascending: false })
 
     if (error) throw error
 
-    const applications = data || []
+    const partnerOnly = (data || []).filter((a: any) => a.scholarship?.provider?.is_partner === true)
+    const count = partnerOnly.length
+
+    const from = (page - 1) * limit
+    const to = from + limit
+    const applications = partnerOnly.slice(from, to)
 
     // No FK between scholarship_applications.student_id and student_profiles
     // (student_id matches student_profiles.user_id in practice, but there's
@@ -89,7 +95,7 @@ router.post('/:id/review', adminMiddleware, async (req: Request, res: Response) 
       .from('scholarship_applications')
       .update(updateData)
       .eq('id', id)
-      .select('*, scholarship:scholarships(*)')
+      .select('*, scholarship:scholarships(*, provider:scholarship_providers(id, name, is_partner))')
       .single()
 
     if (error) throw error
@@ -98,8 +104,11 @@ router.post('/:id/review', adminMiddleware, async (req: Request, res: Response) 
     // Final-outcome notification only - 'under_review' is an intermediate
     // status change with nothing decided yet to tell the student. Never
     // lets an email failure fail the review itself (same contract as the
-    // institution-application approve/reject emails in admin.ts).
-    if ((status === 'awarded' || status === 'rejected') && data.scholarship?.title) {
+    // institution-application approve/reject emails in admin.ts). Also
+    // gated on the provider being a partner - non-partner scholarships are
+    // discovery-only, so students never applied through ElimuX for them.
+    const isPartner = data.scholarship?.provider?.is_partner === true
+    if (isPartner && (status === 'awarded' || status === 'rejected') && data.scholarship?.title) {
       try {
         const { data: userData } = await supabase.auth.admin.getUserById(data.student_id)
         const studentEmail = userData?.user?.email
