@@ -1,6 +1,13 @@
 import { Router, Request, Response } from 'express'
 import { createClient } from '@supabase/supabase-js'
 import { adminMiddleware } from '../middleware/auth'
+import {
+  sendEmail,
+  scholarshipAwardedEmailHtml,
+  scholarshipAwardedEmailSubject,
+  scholarshipRejectedEmailHtml,
+  scholarshipRejectedEmailSubject,
+} from '../lib/email'
 
 const router = Router()
 const supabase = createClient(
@@ -87,6 +94,38 @@ router.post('/:id/review', adminMiddleware, async (req: Request, res: Response) 
 
     if (error) throw error
     if (!data) return res.status(404).json({ error: 'Application not found' })
+
+    // Final-outcome notification only - 'under_review' is an intermediate
+    // status change with nothing decided yet to tell the student. Never
+    // lets an email failure fail the review itself (same contract as the
+    // institution-application approve/reject emails in admin.ts).
+    if ((status === 'awarded' || status === 'rejected') && data.scholarship?.title) {
+      try {
+        const { data: userData } = await supabase.auth.admin.getUserById(data.student_id)
+        const studentEmail = userData?.user?.email
+        if (studentEmail) {
+          const studentName = userData?.user?.user_metadata?.full_name || 'there'
+          const scholarshipTitle = data.scholarship.title
+          const notes = review_notes || undefined
+
+          await sendEmail(
+            status === 'awarded'
+              ? {
+                  to: studentEmail,
+                  subject: scholarshipAwardedEmailSubject(scholarshipTitle),
+                  html: scholarshipAwardedEmailHtml({ studentName, scholarshipTitle, reviewNotes: notes }),
+                }
+              : {
+                  to: studentEmail,
+                  subject: scholarshipRejectedEmailSubject(scholarshipTitle),
+                  html: scholarshipRejectedEmailHtml({ studentName, scholarshipTitle, reviewNotes: notes }),
+                }
+          )
+        }
+      } catch (emailError: any) {
+        console.error('Scholarship review notification error:', emailError)
+      }
+    }
 
     res.json({ data })
   } catch (error: any) {

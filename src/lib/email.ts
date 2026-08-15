@@ -178,3 +178,39 @@ export function deadlineReminderEmailHtml(
 export function deadlineReminderSubject(scholarshipTitle: string, daysLeft: number): string {
   return `⏰ ${daysLeft} days left: ${scholarshipTitle}`
 }
+
+// ── Scholarship Application Review Outcomes ──
+
+export function scholarshipAwardedEmailHtml({ studentName, scholarshipTitle, reviewNotes }: { studentName: string; scholarshipTitle: string; reviewNotes?: string }): string {
+  return `
+    <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1a1a1a;">
+      <h2 style="color: #22c55e; margin-bottom: 16px;">Congratulations, ${studentName}! 🎉</h2>
+      <p>Your application for <strong>${scholarshipTitle}</strong> has been reviewed and awarded on ElimuX.</p>
+      ${reviewNotes ? `<div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; margin: 16px 0;"><strong>Note from the reviewer:</strong> ${reviewNotes}</div>` : ''}
+      <p style="margin-top: 24px;">Log in to your ElimuX applications dashboard for the full details.</p>
+      <a href="https://www.elimux.ke/applications" style="display: inline-block; background: #22c55e; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-top: 16px;">View Application</a>
+      <p style="color: #999; font-size: 12px; margin-top: 24px;">ElimuX &middot; support@elimux.ke</p>
+    </div>
+  `
+}
+
+export function scholarshipAwardedEmailSubject(scholarshipTitle: string): string {
+  return `You've been awarded: ${scholarshipTitle}`
+}
+
+export function scholarshipRejectedEmailHtml({ studentName, scholarshipTitle, reviewNotes }: { studentName: string; scholarshipTitle: string; reviewNotes?: string }): string {
+  return `
+    <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1a1a1a;">
+      <h2 style="color: #dc2626; margin-bottom: 16px;">Application Update</h2>
+      <p>Hi ${studentName}, your application for <strong>${scholarshipTitle}</strong> was not successful this time.</p>
+      ${reviewNotes ? `<div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 12px; margin: 16px 0;"><strong>Feedback from the reviewer:</strong> ${reviewNotes}</div>` : ''}
+      <p style="margin-top: 24px;">Don't be discouraged — browse other scholarships you may qualify for on ElimuX.</p>
+      <a href="https://www.elimux.ke/scholarships" style="display: inline-block; background: #eab308; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-top: 16px;">Browse Scholarships</a>
+      <p style="color: #999; font-size: 12px; margin-top: 24px;">ElimuX &middot; support@elimux.ke</p>
+    </div>
+  `
+}
+
+export function scholarshipRejectedEmailSubject(scholarshipTitle: string): string {
+  return `Update on your application for ${scholarshipTitle}`
+}
