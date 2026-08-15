@@ -34,6 +34,7 @@ import adminScholarshipSponsorsRouter from './routes/admin-scholarship-sponsors'
 import adminScholarshipApplicationsRouter from './routes/admin-scholarship-applications'
 import adminScholarshipRemindersRouter from './routes/admin-scholarship-reminders'
 import scholarshipProvidersRouter from './routes/scholarship-providers'
+import cronScholarshipRemindersRouter from './routes/cron-scholarship-reminders'
 import accreditationBodiesRouter from './routes/accreditation-bodies'
 import majorSponsorRouter from './routes/major-sponsor'
 import advertiserRouter from './routes/advertiser'
@@ -123,6 +124,7 @@ app.use('/api/admin/scholarship-sponsors', adminScholarshipSponsorsRouter)
 app.use('/api/admin/scholarship-applications', adminScholarshipApplicationsRouter)
 app.use('/api/admin/scholarship-applications', adminScholarshipRemindersRouter)
 app.use('/api/scholarship-providers', scholarshipProvidersRouter)
+app.use('/api/cron/scholarship-reminders', cronScholarshipRemindersRouter)
 app.use('/api/accreditation-bodies', accreditationBodiesRouter)
 app.use('/api/major-sponsor', majorSponsorRouter)
 app.use('/api/advertiser', advertiserRouter)
