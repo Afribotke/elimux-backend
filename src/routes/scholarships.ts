@@ -106,7 +106,7 @@ router.get('/:id', async (req, res) => {
 
     const { data, error } = await supabase
       .from('scholarships')
-      .select('*, institution:institutions(name, city, logo_url), country:countries(name, flag_emoji), scholarship_provider:scholarship_providers(id, name, slug, logo_url, website, is_partner)')
+      .select('*, institution:institutions(name, city, logo_url), country:countries(name, flag_emoji), scholarship_provider:scholarship_providers!scholarships_provider_id_fkey(id, name, slug, logo_url, website, is_partner)')
       .eq('id', id)
       .single();
 

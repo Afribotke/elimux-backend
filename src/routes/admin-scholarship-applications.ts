@@ -31,7 +31,7 @@ router.get('/', adminMiddleware, async (req: Request, res: Response) => {
     // this isn't a performance concern.
     let query = supabase
       .from('scholarship_applications')
-      .select('*, scholarship:scholarships(*, provider:scholarship_providers(id, name, is_partner))')
+      .select('*, scholarship:scholarships(*, provider:scholarship_providers!scholarships_provider_id_fkey(id, name, is_partner))')
       .in('status', ['submitted', 'under_review', 'awarded', 'rejected'])
 
     if (status) query = query.eq('status', status)
@@ -95,7 +95,7 @@ router.post('/:id/review', adminMiddleware, async (req: Request, res: Response) 
       .from('scholarship_applications')
       .update(updateData)
       .eq('id', id)
-      .select('*, scholarship:scholarships(*, provider:scholarship_providers(id, name, is_partner))')
+      .select('*, scholarship:scholarships(*, provider:scholarship_providers!scholarships_provider_id_fkey(id, name, is_partner))')
       .single()
 
     if (error) throw error
