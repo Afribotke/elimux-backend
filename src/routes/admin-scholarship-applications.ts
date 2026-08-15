@@ -31,7 +31,29 @@ router.get('/', adminMiddleware, async (req: Request, res: Response) => {
       .range(from, to)
 
     if (error) throw error
-    res.json({ data: data || [], total: count || 0 })
+
+    const applications = data || []
+
+    // No FK between scholarship_applications.student_id and student_profiles
+    // (student_id matches student_profiles.user_id in practice, but there's
+    // no constraint), so PostgREST can't embed `student:student_profiles(...)`
+    // - fetch profiles separately and merge instead.
+    const studentIds = [...new Set(applications.map((a: any) => a.student_id).filter(Boolean))]
+    let studentsById: Record<string, any> = {}
+    if (studentIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('student_profiles')
+        .select('user_id, full_name, email, university_name, course_name, year_of_study')
+        .in('user_id', studentIds)
+      studentsById = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p]))
+    }
+
+    const withStudents = applications.map((a: any) => ({
+      ...a,
+      student: studentsById[a.student_id] || null,
+    }))
+
+    res.json({ data: withStudents, total: count || 0 })
   } catch (error: any) {
     console.error('Admin list applications error:', error)
     res.status(500).json({ error: error.message })
@@ -69,6 +91,41 @@ router.post('/:id/review', adminMiddleware, async (req: Request, res: Response) 
     res.json({ data })
   } catch (error: any) {
     console.error('Admin review error:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// GET /api/admin/scholarship-applications/:id/document/:docName
+// Returns a fresh signed URL for admins to view a specific uploaded document
+router.get('/:id/document/:docName', adminMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id, docName } = req.params
+
+    const { data: application, error: appError } = await supabase
+      .from('scholarship_applications')
+      .select('student_id, documents_uploaded')
+      .eq('id', id)
+      .single()
+
+    if (appError || !application) {
+      return res.status(404).json({ error: 'Application not found' })
+    }
+
+    const doc = application.documents_uploaded?.find((d: any) => d.name === decodeURIComponent(String(docName)))
+    if (!doc?.path) {
+      return res.status(404).json({ error: 'Document not found' })
+    }
+
+    const { data: signedUrl, error: urlError } = await supabase
+      .storage
+      .from('scholarship-documents')
+      .createSignedUrl(doc.path, 3600) // 1 hour
+
+    if (urlError) throw urlError
+
+    res.json({ url: signedUrl?.signedUrl })
+  } catch (error: any) {
+    console.error('Admin document URL error:', error)
     res.status(500).json({ error: error.message })
   }
 })
