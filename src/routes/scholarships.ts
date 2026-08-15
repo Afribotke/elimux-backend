@@ -114,6 +114,7 @@ router.get('/:id', async (req, res) => {
       if (error.code === 'PGRST116' || error.code === '22P02') {
         return res.status(404).json({ error: 'Scholarship not found' });
       }
+      console.error('Error fetching scholarship detail:', error);
       return res.status(500).json({ error: 'Failed to fetch scholarship' });
     }
 
