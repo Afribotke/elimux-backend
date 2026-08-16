@@ -4,6 +4,7 @@ dotenv.config()
 
 import express from 'express'
 import cors from 'cors'
+import { adminRateLimiter } from './middleware/rate-limit'
 
 import institutionsRouter from './routes/institutions'
 import programsRouter from './routes/programs'
@@ -99,6 +100,7 @@ app.use('/api/ai-search', aiSearchRouter)
 app.use('/api/favorites', favoritesRouter)
 app.use('/api/share', shareRouter)
 app.use('/api/reviews', reviewsRouter)
+app.use('/api/admin', adminRateLimiter)
 app.use('/api/admin', adminRouter)
 app.use('/api/admin/dashboard', adminDashboardRouter)
 app.use('/api/admin/student-assignments', adminStudentAssignmentsRoutes);
