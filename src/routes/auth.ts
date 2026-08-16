@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
 import { adminAuth } from "../middleware/auth";
+import { adminRateLimiter } from "../middleware/rate-limit";
 
 const router = Router();
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -67,7 +68,7 @@ router.get("/me", async (req, res) => {
 });
 
 // List all users - admin only, paginated
-router.get("/users", adminAuth, async (req, res) => {
+router.get("/users", adminRateLimiter, adminAuth, async (req, res) => {
   try {
     const page = Math.max(1, parseInt((req.query.page as string) || "1"));
     const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || "25")));
@@ -113,7 +114,7 @@ router.get("/users", adminAuth, async (req, res) => {
 });
 
 // Update user role - admin only
-router.patch("/users/:id/role", adminAuth, async (req, res) => {
+router.patch("/users/:id/role", adminRateLimiter, adminAuth, async (req, res) => {
   try {
     const role = req.body?.role;
     if (!ASSIGNABLE_ROLES.includes(role)) {
@@ -135,7 +136,7 @@ router.patch("/users/:id/role", adminAuth, async (req, res) => {
 // is Supabase Auth's own ban mechanism, which blocks sign-in unconditionally
 // regardless of app code. is_active is kept in sync only so the list view
 // can show status without an extra call per row.
-router.patch("/users/:id/status", adminAuth, async (req, res) => {
+router.patch("/users/:id/status", adminRateLimiter, adminAuth, async (req, res) => {
   try {
     const id = req.params.id as string;
     const { is_active } = req.body || {};
@@ -174,7 +175,7 @@ router.patch("/users/:id/status", adminAuth, async (req, res) => {
 // no user_id column), employers (as owner or admin_user_id), or
 // employer_team_members - deleting out from under any of those would orphan
 // real records rather than cleanly removing an unused account.
-router.delete("/users/:id", adminAuth, async (req, res) => {
+router.delete("/users/:id", adminRateLimiter, adminAuth, async (req, res) => {
   try {
     const id = req.params.id as string;
     const { data: target } = await supabase.from("users").select("email").eq("id", id).maybeSingle();

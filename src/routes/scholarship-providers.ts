@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
 import { adminAuth } from '../middleware/auth'
+import { adminRateLimiter } from '../middleware/rate-limit'
 
 const router = Router()
 
@@ -59,7 +60,7 @@ router.post('/:id/claim', async (req, res) => {
 
 // POST /api/scholarship-providers/:id/approve-partnership
 // Admin only. Flips is_partner to true after contract signature.
-router.post('/:id/approve-partnership', adminAuth, async (req, res) => {
+router.post('/:id/approve-partnership', adminRateLimiter, adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { data, error } = await supabase
@@ -80,7 +81,7 @@ router.post('/:id/approve-partnership', adminAuth, async (req, res) => {
 
 // GET /api/scholarship-providers?claimed_only=true&partner_only=true
 // Admin only.
-router.get('/', adminAuth, async (req, res) => {
+router.get('/', adminRateLimiter, adminAuth, async (req, res) => {
   try {
     let query = supabase.from('scholarship_providers').select('*')
     if (req.query.claimed_only === 'true') {
