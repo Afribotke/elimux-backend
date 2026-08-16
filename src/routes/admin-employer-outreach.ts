@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { adminMiddleware } from "../middleware/auth";
+import { adminAuth } from "../middleware/auth";
 import { supabase } from "../lib/supabase";
 import { sendEmail } from "../lib/email";
 
@@ -28,7 +28,7 @@ async function fetchManagersByIds(ids: Array<string | null | undefined>): Promis
 }
 
 // List all employer_names with outreach data
-router.get("/", adminMiddleware, async (req, res) => {
+router.get("/", adminAuth, async (req, res) => {
   try {
     const {
       status = "",
@@ -99,7 +99,7 @@ router.get("/", adminMiddleware, async (req, res) => {
 });
 
 // Roster of admin_users for assignment pickers
-router.get("/managers", adminMiddleware, async (req, res) => {
+router.get("/managers", adminAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("admin_users")
@@ -115,7 +115,7 @@ router.get("/managers", adminMiddleware, async (req, res) => {
 });
 
 // Get single employer with full outreach history
-router.get("/:employerNameId", adminMiddleware, async (req, res) => {
+router.get("/:employerNameId", adminAuth, async (req, res) => {
   try {
     const employerNameId = req.params.employerNameId as string;
 
@@ -175,7 +175,7 @@ router.get("/:employerNameId", adminMiddleware, async (req, res) => {
 });
 
 // Assign account manager / supervisor
-router.patch("/:employerNameId/assign", adminMiddleware, async (req, res) => {
+router.patch("/:employerNameId/assign", adminAuth, async (req, res) => {
   try {
     const employerNameId = req.params.employerNameId as string;
     const { assigned_to, supervised_by, notes } = req.body;
@@ -220,7 +220,7 @@ router.patch("/:employerNameId/assign", adminMiddleware, async (req, res) => {
 });
 
 // Update status
-router.patch("/:employerNameId/status", adminMiddleware, async (req, res) => {
+router.patch("/:employerNameId/status", adminAuth, async (req, res) => {
   try {
     const employerNameId = req.params.employerNameId as string;
     const { status, notes } = req.body;
@@ -255,7 +255,7 @@ router.patch("/:employerNameId/status", adminMiddleware, async (req, res) => {
 });
 
 // Add research data
-router.patch("/:employerNameId/research", adminMiddleware, async (req, res) => {
+router.patch("/:employerNameId/research", adminAuth, async (req, res) => {
   try {
     const employerNameId = req.params.employerNameId as string;
     const { research_data, notes } = req.body;
@@ -309,7 +309,7 @@ router.patch("/:employerNameId/research", adminMiddleware, async (req, res) => {
 });
 
 // Send invitation email
-router.post("/:employerNameId/invite", adminMiddleware, async (req, res) => {
+router.post("/:employerNameId/invite", adminAuth, async (req, res) => {
   try {
     const employerNameId = req.params.employerNameId as string;
     const { email } = req.body;
@@ -388,7 +388,7 @@ router.post("/:employerNameId/invite", adminMiddleware, async (req, res) => {
 });
 
 // Bulk invite - only sends to employers that already have a research email saved
-router.post("/bulk-invite", adminMiddleware, async (req, res) => {
+router.post("/bulk-invite", adminAuth, async (req, res) => {
   try {
     const { employerNameIds } = req.body;
     const results = { sent: 0, failed: 0, noEmail: 0 };
@@ -441,7 +441,7 @@ router.post("/bulk-invite", adminMiddleware, async (req, res) => {
 });
 
 // Team management
-router.get("/team/members", adminMiddleware, async (req, res) => {
+router.get("/team/members", adminAuth, async (req, res) => {
   try {
     const { data: team, error } = await supabase.from("outreach_team").select("*");
     if (error) throw error;
@@ -462,7 +462,7 @@ router.get("/team/members", adminMiddleware, async (req, res) => {
   }
 });
 
-router.post("/team/members", adminMiddleware, async (req, res) => {
+router.post("/team/members", adminAuth, async (req, res) => {
   try {
     const { user_id, role, reports_to } = req.body;
     const { data, error } = await supabase
@@ -479,7 +479,7 @@ router.post("/team/members", adminMiddleware, async (req, res) => {
   }
 });
 
-router.delete("/team/members/:id", adminMiddleware, async (req, res) => {
+router.delete("/team/members/:id", adminAuth, async (req, res) => {
   try {
     const id = req.params.id as string;
     const { error } = await supabase.from("outreach_team").delete().eq("id", id);
@@ -492,7 +492,7 @@ router.delete("/team/members/:id", adminMiddleware, async (req, res) => {
 });
 
 // Performance dashboard
-router.get("/stats/dashboard", adminMiddleware, async (req, res) => {
+router.get("/stats/dashboard", adminAuth, async (req, res) => {
   try {
     const { data: statusCounts, error: statusErr } = await supabase
       .from("employer_outreach")

@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
-import { adminMiddleware } from '../middleware/auth';
+import { adminAuth } from '../middleware/auth';
 import { requireUser, UserAuthRequest } from '../middleware/user-auth';
 
 const router = Router();
@@ -186,7 +186,7 @@ router.get('/me', requireUser, async (req: UserAuthRequest, res: Response) => {
 // GET /api/applications — Admin-only listing across all applications/employers.
 // (Employer and student views should use /api/applications/me and
 // /api/employers/me/applications, which are ownership-scoped.)
-router.get('/', adminMiddleware, async (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
   try {
     const { student_id, employer_id, internship_id, status } = req.query;
     let query = supabase.from('applications').select(`

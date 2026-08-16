@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { adminMiddleware } from "../middleware/auth";
+import { adminAuth } from "../middleware/auth";
 import { supabase } from "../lib/supabase";
 
 const router = Router();
 
 // List eligible students missing institution_id
-router.get("/unassigned", adminMiddleware, async (req, res) => {
+router.get("/unassigned", adminAuth, async (req, res) => {
   try {
     const { limit = "50", offset = "0" } = req.query;
     const from = parseInt(offset as string);
@@ -29,7 +29,7 @@ router.get("/unassigned", adminMiddleware, async (req, res) => {
 // List all institutions (for dropdown)
 // institutions has country_id (FK), not a flat country column - join to get
 // the display name, matching the pattern used by InstitutionRow elsewhere.
-router.get("/institutions", adminMiddleware, async (req, res) => {
+router.get("/institutions", adminAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("institutions")
@@ -45,7 +45,7 @@ router.get("/institutions", adminMiddleware, async (req, res) => {
 });
 
 // Assign institution to a student
-router.patch("/:id/assign", adminMiddleware, async (req, res) => {
+router.patch("/:id/assign", adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { institution_id } = req.body;

@@ -14,7 +14,7 @@
 
 import { Router, Request, Response } from 'express';
 import { supabase } from '../lib/supabase';
-import { adminMiddleware } from '../middleware/auth';
+import { adminAuth } from '../middleware/auth';
 import { requireUser, UserAuthRequest } from '../middleware/user-auth';
 import { employerAuth, requireEmployerManage, EmployerAuthRequest } from '../middleware/employer-auth';
 
@@ -791,7 +791,7 @@ router.get('/employers/:slug', async (req: Request, res: Response): Promise<void
 // ADMIN ENDPOINTS
 // ============================================
 
-router.get('/admin/internships', adminMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/admin/internships', adminAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { data, error } = await supabase
       .from('internships')
@@ -805,7 +805,7 @@ router.get('/admin/internships', adminMiddleware, async (req: Request, res: Resp
   }
 });
 
-router.get('/admin/employers', adminMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/admin/employers', adminAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { data, error } = await supabase
       .from('employers')
@@ -819,7 +819,7 @@ router.get('/admin/employers', adminMiddleware, async (req: Request, res: Respon
   }
 });
 
-router.get('/admin/students', adminMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/admin/students', adminAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { data, error } = await supabase
       .from('student_profiles')
@@ -834,7 +834,7 @@ router.get('/admin/students', adminMiddleware, async (req: Request, res: Respons
   }
 });
 
-router.patch('/admin/employers/:id/verify', adminMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.patch('/admin/employers/:id/verify', adminAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { status } = req.body || {};
     if (!['approved', 'rejected', 'pending'].includes(status)) {

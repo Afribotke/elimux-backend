@@ -1,13 +1,13 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { getDeviceFingerprint } from '../lib/deviceFingerprint'
 import { TRACKABLE_EVENT_TYPES, periodStarts, getUniqueDeviceIds, dayKey } from '../lib/analytics'
 
 const router = Router()
 
 // POST /api/admin/analytics/track - despite the /admin/ prefix (kept to match the
-// spec's URL), this is deliberately PUBLIC and not behind adminMiddleware: it exists
+// spec's URL), this is deliberately PUBLIC and not behind adminAuth: it exists
 // to record anonymous visitor behavior (searches, page views, clicks...), which by
 // definition can't carry an admin key. The 5 GET endpoints below are the actual
 // admin-only surface.
@@ -37,7 +37,7 @@ router.post('/track', async (req, res) => {
 })
 
 // GET /api/admin/analytics/overview
-router.get('/overview', adminMiddleware, async (req, res) => {
+router.get('/overview', adminAuth, async (req, res) => {
   try {
     const { today, week, month } = periodStarts()
 
@@ -85,7 +85,7 @@ router.get('/overview', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/admin/analytics/revenue
-router.get('/revenue', adminMiddleware, async (req, res) => {
+router.get('/revenue', adminAuth, async (req, res) => {
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -152,7 +152,7 @@ router.get('/revenue', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/admin/analytics/users - optional ?level=none|low|medium|high
-router.get('/users', adminMiddleware, async (req, res) => {
+router.get('/users', adminAuth, async (req, res) => {
   try {
     const { level } = req.query
 
@@ -207,7 +207,7 @@ router.get('/users', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/admin/analytics/searches
-router.get('/searches', adminMiddleware, async (req, res) => {
+router.get('/searches', adminAuth, async (req, res) => {
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -255,7 +255,7 @@ router.get('/searches', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/admin/analytics/institutions
-router.get('/institutions', adminMiddleware, async (req, res) => {
+router.get('/institutions', adminAuth, async (req, res) => {
   try {
     const [{ data: viewEvents, error: viewsError }, { data: applications, error: appsError }, { data: reviews, error: reviewsError }] = await Promise.all([
       supabase.from('analytics_events').select('metadata').eq('event_type', 'page_view'),
@@ -332,7 +332,7 @@ router.get('/institutions', adminMiddleware, async (req, res) => {
 // same metric already shown as /overview's total_users - rather than a
 // narrower page-view-only count, so this doesn't introduce a second,
 // slightly different "total visitors" figure alongside the existing one.
-router.get('/visitor-stats', adminMiddleware, async (req, res) => {
+router.get('/visitor-stats', adminAuth, async (req, res) => {
   try {
     const { today } = periodStarts()
 

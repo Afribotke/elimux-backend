@@ -17,6 +17,25 @@ const supabase = createClient(
 // Note: admin_users and user_roles are both empty in production today, so in
 // practice the x-admin-key branch is the only one that grants access. The JWT
 // branch is here for when those tables get populated.
+/**
+ * adminAuth — async admin authentication
+ * Used by: every admin-gated route in the app (unified onto this single
+ *   function as of Cycle 005 - previously split between this and the now-
+ *   removed adminMiddleware, which only accepted x-admin-key with no JWT path).
+ * Checks: EITHER the shared x-admin-key header matching process.env.ADMIN_KEY,
+ *   OR a Bearer Supabase JWT belonging to a user whose role - read from
+ *   admin_users (by email, if is_active !== false), then user_roles (by
+ *   user_id), then user_metadata.role, in that priority order - is 'admin' or
+ *   'super_admin'. The JWT lookup is race-timed against an 8s timeout so a
+ *   hung Supabase auth call can't hang the request. admin_users/user_roles
+ *   are both empty in production today, so in practice only the x-admin-key
+ *   branch currently grants access - the JWT branch exists for when those
+ *   tables get populated.
+ * Returns: 401 Unauthorized on any failure (missing/wrong key, invalid JWT,
+ *   valid JWT but no admin/super_admin role, or an unexpected error - all
+ *   collapse to the same 401 so a caller can't distinguish "no credentials"
+ *   from "wrong role").
+ */
 export async function adminAuth(req: Request, res: Response, next: NextFunction) {
   const provided = req.headers['x-admin-key']
   const expected = process.env.ADMIN_KEY
@@ -74,12 +93,4 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
   next()
 }
 
-export function adminMiddleware(req: Request, res: Response, next: NextFunction) {
-  const adminKey = req.headers['x-admin-key']
-  
-  if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
-    return res.status(403).json({ error: 'Forbidden' })
-  }
-  
-  next()
-}
+// REMOVED: adminMiddleware deprecated. All admin routes now use adminAuth.

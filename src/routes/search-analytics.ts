@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { getDeviceFingerprint } from '../lib/deviceFingerprint'
 
 const router = Router()
@@ -61,7 +61,7 @@ router.post('/view', async (req, res) => {
 // GET /api/analytics/university/:id - admin-gated (no per-institution login exists
 // yet, so this is reached from /admin/analytics with the shared admin key, same as
 // every other /api/admin/analytics/* endpoint).
-router.get('/university/:id', adminMiddleware, async (req, res) => {
+router.get('/university/:id', adminAuth, async (req, res) => {
   try {
     const institutionId = req.params.id
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()

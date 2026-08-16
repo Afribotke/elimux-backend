@@ -1,11 +1,11 @@
 import { Router } from 'express'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { supabase } from '../lib/supabase'
 
 const router = Router()
 
 // GET /api/admin/employer-names?page=1&limit=25&q=search
-router.get('/', adminMiddleware, async (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
   try {
     const page = Math.max(1, parseInt((req.query.page as string) || '1'))
     const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '25')))

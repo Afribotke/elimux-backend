@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { adminMiddleware } from '../middleware/auth';
+import { adminAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -28,7 +28,7 @@ function normalizeForUrl(name: string): string {
 
 // ── POST /api/employer-names/bulk-upload ──
 // FAST: No HTTP calls, just insert names. Returns in seconds even for 3000 names.
-router.post('/bulk-upload', adminMiddleware, async (req, res) => {
+router.post('/bulk-upload', adminAuth, async (req, res) => {
   try {
     const { names } = req.body as { names: string[] };
     if (!Array.isArray(names) || names.length === 0) {
@@ -80,7 +80,7 @@ router.post('/bulk-upload', adminMiddleware, async (req, res) => {
 
 // ── POST /api/employer-names/:id/discover-url ──
 // SEPARATE: Discover URL for a single employer (admin-triggered, one at a time)
-router.post('/:id/discover-url', adminMiddleware, async (req, res) => {
+router.post('/:id/discover-url', adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -181,7 +181,7 @@ router.get('/search', async (req, res) => {
 // employer-facing auth exists yet in this codebase — opening this up to
 // unauthenticated callers would let anyone set the public-facing URL on any
 // row by ID.
-router.patch('/:id/verify', adminMiddleware, async (req, res) => {
+router.patch('/:id/verify', adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { website_url } = req.body;

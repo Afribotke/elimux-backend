@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { adminMiddleware } from "../middleware/auth";
+import { adminAuth } from "../middleware/auth";
 import { supabase } from "../lib/supabase";
 
 const router = Router();
 
 // Attachment completion report
-router.get("/attachments", adminMiddleware, async (req, res) => {
+router.get("/attachments", adminAuth, async (req, res) => {
   try {
     const { status, from, to } = req.query;
 
@@ -53,7 +53,7 @@ router.get("/attachments", adminMiddleware, async (req, res) => {
 });
 
 // CSV export
-router.get("/export/:table", adminMiddleware, async (req, res) => {
+router.get("/export/:table", adminAuth, async (req, res) => {
   try {
     const table = req.params.table as string;
     const { from, to } = req.query;

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import webpush from '../lib/webpush'
 
 const router = Router()
@@ -66,7 +66,7 @@ router.delete('/subscribe', async (req, res) => {
 
 // POST /api/pwa/notify (admin only) - send a push to all active subscriptions,
 // or a specific set via target_devices
-router.post('/notify', adminMiddleware, async (req, res) => {
+router.post('/notify', adminAuth, async (req, res) => {
   try {
     const { title, body, url, target_devices } = req.body || {}
 

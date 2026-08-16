@@ -1,11 +1,11 @@
 import { Router } from 'express'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { supabase } from '../lib/supabase'
 
 const router = Router()
 
 // GET /api/admin/scholarship-sponsors?type=&country=&search=
-router.get('/', adminMiddleware, async (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
   try {
     const type = req.query.type as string | undefined
     const country = req.query.country as string | undefined
@@ -31,7 +31,7 @@ router.get('/', adminMiddleware, async (req, res) => {
 })
 
 // POST /api/admin/scholarship-sponsors
-router.post('/', adminMiddleware, async (req, res) => {
+router.post('/', adminAuth, async (req, res) => {
   try {
     const body = req.body || {}
 

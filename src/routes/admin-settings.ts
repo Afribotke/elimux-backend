@@ -7,7 +7,7 @@
 // ============================================
 
 import { Router, Request, Response } from 'express';
-import { adminMiddleware } from '../middleware/auth';
+import { adminAuth } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
 
 const router = Router();
@@ -27,7 +27,7 @@ const AD_PRICING_KEYS = [
     'ad_billing_enabled'
 ];
 
-router.get('/', adminMiddleware, async (_req: Request, res: Response): Promise<void> => {
+router.get('/', adminAuth, async (_req: Request, res: Response): Promise<void> => {
     try {
         const { data, error } = await supabase
             .from('platform_settings')
@@ -43,7 +43,7 @@ router.get('/', adminMiddleware, async (_req: Request, res: Response): Promise<v
     }
 });
 
-router.patch('/:key', adminMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.patch('/:key', adminAuth, async (req: Request, res: Response): Promise<void> => {
     try {
         const key = String(req.params.key);
         const value = req.body?.value;
@@ -98,7 +98,7 @@ router.patch('/:key', adminMiddleware, async (req: Request, res: Response): Prom
 });
 
 // ELIMUX 22: GET /api/admin/settings/ad-pricing - ad pricing settings only
-router.get('/ad-pricing', adminMiddleware, async (_req: Request, res: Response): Promise<void> => {
+router.get('/ad-pricing', adminAuth, async (_req: Request, res: Response): Promise<void> => {
     try {
         const { data, error } = await supabase
             .from('platform_settings')
@@ -130,7 +130,7 @@ router.get('/ad-pricing', adminMiddleware, async (_req: Request, res: Response):
 });
 
 // ELIMUX 22: PUT /api/admin/settings/ad-pricing - update ad pricing settings
-router.put('/ad-pricing', adminMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.put('/ad-pricing', adminAuth, async (req: Request, res: Response): Promise<void> => {
     try {
         const updates = req.body;
         const results: any[] = [];

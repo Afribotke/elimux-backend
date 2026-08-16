@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../lib/supabase';
-import { adminMiddleware } from '../middleware/auth';
+import { adminAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -139,7 +139,7 @@ router.post('/apply', async (req, res) => {
 });
 
 // POST /api/programs — create (admin only)
-router.post('/', adminMiddleware, async (req, res) => {
+router.post('/', adminAuth, async (req, res) => {
   try {
     const { institution_id, category_id, name, description, duration_months, tuition_fees, currency, level, mode, requirements, career_outcomes } = req.body;
 
@@ -179,7 +179,7 @@ router.post('/', adminMiddleware, async (req, res) => {
 });
 
 // PUT /api/programs/:id — update (admin only)
-router.put('/:id', adminMiddleware, async (req, res) => {
+router.put('/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -204,7 +204,7 @@ router.put('/:id', adminMiddleware, async (req, res) => {
 });
 
 // DELETE /api/programs/:id — delete (admin only)
-router.delete('/:id', adminMiddleware, async (req, res) => {
+router.delete('/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { error } = await supabase.from('programs').delete().eq('id', id);

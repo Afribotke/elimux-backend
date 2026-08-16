@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { supabase } from '../lib/supabase'
 
 const router = Router()
@@ -8,7 +8,7 @@ const router = Router()
 // Scholarship creation lives in admin.ts POST /scholarships.
 
 // GET /api/admin/scholarships?page=1&limit=20&status=&application_status=&search=
-router.get('/', adminMiddleware, async (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
   try {
     const page = Math.max(1, parseInt((req.query.page as string) || '1'))
     const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20')))
@@ -41,7 +41,7 @@ router.get('/', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/admin/scholarships/:id
-router.get('/:id', adminMiddleware, async (req, res) => {
+router.get('/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
 
@@ -68,7 +68,7 @@ router.get('/:id', adminMiddleware, async (req, res) => {
 })
 
 // PUT /api/admin/scholarships/:id
-router.put('/:id', adminMiddleware, async (req, res) => {
+router.put('/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const body = req.body || {}
@@ -154,7 +154,7 @@ router.put('/:id', adminMiddleware, async (req, res) => {
 })
 
 // DELETE /api/admin/scholarships/:id
-router.delete('/:id', adminMiddleware, async (req, res) => {
+router.delete('/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { error } = await supabase.from('scholarships').delete().eq('id', id)

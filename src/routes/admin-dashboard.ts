@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { supabase } from '../lib/supabase'
 
 const router = Router()
@@ -8,7 +8,7 @@ const router = Router()
 // admin overview page. Deliberately excludes a "total users" figure: real
 // accounts live in auth.users, which has no cheap count endpoint, and
 // public.users is an unused legacy table (always 0 rows) that would lie.
-router.get('/stats', adminMiddleware, async (req, res) => {
+router.get('/stats', adminAuth, async (req, res) => {
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -84,7 +84,7 @@ router.get('/stats', adminMiddleware, async (req, res) => {
 // unwritten) activity_log table. No route in this codebase writes to it yet,
 // so this may return an empty page in production; that's the accurate state,
 // not a bug in this endpoint.
-router.get('/audit-log', adminMiddleware, async (req, res) => {
+router.get('/audit-log', adminAuth, async (req, res) => {
   try {
     const page = Math.max(1, parseInt((req.query.page as string) || '1'))
     const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '50')))
@@ -110,7 +110,7 @@ router.get('/audit-log', adminMiddleware, async (req, res) => {
 // (/nita/*, gated by requireNitaAdmin in src/routes/nita.ts). This just
 // gives platform admins visibility without a second write path on the same
 // rows.
-router.get('/nita', adminMiddleware, async (req, res) => {
+router.get('/nita', adminAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('nita_compliance_flags')

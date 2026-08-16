@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { aiClient } from '../lib/ai-gateway'
 
 const router = Router()
@@ -11,12 +11,12 @@ const router = Router()
 // rate-limited route rather than opening this one up.
 
 // GET /api/ai/status - current mode, fallback order, which providers have keys configured
-router.get('/status', adminMiddleware, (req, res) => {
+router.get('/status', adminAuth, (req, res) => {
   res.json(aiClient.getStatus())
 })
 
 // POST /api/ai/mode - { mode: 'launch' | 'scale' }
-router.post('/mode', adminMiddleware, (req, res) => {
+router.post('/mode', adminAuth, (req, res) => {
   try {
     const { mode } = req.body
     const newMode = aiClient.setMode(mode)
@@ -27,7 +27,7 @@ router.post('/mode', adminMiddleware, (req, res) => {
 })
 
 // POST /api/ai/chat - { messages: [{role, content}], model?: 'auto' | providerName, temperature? }
-router.post('/chat', adminMiddleware, async (req, res) => {
+router.post('/chat', adminAuth, async (req, res) => {
   try {
     const { messages, model, temperature } = req.body
 
@@ -46,7 +46,7 @@ router.post('/chat', adminMiddleware, async (req, res) => {
 // POST /api/ai/embed - { text: string } - tries OpenAI then Together AI (see
 // AIClient.embeddings). Response includes provider/model since the two
 // produce different vector dimensions - don't mix them in a shared index.
-router.post('/embed', adminMiddleware, async (req, res) => {
+router.post('/embed', adminAuth, async (req, res) => {
   try {
     const { text } = req.body
 

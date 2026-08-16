@@ -8,12 +8,12 @@
 // ============================================================
 
 import { Router, Request, Response } from 'express';
-import { adminMiddleware } from '../middleware/auth';
+import { adminAuth } from '../middleware/auth';
 import { supabase } from '../lib/supabase';
 
 const router = Router();
 
-router.get('/', adminMiddleware, async (_req: Request, res: Response): Promise<void> => {
+router.get('/', adminAuth, async (_req: Request, res: Response): Promise<void> => {
   try {
     const [
       { data: subscriptionPayments, error: subError },

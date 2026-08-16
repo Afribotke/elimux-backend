@@ -4,10 +4,10 @@ import { scrapeScholarshipPage, PHASE_2_SOURCES } from '../services/scholarshipS
 import { extractScholarshipsFromText } from '../services/aiScholarshipExtract'
 import { validateScraperUrl } from '../lib/ssrfGuard'
 import { normalizeCoverageType, parseDeadline } from '../services/scholarshipNormalizer'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 
 const router = Router()
-router.use(adminMiddleware)
+router.use(adminAuth)
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,

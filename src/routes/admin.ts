@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { supabase } from '../lib/supabase'
 import {
   sendEmail,
@@ -15,12 +15,12 @@ const router = Router()
 // calls before showing the dashboard. Reuses the same check every other
 // admin-protected route already applies, so a key that passes here is
 // guaranteed to also work for real CRUD operations (and vice versa).
-router.get('/verify', adminMiddleware, (req, res) => {
+router.get('/verify', adminAuth, (req, res) => {
   res.json({ valid: true })
 })
 
 // GET /api/admin/plans — list all plans, including inactive, with active subscriber counts
-router.get('/plans', adminMiddleware, async (req, res) => {
+router.get('/plans', adminAuth, async (req, res) => {
   try {
     const { data: plans, error } = await supabase
       .from('subscription_plans')
@@ -49,7 +49,7 @@ router.get('/plans', adminMiddleware, async (req, res) => {
 })
 
 // POST /api/admin/plans — create a new plan
-router.post('/plans', adminMiddleware, async (req, res) => {
+router.post('/plans', adminAuth, async (req, res) => {
   try {
     const { name, slug, description, price_kes, price_usd, currency, duration_months, features, is_active } = req.body
 
@@ -86,7 +86,7 @@ router.post('/plans', adminMiddleware, async (req, res) => {
 })
 
 // PUT /api/admin/plans/:id — update plan details
-router.put('/plans/:id', adminMiddleware, async (req, res) => {
+router.put('/plans/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { name, slug, description, price_kes, price_usd, currency, duration_months, features, is_active } = req.body
@@ -122,7 +122,7 @@ router.put('/plans/:id', adminMiddleware, async (req, res) => {
 })
 
 // DELETE /api/admin/plans/:id — soft delete (is_active = false)
-router.delete('/plans/:id', adminMiddleware, async (req, res) => {
+router.delete('/plans/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
 
@@ -146,7 +146,7 @@ router.delete('/plans/:id', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/admin/applications — list institution applications with their program applications
-router.get('/applications', adminMiddleware, async (req, res) => {
+router.get('/applications', adminAuth, async (req, res) => {
   try {
     const { status } = req.query
 
@@ -170,7 +170,7 @@ router.get('/applications', adminMiddleware, async (req, res) => {
 
 // POST /api/admin/applications/:id/approve — create the real institution (and any
 // pending programs submitted alongside it), then mark the application approved.
-router.post('/applications/:id/approve', adminMiddleware, async (req, res) => {
+router.post('/applications/:id/approve', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { admin_notes } = req.body
@@ -279,7 +279,7 @@ router.post('/applications/:id/approve', adminMiddleware, async (req, res) => {
 })
 
 // POST /api/admin/applications/:id/reject
-router.post('/applications/:id/reject', adminMiddleware, async (req, res) => {
+router.post('/applications/:id/reject', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { admin_notes } = req.body
@@ -322,7 +322,7 @@ router.post('/applications/:id/reject', adminMiddleware, async (req, res) => {
 // POST /api/admin/applications/programs/:id/approve — approve a single program
 // application against an institution that's already been approved (e.g. a
 // program submitted after the institution's initial onboarding batch).
-router.post('/applications/programs/:id/approve', adminMiddleware, async (req, res) => {
+router.post('/applications/programs/:id/approve', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { admin_notes } = req.body
@@ -382,7 +382,7 @@ router.post('/applications/programs/:id/approve', adminMiddleware, async (req, r
 })
 
 // POST /api/admin/applications/programs/:id/reject
-router.post('/applications/programs/:id/reject', adminMiddleware, async (req, res) => {
+router.post('/applications/programs/:id/reject', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { admin_notes } = req.body
@@ -405,7 +405,7 @@ router.post('/applications/programs/:id/reject', adminMiddleware, async (req, re
 })
 
 // GET /api/admin/reviews?status=pending — list reviews for moderation, defaults to pending
-router.get('/reviews', adminMiddleware, async (req, res) => {
+router.get('/reviews', adminAuth, async (req, res) => {
   try {
     const { status = 'pending' } = req.query
 
@@ -425,7 +425,7 @@ router.get('/reviews', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/admin/reviews/:id — set status to approved/rejected
-router.patch('/reviews/:id', adminMiddleware, async (req, res) => {
+router.patch('/reviews/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { status } = req.body
@@ -452,7 +452,7 @@ router.patch('/reviews/:id', adminMiddleware, async (req, res) => {
 })
 
 // DELETE /api/admin/reviews/:id — permanently remove a review (spam, GDPR removal requests)
-router.delete('/reviews/:id', adminMiddleware, async (req, res) => {
+router.delete('/reviews/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
 
@@ -474,7 +474,7 @@ router.delete('/reviews/:id', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/admin/messages?status=new — list contact form submissions, defaults to new
-router.get('/messages', adminMiddleware, async (req, res) => {
+router.get('/messages', adminAuth, async (req, res) => {
   try {
     const { status = 'new' } = req.query
 
@@ -497,7 +497,7 @@ router.get('/messages', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/admin/messages/:id — set status to read/archived
-router.patch('/messages/:id', adminMiddleware, async (req, res) => {
+router.patch('/messages/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { status } = req.body
@@ -524,7 +524,7 @@ router.patch('/messages/:id', adminMiddleware, async (req, res) => {
 })
 
 // DELETE /api/admin/messages/:id — permanently remove a message
-router.delete('/messages/:id', adminMiddleware, async (req, res) => {
+router.delete('/messages/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
 
@@ -547,7 +547,7 @@ router.delete('/messages/:id', adminMiddleware, async (req, res) => {
 
 // GET /api/admin/potential-employers?status=pending — list employer sign-up
 // interest submissions, defaults to pending
-router.get('/potential-employers', adminMiddleware, async (req, res) => {
+router.get('/potential-employers', adminAuth, async (req, res) => {
   try {
     const { status = 'pending' } = req.query
 
@@ -570,7 +570,7 @@ router.get('/potential-employers', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/admin/potential-employers/:id — set status and/or admin notes
-router.patch('/potential-employers/:id', adminMiddleware, async (req, res) => {
+router.patch('/potential-employers/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { status, admin_notes } = req.body
@@ -605,7 +605,7 @@ router.patch('/potential-employers/:id', adminMiddleware, async (req, res) => {
 // only allows a row's own auth.uid() or an authenticated admin (via
 // user_roles), neither of which this admin panel has, since it authenticates
 // via the shared admin key rather than a Supabase Auth session.
-router.post('/students/bulk-upload', adminMiddleware, async (req, res) => {
+router.post('/students/bulk-upload', adminAuth, async (req, res) => {
   try {
     const students = req.body?.students
     if (!Array.isArray(students)) {
@@ -652,7 +652,7 @@ router.post('/students/bulk-upload', adminMiddleware, async (req, res) => {
 // GET /api/admin/compliance-flags?resolved=false&severity=high&source=admin
 // ElimuX's own trust/safety flags on employers - separate from NITA's
 // regulatory nita_compliance_flags (elimux-sql/37_compliance_layer.sql).
-router.get('/compliance-flags', adminMiddleware, async (req, res) => {
+router.get('/compliance-flags', adminAuth, async (req, res) => {
   try {
     const { resolved, severity, source, limit = '50', offset = '0' } = req.query
     const limitNum = Math.min(200, Math.max(1, parseInt(limit as string) || 50))
@@ -679,7 +679,7 @@ router.get('/compliance-flags', adminMiddleware, async (req, res) => {
 })
 
 // POST /api/admin/compliance-flags — create a flag
-router.post('/compliance-flags', adminMiddleware, async (req, res) => {
+router.post('/compliance-flags', adminAuth, async (req, res) => {
   try {
     const { employer_id, flag_type, flag_reason, severity, source } = req.body
 
@@ -709,7 +709,7 @@ router.post('/compliance-flags', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/admin/compliance-flags/:id — resolve or update a flag
-router.patch('/compliance-flags/:id', adminMiddleware, async (req, res) => {
+router.patch('/compliance-flags/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { resolved, resolution_notes, resolved_by } = req.body
@@ -748,7 +748,7 @@ router.patch('/compliance-flags/:id', adminMiddleware, async (req, res) => {
 // records. Not a replacement for employers.is_verified/verification_status
 // (untouched, still drives the existing Verify/Reject employers page) -
 // this is ElimuX's separate verification audit trail.
-router.get('/verified-employers', adminMiddleware, async (req, res) => {
+router.get('/verified-employers', adminAuth, async (req, res) => {
   try {
     const { employer_id, is_active, limit = '50', offset = '0' } = req.query
     const limitNum = Math.min(200, Math.max(1, parseInt(limit as string) || 50))
@@ -776,7 +776,7 @@ router.get('/verified-employers', adminMiddleware, async (req, res) => {
 // POST /api/admin/verified-employers — record a new verification, replacing
 // any existing active one for the same employer (matches the partial
 // unique index on verified_employers(employer_id) WHERE is_active).
-router.post('/verified-employers', adminMiddleware, async (req, res) => {
+router.post('/verified-employers', adminAuth, async (req, res) => {
   try {
     const { employer_id, verified_by, verification_method, verification_notes, documents_reviewed, tier } = req.body
 
@@ -813,7 +813,7 @@ router.post('/verified-employers', adminMiddleware, async (req, res) => {
 })
 
 // POST /api/admin/scholarships — create a scholarship
-router.post('/scholarships', adminMiddleware, async (req, res) => {
+router.post('/scholarships', adminAuth, async (req, res) => {
   try {
     const {
       title, provider, provider_logo_url, description, eligibility, benefits,
@@ -870,7 +870,7 @@ router.post('/scholarships', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/admin/scholarships/:id — update scholarship fields
-router.patch('/scholarships/:id', adminMiddleware, async (req, res) => {
+router.patch('/scholarships/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const updates = req.body
@@ -900,7 +900,7 @@ router.patch('/scholarships/:id', adminMiddleware, async (req, res) => {
 const ACCREDITATION_BODY_TYPES = ['university', 'tvet', 'secondary', 'professional']
 
 // POST /api/admin/accreditation-bodies — create a new accreditation body
-router.post('/accreditation-bodies', adminMiddleware, async (req, res) => {
+router.post('/accreditation-bodies', adminAuth, async (req, res) => {
   try {
     const { name, code, description, logo_url, website_url, country_id, body_type, is_active } = req.body
 
@@ -940,7 +940,7 @@ router.post('/accreditation-bodies', adminMiddleware, async (req, res) => {
 })
 
 // POST /api/admin/institution-accreditations — link an institution to an accreditation body
-router.post('/institution-accreditations', adminMiddleware, async (req, res) => {
+router.post('/institution-accreditations', adminAuth, async (req, res) => {
   try {
     // The request field stays `body_id` for backwards compatibility with
     // CreateInstitutionAccreditationInput in the frontend's lib/api.ts;
@@ -982,7 +982,7 @@ router.post('/institution-accreditations', adminMiddleware, async (req, res) => 
 const SPONSORSHIP_TIERS = ['platinum', 'gold', 'silver', 'bronze']
 
 // GET /api/admin/major-sponsors — list all sponsors, active and inactive
-router.get('/major-sponsors', adminMiddleware, async (req, res) => {
+router.get('/major-sponsors', adminAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('major_sponsors')
@@ -1000,7 +1000,7 @@ router.get('/major-sponsors', adminMiddleware, async (req, res) => {
 
 // POST /api/admin/major-sponsors — create a new major sponsor (starts inactive;
 // use PATCH /:id/activate to make it the live "Powered by" sponsor)
-router.post('/major-sponsors', adminMiddleware, async (req, res) => {
+router.post('/major-sponsors', adminAuth, async (req, res) => {
   try {
     const {
       organization_name, logo_url, tagline, website_url, sponsorship_tier,
@@ -1047,7 +1047,7 @@ router.post('/major-sponsors', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/admin/major-sponsors/:id — update sponsor details
-router.patch('/major-sponsors/:id', adminMiddleware, async (req, res) => {
+router.patch('/major-sponsors/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const {
@@ -1097,7 +1097,7 @@ router.patch('/major-sponsors/:id', adminMiddleware, async (req, res) => {
 
 // PATCH /api/admin/major-sponsors/:id/activate — make this the sole active
 // sponsor, deactivating whichever one was previously active
-router.patch('/major-sponsors/:id/activate', adminMiddleware, async (req, res) => {
+router.patch('/major-sponsors/:id/activate', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
 
@@ -1139,7 +1139,7 @@ router.patch('/major-sponsors/:id/activate', adminMiddleware, async (req, res) =
 // ============================================================
 
 // GET /api/admin/campaigns — list ALL campaigns across advertisers, filterable by status
-router.get('/campaigns', adminMiddleware, async (req, res) => {
+router.get('/campaigns', adminAuth, async (req, res) => {
   try {
     const { status } = req.query
 
@@ -1161,7 +1161,7 @@ router.get('/campaigns', adminMiddleware, async (req, res) => {
 })
 
 // POST /api/admin/campaigns/:id/approve — pending_review → active; duration runs from approval date
-router.post('/campaigns/:id/approve', adminMiddleware, async (req, res) => {
+router.post('/campaigns/:id/approve', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
 
@@ -1203,7 +1203,7 @@ router.post('/campaigns/:id/approve', adminMiddleware, async (req, res) => {
 })
 
 // POST /api/admin/campaigns/:id/reject — reject + refund the reserved budget to the advertiser wallet
-router.post('/campaigns/:id/reject', adminMiddleware, async (req, res) => {
+router.post('/campaigns/:id/reject', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
 
@@ -1257,7 +1257,7 @@ router.post('/campaigns/:id/reject', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/admin/campaigns/:id/status — admin pause/reactivate of live campaigns (takedown power)
-router.patch('/campaigns/:id/status', adminMiddleware, async (req, res) => {
+router.patch('/campaigns/:id/status', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { status } = req.body
@@ -1289,7 +1289,7 @@ router.patch('/campaigns/:id/status', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/admin/advertisers — all advertisers with campaign counts
-router.get('/advertisers', adminMiddleware, async (req, res) => {
+router.get('/advertisers', adminAuth, async (req, res) => {
   try {
     const { data: advertisers, error } = await supabase
       .from('advertisers')
@@ -1317,7 +1317,7 @@ router.get('/advertisers', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/admin/advertisers/:id/status — suspend or reactivate an advertiser account
-router.patch('/advertisers/:id/status', adminMiddleware, async (req, res) => {
+router.patch('/advertisers/:id/status', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { status } = req.body
@@ -1344,7 +1344,7 @@ router.patch('/advertisers/:id/status', adminMiddleware, async (req, res) => {
 })
 
 // GET /api/admin/institution-accounts — list institution account claims
-router.get('/institution-accounts', adminMiddleware, async (req, res) => {
+router.get('/institution-accounts', adminAuth, async (req, res) => {
   try {
     const { status } = req.query
 
@@ -1366,7 +1366,7 @@ router.get('/institution-accounts', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/admin/institution-accounts/:id/status — approve (active) or suspend a claim
-router.patch('/institution-accounts/:id/status', adminMiddleware, async (req, res) => {
+router.patch('/institution-accounts/:id/status', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { status } = req.body

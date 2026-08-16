@@ -1,12 +1,12 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { validateScraperUrl } from '../lib/ssrfGuard'
 import { aiProvider } from '../lib/ai'
 import type { ExtractedProgram } from '../lib/ai/types'
 
 const router = Router()
-router.use(adminMiddleware) // every /api/admin/scraper/* route is admin-only
+router.use(adminAuth) // every /api/admin/scraper/* route is admin-only
 
 // Matches each table's CHECK constraint (found by probing - not reflected in
 // PostgREST's schema, same situation as queued_actions in pwa.ts).

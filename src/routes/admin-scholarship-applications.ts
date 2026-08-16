@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { createClient } from '@supabase/supabase-js'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import {
   sendEmail,
   scholarshipAwardedEmailHtml,
@@ -17,7 +17,7 @@ const supabase = createClient(
 
 // GET /api/admin/scholarship-applications
 // Query: ?status=&page=1&limit=20
-router.get('/', adminMiddleware, async (req: Request, res: Response) => {
+router.get('/', adminAuth, async (req: Request, res: Response) => {
   try {
     const status = req.query.status as string | undefined
     const page = parseInt(req.query.page as string) || 1
@@ -75,7 +75,7 @@ router.get('/', adminMiddleware, async (req: Request, res: Response) => {
 
 // POST /api/admin/scholarship-applications/:id/review
 // Body: { status: 'under_review' | 'awarded' | 'rejected', review_score?, review_notes? }
-router.post('/:id/review', adminMiddleware, async (req: Request, res: Response) => {
+router.post('/:id/review', adminAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params
     const { status, review_score, review_notes } = req.body
@@ -145,7 +145,7 @@ router.post('/:id/review', adminMiddleware, async (req: Request, res: Response) 
 
 // GET /api/admin/scholarship-applications/:id/document/:docName
 // Returns a fresh signed URL for admins to view a specific uploaded document
-router.get('/:id/document/:docName', adminMiddleware, async (req: Request, res: Response) => {
+router.get('/:id/document/:docName', adminAuth, async (req: Request, res: Response) => {
   try {
     const { id, docName } = req.params
 

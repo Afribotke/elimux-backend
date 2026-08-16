@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { getDeviceFingerprint } from '../lib/deviceFingerprint'
 
 const router = Router()
@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
 })
 
 // GET /api/sponsor-ads/admin — all ads regardless of placement/active/expiry (admin only)
-router.get('/admin', adminMiddleware, async (req, res) => {
+router.get('/admin', adminAuth, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('sponsor_ads')
@@ -49,7 +49,7 @@ router.get('/admin', adminMiddleware, async (req, res) => {
 })
 
 // POST /api/sponsor-ads (admin only)
-router.post('/', adminMiddleware, async (req, res) => {
+router.post('/', adminAuth, async (req, res) => {
   try {
     const { sponsor_id, title, description, image_url, target_url, placement, start_date, end_date } = req.body
 
@@ -86,7 +86,7 @@ router.post('/', adminMiddleware, async (req, res) => {
 })
 
 // PATCH /api/sponsor-ads/:id (admin only) — toggle is_active or update ad fields
-router.patch('/:id', adminMiddleware, async (req, res) => {
+router.patch('/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
     const { sponsor_id, title, description, image_url, target_url, placement, start_date, end_date, is_active } = req.body

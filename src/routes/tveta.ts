@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
-import { adminMiddleware } from '../middleware/auth'
+import { adminAuth } from '../middleware/auth'
 import { runTvetaScrape, checkRobotsTxt } from '../services/tvetaScraper'
 
 const router = Router()
@@ -19,7 +19,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
 // ── GET /api/tveta/public-search ──
 // Public, unauthenticated lookup so students can check whether an
 // institution is TVETA-accredited before enrolling. Registered ahead of
-// adminMiddleware below so this one route is exempt from the admin gate.
+// adminAuth below so this one route is exempt from the admin gate.
 router.get('/public-search', async (req, res) => {
   try {
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
@@ -53,7 +53,7 @@ router.get('/public-search', async (req, res) => {
   }
 })
 
-router.use(adminMiddleware) // every other /api/tveta/* route is admin-only
+router.use(adminAuth) // every other /api/tveta/* route is admin-only
 
 // ── POST /api/tveta/run ──
 // Trigger a scrape of the TVETA accreditation registry.
@@ -292,7 +292,7 @@ router.post('/approve/:id', async (req, res) => {
 
 // ── POST /api/tveta/bulk-approve ──
 // Approve all pending institutions with Active status (skip Expired License)
-router.post('/bulk-approve', adminMiddleware, async (req, res) => {
+router.post('/bulk-approve', adminAuth, async (req, res) => {
   try {
     // PostgREST caps a single select at 1000 rows by default - page through
     // until exhausted instead of silently only seeing the first 1000 pending.
