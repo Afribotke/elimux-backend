@@ -61,6 +61,7 @@ import tvetaRouter from './routes/tveta'
 import attachmentsRouter from './routes/attachments'
 import nitaRouter from './routes/nita'
 import requisitionsRouter from './routes/requisitions'
+import userExportRouter from './routes/user-export'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 import stripePayments from './routes/payments-stripe';
 import mpesaPayments from './routes/payments-mpesa';
@@ -182,6 +183,7 @@ app.use('/api/tveta', tvetaRouter)
 app.use('/api/attachments', attachmentsRouter)
 app.use('/api/nita', nitaRouter)
 app.use('/api/requisitions', requisitionsRouter)
+app.use('/api/user', userExportRouter)
 
 app.get('/', (req, res) => {
   res.json({
