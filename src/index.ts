@@ -64,11 +64,41 @@ import requisitionsRouter from './routes/requisitions'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 import stripePayments from './routes/payments-stripe';
 import mpesaPayments from './routes/payments-mpesa';
+import helmet from 'helmet'
 
 const app = express()
 const PORT = process.env.PORT || 3001
 
 app.use(cors({ allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key'] }))
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://*.supabase.co", "https://api.elimux.ke"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  // Not in the original spec, added deliberately: helmet's default
+  // Cross-Origin-Resource-Policy is 'same-origin', which is a different
+  // mechanism from CORS (the cors() call above only controls XHR/fetch
+  // access, not <img>/<script>-style cross-origin embedding) and a common
+  // source of "images/assets silently stopped loading cross-origin" bugs
+  // after adding helmet. This API is meant to be consumed cross-origin from
+  // elimux-frontend and any other client, so explicitly opt out.
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+}))
 app.use(
   // 8mb, not 5mb: scholarship-applications.ts uploads send files as base64
   // inside this JSON body, which inflates a file at documentUpload.ts's own
