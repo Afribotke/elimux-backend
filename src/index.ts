@@ -62,6 +62,7 @@ import attachmentsRouter from './routes/attachments'
 import nitaRouter from './routes/nita'
 import requisitionsRouter from './routes/requisitions'
 import userExportRouter from './routes/user-export'
+import userDeleteRouter from './routes/user-delete'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 import stripePayments from './routes/payments-stripe';
 import mpesaPayments from './routes/payments-mpesa';
@@ -184,6 +185,7 @@ app.use('/api/attachments', attachmentsRouter)
 app.use('/api/nita', nitaRouter)
 app.use('/api/requisitions', requisitionsRouter)
 app.use('/api/user', userExportRouter)
+app.use('/api/user', userDeleteRouter)
 
 app.get('/', (req, res) => {
   res.json({
