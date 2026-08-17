@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { adminAuth } from '../middleware/auth'
 import { supabase } from '../lib/supabase'
+import { createScholarshipSchema, updateScholarshipSchema } from '../lib/validation/scholarshipSchemas'
 import {
   sendEmail,
   applicationApprovedEmailHtml,
@@ -815,45 +816,14 @@ router.post('/verified-employers', adminAuth, async (req, res) => {
 // POST /api/admin/scholarships — create a scholarship
 router.post('/scholarships', adminAuth, async (req, res) => {
   try {
-    const {
-      title, provider, provider_logo_url, description, eligibility, benefits,
-      amount, currency, coverage_type, institution_id, country_id,
-      study_levels, disciplines, target_groups, application_opens, application_deadline,
-      notification_date, application_url, application_process, required_documents,
-      status, is_featured, source_url,
-    } = req.body
-
-    if (!title || !provider || !application_deadline) {
-      return res.status(400).json({ error: 'Missing required fields', required: ['title', 'provider', 'application_deadline'] })
+    const parsed = createScholarshipSchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() })
     }
 
     const { data, error } = await supabase
       .from('scholarships')
-      .insert({
-        title,
-        provider,
-        provider_logo_url: provider_logo_url || null,
-        description: description || null,
-        eligibility: eligibility || null,
-        benefits: benefits || null,
-        amount: amount || null,
-        currency: currency || 'KES',
-        coverage_type: coverage_type || null,
-        institution_id: institution_id || null,
-        country_id: country_id || null,
-        study_levels: study_levels || null,
-        disciplines: disciplines || null,
-        target_groups: target_groups || null,
-        application_opens: application_opens || null,
-        application_deadline,
-        notification_date: notification_date || null,
-        application_url: application_url || null,
-        application_process: application_process || null,
-        required_documents: required_documents || null,
-        status: status || 'active',
-        is_featured: is_featured ?? false,
-        source_url: source_url || null,
-      })
+      .insert(parsed.data)
       .select()
       .single()
 
@@ -873,11 +843,14 @@ router.post('/scholarships', adminAuth, async (req, res) => {
 router.patch('/scholarships/:id', adminAuth, async (req, res) => {
   try {
     const { id } = req.params
-    const updates = req.body
+    const parsed = updateScholarshipSchema.safeParse(req.body)
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid input', details: parsed.error.flatten() })
+    }
 
     const { data, error } = await supabase
       .from('scholarships')
-      .update(updates)
+      .update(parsed.data)
       .eq('id', id)
       .select()
       .single()
