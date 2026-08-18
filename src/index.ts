@@ -65,6 +65,7 @@ import userExportRouter from './routes/user-export'
 import userDeleteRouter from './routes/user-delete'
 import bursaryPaymentsRouter from './routes/bursary-payments'
 import bursaryProvidersRouter from './routes/bursary-providers'
+import adminBursaryProvidersRouter from './routes/admin-bursary-providers'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 import stripePayments from './routes/payments-stripe';
 import mpesaPayments from './routes/payments-mpesa';
@@ -190,6 +191,7 @@ app.use('/api/user', userExportRouter)
 app.use('/api/user', userDeleteRouter)
 app.use('/api/bursary/payments', bursaryPaymentsRouter)
 app.use('/api/bursary/providers', bursaryProvidersRouter)
+app.use('/api/admin/bursary-providers', adminBursaryProvidersRouter)
 
 app.get('/', (req, res) => {
   res.json({
