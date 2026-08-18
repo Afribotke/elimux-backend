@@ -72,6 +72,7 @@ import mpesaPayments from './routes/payments-mpesa';
 import helmet from 'helmet'
 
 const app = express()
+app.set('trust proxy', 1)
 const PORT = process.env.PORT || 3001
 
 app.use(cors({ allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key'] }))
