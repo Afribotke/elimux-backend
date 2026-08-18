@@ -1,5 +1,18 @@
 import rateLimit from 'express-rate-limit'
 
+// Public, unauthenticated write endpoint (bursary provider registration) -
+// no admin key, no email verification, creates a real tenants row per
+// request. Legitimate use is "an org registers once," so this is
+// deliberately much tighter than adminRateLimiter, which is sized for
+// rapid legitimate admin-dashboard traffic.
+export const publicRegistrationRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({ error: 'Too many registration attempts. Try again later.' }),
+})
+
 export const adminRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
