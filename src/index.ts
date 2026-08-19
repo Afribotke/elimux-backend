@@ -70,6 +70,7 @@ import adminBursaryFundsRouter from './routes/admin-bursary-funds'
 import adminBursaryApplicationsRouter from './routes/admin-bursary-applications'
 import adminBursaryDisbursementsRouter from './routes/admin-bursary-disbursements'
 import bursaryPublicRouter from './routes/bursary-public'
+import bursaryCronRouter from './routes/bursary-cron'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 import stripePayments from './routes/payments-stripe';
 import mpesaPayments from './routes/payments-mpesa';
@@ -201,6 +202,7 @@ app.use('/api/admin/bursary-funds', adminBursaryFundsRouter)
 app.use('/api/admin/bursary-applications', adminBursaryApplicationsRouter)
 app.use('/api/admin/bursary-disbursements', adminBursaryDisbursementsRouter)
 app.use('/api/bursary', bursaryPublicRouter)
+app.use('/api/bursary/cron', bursaryCronRouter)
 
 app.get('/', (req, res) => {
   res.json({
