@@ -38,7 +38,10 @@ router.get('/funds', async (req: Request, res: Response) => {
 
     if (fundsError) throw fundsError;
 
-    const providerIds = [...new Set((funds || []).map(f => f.provider_id).filter(Boolean))];
+    // provider_id is an optional override; the admin fund-create endpoint only
+    // ever sets tenant_id, so that's the reliable "who owns this fund" field
+    // (same convention bursary-providers.ts's GET /:slug/funds already uses).
+    const providerIds = [...new Set((funds || []).map(f => f.provider_id || f.tenant_id).filter(Boolean))];
     const tenantIds = [...new Set((funds || []).map(f => f.tenant_id).filter(Boolean))];
 
     const [{ data: providers }, { data: branding }] = await Promise.all([
@@ -54,7 +57,7 @@ router.get('/funds', async (req: Request, res: Response) => {
     const brandingMap = new Map((branding || []).map((b: any) => [b.tenant_id, b]));
 
     const flattened = (funds || []).map(f =>
-      flattenFund(f, providerMap.get(f.provider_id)?.name ?? null, brandingMap.get(f.tenant_id)?.logo_url ?? null)
+      flattenFund(f, providerMap.get(f.provider_id || f.tenant_id)?.name ?? null, brandingMap.get(f.tenant_id)?.logo_url ?? null)
     );
 
     return res.json({ funds: flattened });
@@ -78,9 +81,10 @@ router.get('/funds/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Bursary not found' });
     }
 
+    const providerId = fund.provider_id || fund.tenant_id;
     const [{ data: provider }, { data: branding }] = await Promise.all([
-      fund.provider_id
-        ? supabase.from('tenants').select('id, name').eq('id', fund.provider_id).maybeSingle()
+      providerId
+        ? supabase.from('tenants').select('id, name').eq('id', providerId).maybeSingle()
         : Promise.resolve({ data: null as any }),
       supabase.from('tenant_branding').select('logo_url').eq('tenant_id', fund.tenant_id).maybeSingle(),
     ]);
