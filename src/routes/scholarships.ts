@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../lib/supabase';
 import { getDeviceFingerprint } from '../lib/deviceFingerprint';
+import { requireUser, UserAuthRequest } from '../middleware/user-auth';
 
 const router = Router();
 
@@ -75,16 +76,14 @@ router.get('/featured', async (req, res) => {
   }
 });
 
-// GET /api/scholarships/favorites — device's saved scholarships (public)
+// GET /api/scholarships/favorites — current user's saved scholarships (auth required)
 // Declared ahead of GET /:id so "favorites" isn't captured as an :id param.
-router.get('/favorites', async (req, res) => {
+router.get('/favorites', requireUser, async (req: UserAuthRequest, res) => {
   try {
-    const deviceId = getDeviceFingerprint(req);
-
     const { data, error } = await supabase
       .from('scholarship_favorites')
       .select('*, scholarship:scholarships(*, institution:institutions(name), country:countries(name))')
-      .eq('device_id', deviceId)
+      .eq('user_id', req.userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -125,18 +124,19 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/scholarships/:id/favorite — save to scholarship_favorites (public)
-router.post('/:id/favorite', async (req, res) => {
+// POST /api/scholarships/:id/favorite — save to scholarship_favorites (auth required)
+router.post('/:id/favorite', requireUser, async (req: UserAuthRequest, res) => {
   try {
     const { id } = req.params;
     const deviceId = getDeviceFingerprint(req);
 
-    // No unique constraint on (device_id, scholarship_id), so check first
-    // rather than insert-and-catch to avoid duplicate rows on retry.
+    // The unique constraint on (user_id, scholarship_id) makes insert-and-catch
+    // safe now, but checking first still avoids a noisy 409 in the common
+    // "already favorited" case.
     const { data: existing } = await supabase
       .from('scholarship_favorites')
       .select('*')
-      .eq('device_id', deviceId)
+      .eq('user_id', req.userId)
       .eq('scholarship_id', id)
       .maybeSingle();
 
@@ -146,7 +146,7 @@ router.post('/:id/favorite', async (req, res) => {
 
     const { data, error } = await supabase
       .from('scholarship_favorites')
-      .insert({ device_id: deviceId, scholarship_id: id })
+      .insert({ device_id: deviceId, scholarship_id: id, user_id: req.userId })
       .select()
       .single();
 
@@ -165,16 +165,15 @@ router.post('/:id/favorite', async (req, res) => {
   }
 });
 
-// DELETE /api/scholarships/:id/favorite — remove from scholarship_favorites (public)
-router.delete('/:id/favorite', async (req, res) => {
+// DELETE /api/scholarships/:id/favorite — remove from scholarship_favorites (auth required)
+router.delete('/:id/favorite', requireUser, async (req: UserAuthRequest, res) => {
   try {
     const { id } = req.params;
-    const deviceId = getDeviceFingerprint(req);
 
     const { error } = await supabase
       .from('scholarship_favorites')
       .delete()
-      .eq('device_id', deviceId)
+      .eq('user_id', req.userId)
       .eq('scholarship_id', id);
 
     if (error) {
