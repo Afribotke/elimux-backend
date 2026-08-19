@@ -166,6 +166,24 @@ router.get('/badges', async (req, res) => {
   }
 })
 
+// GET /api/gamification/actions - list all active point-earning actions
+// ("how to earn" reference data, mirrors /badges).
+router.get('/actions', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('gamification_actions')
+      .select('*')
+      .eq('is_active', true)
+      .order('points', { ascending: false })
+
+    if (error) throw error
+    res.json({ data: data || [] })
+  } catch (error: any) {
+    console.error('List actions error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // GET /api/gamification/me - current user's point total + earned badges,
 // read-only (no side effects). Needed for header/profile displays that show
 // state on page load rather than only right after an award.
