@@ -66,6 +66,10 @@ import userDeleteRouter from './routes/user-delete'
 import bursaryPaymentsRouter from './routes/bursary-payments'
 import bursaryProvidersRouter from './routes/bursary-providers'
 import adminBursaryProvidersRouter from './routes/admin-bursary-providers'
+import adminBursaryFundsRouter from './routes/admin-bursary-funds'
+import adminBursaryApplicationsRouter from './routes/admin-bursary-applications'
+import adminBursaryDisbursementsRouter from './routes/admin-bursary-disbursements'
+import bursaryPublicRouter from './routes/bursary-public'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 import stripePayments from './routes/payments-stripe';
 import mpesaPayments from './routes/payments-mpesa';
@@ -193,6 +197,10 @@ app.use('/api/user', userDeleteRouter)
 app.use('/api/bursary/payments', bursaryPaymentsRouter)
 app.use('/api/bursary/providers', bursaryProvidersRouter)
 app.use('/api/admin/bursary-providers', adminBursaryProvidersRouter)
+app.use('/api/admin/bursary-funds', adminBursaryFundsRouter)
+app.use('/api/admin/bursary-applications', adminBursaryApplicationsRouter)
+app.use('/api/admin/bursary-disbursements', adminBursaryDisbursementsRouter)
+app.use('/api/bursary', bursaryPublicRouter)
 
 app.get('/', (req, res) => {
   res.json({

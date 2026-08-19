@@ -1,0 +1,262 @@
+import { Router, Request, Response } from 'express';
+import { supabase } from '../lib/supabase';
+
+const router = Router();
+
+function flattenFund(f: any, providerName: string | null, providerLogo: string | null) {
+  return {
+    id: f.id,
+    tenantId: f.tenant_id,
+    providerId: f.provider_id,
+    name: f.name,
+    description: f.description,
+    fundType: f.fund_type,
+    status: f.status,
+    totalAmount: f.budget?.total ?? null,
+    currency: f.budget?.currency ?? null,
+    committed: f.budget?.committed ?? null,
+    disbursed: f.budget?.disbursed ?? null,
+    eligibilityRules: f.eligibility_rules ?? null,
+    requiredDocuments: f.required_documents ?? null,
+    deadline: f.application_window?.deadline ?? null,
+    opensAt: f.application_window?.opens_at ?? null,
+    providerName,
+    providerLogo,
+    createdAt: f.created_at,
+    updatedAt: f.updated_at,
+  };
+}
+
+// GET /api/bursary/funds — List all open bursary funds across providers
+router.get('/funds', async (req: Request, res: Response) => {
+  try {
+    const { data: funds, error: fundsError } = await supabase
+      .from('bursary_funds')
+      .select('*')
+      .eq('status', 'open')
+      .order('created_at', { ascending: false });
+
+    if (fundsError) throw fundsError;
+
+    const providerIds = [...new Set((funds || []).map(f => f.provider_id).filter(Boolean))];
+    const tenantIds = [...new Set((funds || []).map(f => f.tenant_id).filter(Boolean))];
+
+    const [{ data: providers }, { data: branding }] = await Promise.all([
+      providerIds.length
+        ? supabase.from('tenants').select('id, name').in('id', providerIds)
+        : Promise.resolve({ data: [] as any[] }),
+      tenantIds.length
+        ? supabase.from('tenant_branding').select('tenant_id, logo_url').in('tenant_id', tenantIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    const providerMap = new Map((providers || []).map((p: any) => [p.id, p]));
+    const brandingMap = new Map((branding || []).map((b: any) => [b.tenant_id, b]));
+
+    const flattened = (funds || []).map(f =>
+      flattenFund(f, providerMap.get(f.provider_id)?.name ?? null, brandingMap.get(f.tenant_id)?.logo_url ?? null)
+    );
+
+    return res.json({ funds: flattened });
+  } catch (err: any) {
+    console.error('[Bursary] List funds error:', err);
+    return res.status(500).json({ error: 'Failed to load bursaries' });
+  }
+});
+
+// GET /api/bursary/funds/:id — Single fund detail
+router.get('/funds/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { data: fund, error: fundError } = await supabase
+      .from('bursary_funds')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fundError || !fund) {
+      return res.status(404).json({ error: 'Bursary not found' });
+    }
+
+    const [{ data: provider }, { data: branding }] = await Promise.all([
+      fund.provider_id
+        ? supabase.from('tenants').select('id, name').eq('id', fund.provider_id).maybeSingle()
+        : Promise.resolve({ data: null as any }),
+      supabase.from('tenant_branding').select('logo_url').eq('tenant_id', fund.tenant_id).maybeSingle(),
+    ]);
+
+    return res.json({ fund: flattenFund(fund, provider?.name ?? null, branding?.logo_url ?? null) });
+  } catch (err: any) {
+    console.error('[Bursary] Fund detail error:', err);
+    return res.status(500).json({ error: 'Failed to load bursary details' });
+  }
+});
+
+// POST /api/bursary/apply — Student submits application
+router.post('/apply', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { fund_id } = req.body;
+    if (!fund_id) {
+      return res.status(400).json({ error: 'fund_id is required' });
+    }
+
+    const { data: fund, error: fundError } = await supabase
+      .from('bursary_funds')
+      .select('id, tenant_id, status, application_window')
+      .eq('id', fund_id)
+      .single();
+
+    if (fundError || !fund) {
+      return res.status(404).json({ error: 'Bursary fund not found' });
+    }
+
+    if (fund.status !== 'open') {
+      return res.status(400).json({ error: 'This bursary is not currently accepting applications' });
+    }
+
+    if (fund.application_window?.deadline && new Date(fund.application_window.deadline) < new Date()) {
+      return res.status(400).json({ error: 'Application deadline has passed' });
+    }
+
+    // Find or create the applicant profile - bursary_applications.applicant_id
+    // is a FK to bursary_applicants.id, not directly to auth.users.id.
+    const { data: existingApplicant } = await supabase
+      .from('bursary_applicants')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let applicantId: string;
+    if (existingApplicant) {
+      applicantId = existingApplicant.id;
+    } else {
+      const { data: newApplicant, error: applicantError } = await supabase
+        .from('bursary_applicants')
+        .insert({
+          user_id: user.id,
+          tenant_id: fund.tenant_id,
+          application_type: 'self',
+        })
+        .select('id')
+        .single();
+
+      if (applicantError || !newApplicant) {
+        console.error('[Bursary] Applicant creation error:', applicantError);
+        return res.status(500).json({ error: 'Failed to create applicant profile' });
+      }
+      applicantId = newApplicant.id;
+    }
+
+    const { data: existingApp } = await supabase
+      .from('bursary_applications')
+      .select('id')
+      .eq('fund_id', fund_id)
+      .eq('applicant_id', applicantId)
+      .maybeSingle();
+
+    if (existingApp) {
+      return res.status(409).json({ error: 'You have already applied for this bursary' });
+    }
+
+    const { data: application, error: appError } = await supabase
+      .from('bursary_applications')
+      .insert({
+        fund_id,
+        applicant_id: applicantId,
+        tenant_id: fund.tenant_id,
+        status: 'submitted',
+      })
+      .select()
+      .single();
+
+    if (appError) {
+      console.error('[Bursary] Application insert error:', appError);
+      return res.status(500).json({ error: 'Failed to submit application' });
+    }
+
+    return res.status(201).json({
+      success: true,
+      application_id: application.id,
+      status: application.status,
+      message: 'Application submitted successfully',
+    });
+  } catch (err: any) {
+    console.error('[Bursary] Apply error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/bursary/applications/my — Current user's applications
+router.get('/applications/my', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { data: applicant } = await supabase
+      .from('bursary_applicants')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!applicant) {
+      return res.json({ applications: [] });
+    }
+
+    const { data: applications, error } = await supabase
+      .from('bursary_applications')
+      .select('*, fund:bursary_funds!fund_id(id, name, description, budget, application_window, status)')
+      .eq('applicant_id', applicant.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Bursary] Fetch applications error:', error);
+      return res.status(500).json({ error: 'Failed to fetch applications' });
+    }
+
+    const flattened = (applications || []).map((app: any) => ({
+      id: app.id,
+      applicantId: app.applicant_id,
+      fundId: app.fund_id,
+      tenantId: app.tenant_id,
+      status: app.status,
+      submissionData: app.submission_data,
+      eligibilityScore: app.eligibility_score,
+      fraudScore: app.fraud_score,
+      documentStatus: app.document_status,
+      createdAt: app.created_at,
+      updatedAt: app.updated_at,
+      fundName: app.fund?.name ?? null,
+      fundDescription: app.fund?.description ?? null,
+      fundAmount: app.fund?.budget?.total ?? null,
+      fundCurrency: app.fund?.budget?.currency ?? null,
+      fundDeadline: app.fund?.application_window?.deadline ?? null,
+      fundStatus: app.fund?.status ?? null,
+    }));
+
+    return res.json({ applications: flattened });
+  } catch (err: any) {
+    console.error('[Bursary] Get applications error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
