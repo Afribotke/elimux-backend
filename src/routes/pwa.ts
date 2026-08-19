@@ -113,58 +113,6 @@ router.post('/notify', adminAuth, async (req, res) => {
   }
 })
 
-// POST /api/pwa/cache - upsert one offline-cache entry (public, device-scoped)
-router.post('/cache', async (req, res) => {
-  try {
-    const { device_id, cache_type, content_id, cached_data, expires_at } = req.body || {}
-
-    if (!device_id || !cache_type || !content_id) {
-      return res.status(400).json({ error: 'device_id, cache_type, and content_id are required' })
-    }
-
-    const { data, error } = await supabase
-      .from('offline_cache')
-      .upsert(
-        { device_id, cache_type, content_id, cached_data: cached_data ?? null, expires_at: expires_at ?? null },
-        { onConflict: 'device_id,cache_type,content_id' }
-      )
-      .select()
-      .single()
-
-    if (error) throw error
-
-    res.status(201).json({ data })
-  } catch (error: any) {
-    console.error('PWA cache write error:', error)
-    res.status(500).json({ error: 'Failed to write cache entry', details: error.message })
-  }
-})
-
-// GET /api/pwa/cache?device_id=xxx&cache_type=institution - unexpired cached
-// entries for a device, optionally scoped to one cache_type
-router.get('/cache', async (req, res) => {
-  try {
-    const { device_id, cache_type } = req.query
-    if (!device_id) return res.status(400).json({ error: 'device_id query param is required' })
-
-    let query = supabase
-      .from('offline_cache')
-      .select('*')
-      .eq('device_id', device_id as string)
-      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-
-    if (cache_type) query = query.eq('cache_type', cache_type as string)
-
-    const { data, error } = await query.order('created_at', { ascending: false })
-    if (error) throw error
-
-    res.json({ data: data || [] })
-  } catch (error: any) {
-    console.error('PWA cache read error:', error)
-    res.status(500).json({ error: 'Failed to fetch cache entries' })
-  }
-})
-
 // POST /api/pwa/queue - queue an action a device couldn't complete while offline
 router.post('/queue', async (req, res) => {
   try {
