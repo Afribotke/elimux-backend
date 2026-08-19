@@ -263,4 +263,121 @@ router.get('/applications/my', async (req: Request, res: Response) => {
   }
 });
 
+function flattenApplicant(a: any) {
+  const personal = a.personal_info || {};
+  const academic = a.academic_info || {};
+  return {
+    id: a.id,
+    fullName: personal.full_name ?? null,
+    email: personal.email ?? null,
+    phone: personal.phone ?? null,
+    dateOfBirth: personal.date_of_birth ?? null,
+    institution: academic.institution ?? null,
+    course: academic.course ?? null,
+    yearOfStudy: academic.year_of_study ?? null,
+    gpa: academic.gpa ?? null,
+    createdAt: a.created_at,
+    updatedAt: a.updated_at,
+  };
+}
+
+// GET /api/bursary/applicant/me — Get the current user's applicant profile
+router.get('/applicant/me', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { data: applicant } = await supabase
+      .from('bursary_applicants')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    return res.json({ profile: applicant ? flattenApplicant(applicant) : null });
+  } catch (err: any) {
+    console.error('[Bursary] Get applicant profile error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/bursary/applicant/me — Update (or create) the current user's applicant profile
+router.patch('/applicant/me', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { fullName, email, phone, dateOfBirth, institution, course, yearOfStudy, gpa } = req.body;
+
+    const personalInfo = {
+      ...(fullName !== undefined ? { full_name: fullName } : {}),
+      ...(email !== undefined ? { email } : {}),
+      ...(phone !== undefined ? { phone } : {}),
+      ...(dateOfBirth !== undefined ? { date_of_birth: dateOfBirth } : {}),
+    };
+    const academicInfo = {
+      ...(institution !== undefined ? { institution } : {}),
+      ...(course !== undefined ? { course } : {}),
+      ...(yearOfStudy !== undefined ? { year_of_study: yearOfStudy } : {}),
+      ...(gpa !== undefined ? { gpa } : {}),
+    };
+
+    const { data: existing } = await supabase
+      .from('bursary_applicants')
+      .select('id, personal_info, academic_info')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let applicant;
+    if (existing) {
+      const { data, error } = await supabase
+        .from('bursary_applicants')
+        .update({
+          personal_info: { ...(existing.personal_info || {}), ...personalInfo },
+          academic_info: { ...(existing.academic_info || {}), ...academicInfo },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+        .select('*')
+        .single();
+      if (error) throw error;
+      applicant = data;
+    } else {
+      const { data, error } = await supabase
+        .from('bursary_applicants')
+        .insert({
+          user_id: user.id,
+          tenant_id: null,
+          application_type: 'self',
+          personal_info: personalInfo,
+          academic_info: academicInfo,
+        })
+        .select('*')
+        .single();
+      if (error) throw error;
+      applicant = data;
+    }
+
+    return res.json({ profile: flattenApplicant(applicant) });
+  } catch (err: any) {
+    console.error('[Bursary] Update applicant profile error:', err);
+    return res.status(500).json({ error: 'Failed to save profile' });
+  }
+});
+
 export default router;
