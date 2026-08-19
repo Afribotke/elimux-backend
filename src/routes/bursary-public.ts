@@ -117,7 +117,7 @@ router.post('/apply', async (req: Request, res: Response) => {
 
     const { data: fund, error: fundError } = await supabase
       .from('bursary_funds')
-      .select('id, tenant_id, status, application_window')
+      .select('id, tenant_id, status, application_window, name')
       .eq('id', fund_id)
       .single();
 
@@ -187,6 +187,20 @@ router.post('/apply', async (req: Request, res: Response) => {
     if (appError) {
       console.error('[Bursary] Application insert error:', appError);
       return res.status(500).json({ error: 'Failed to submit application' });
+    }
+
+    // Best-effort - a notification failure shouldn't fail an already-successful application
+    try {
+      await supabase.from('bursary_notifications').insert({
+        user_id: user.id,
+        type: 'status_update',
+        title: 'Application submitted',
+        message: `Your application for "${fund.name}" has been submitted.`,
+        fund_id: fund_id,
+        application_id: application.id,
+      });
+    } catch (notifyErr) {
+      console.error('[Bursary] Notification insert error:', notifyErr);
     }
 
     return res.status(201).json({
@@ -479,6 +493,156 @@ router.get('/bookmarks', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('[Bursary] List bookmarks error:', err);
     return res.status(500).json({ error: 'Failed to load bookmarks' });
+  }
+});
+
+// GET /api/bursary/notifications — List current user's notifications
+router.get('/notifications', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { data, error } = await supabase
+      .from('bursary_notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    const notifications = (data || []).map((n: any) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      fundId: n.fund_id,
+      applicationId: n.application_id,
+      isRead: n.is_read,
+      createdAt: n.created_at,
+    }));
+
+    return res.json({ notifications });
+  } catch (err: any) {
+    console.error('[Bursary] List notifications error:', err);
+    return res.status(500).json({ error: 'Failed to load notifications' });
+  }
+});
+
+// PATCH /api/bursary/notifications/:id/read — Mark a notification as read
+router.patch('/notifications/:id/read', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('bursary_notifications')
+      .update({ is_read: true })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+    return res.json({ success: true });
+  } catch (err: any) {
+    console.error('[Bursary] Mark notification read error:', err);
+    return res.status(500).json({ error: 'Failed to update notification' });
+  }
+});
+
+// GET /api/bursary/alert-preferences — Get current user's alert preferences
+router.get('/alert-preferences', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { data } = await supabase
+      .from('bursary_alert_preferences')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    return res.json({
+      preferences: data
+        ? {
+            alertTypes: data.alert_types || [],
+            fieldOfStudy: data.field_of_study,
+            minAmount: data.min_amount,
+            maxAmount: data.max_amount,
+          }
+        : { alertTypes: ['deadline', 'new_match'], fieldOfStudy: null, minAmount: null, maxAmount: null },
+    });
+  } catch (err: any) {
+    console.error('[Bursary] Get alert preferences error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/bursary/alert-preferences — Update (or create) alert preferences
+router.patch('/alert-preferences', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { alertTypes, fieldOfStudy, minAmount, maxAmount } = req.body;
+
+    const { data, error } = await supabase
+      .from('bursary_alert_preferences')
+      .upsert(
+        {
+          user_id: user.id,
+          alert_types: alertTypes ?? ['deadline', 'new_match'],
+          field_of_study: fieldOfStudy ?? null,
+          min_amount: minAmount ?? null,
+          max_amount: maxAmount ?? null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return res.json({
+      preferences: {
+        alertTypes: data.alert_types || [],
+        fieldOfStudy: data.field_of_study,
+        minAmount: data.min_amount,
+        maxAmount: data.max_amount,
+      },
+    });
+  } catch (err: any) {
+    console.error('[Bursary] Update alert preferences error:', err);
+    return res.status(500).json({ error: 'Failed to save preferences' });
   }
 });
 
