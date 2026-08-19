@@ -380,4 +380,106 @@ router.patch('/applicant/me', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/bursary/bookmarks — Bookmark a fund
+router.post('/bookmarks', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { fund_id } = req.body;
+    if (!fund_id) {
+      return res.status(400).json({ error: 'fund_id is required' });
+    }
+
+    const { data, error } = await supabase
+      .from('bursary_bookmarks')
+      .upsert({ user_id: user.id, fund_id }, { onConflict: 'user_id,fund_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return res.status(201).json({ success: true, bookmark: { id: data.id, fundId: data.fund_id, createdAt: data.created_at } });
+  } catch (err: any) {
+    console.error('[Bursary] Add bookmark error:', err);
+    return res.status(500).json({ error: 'Failed to save bookmark' });
+  }
+});
+
+// DELETE /api/bursary/bookmarks/:fundId — Remove a bookmark
+router.delete('/bookmarks/:fundId', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { fundId } = req.params;
+    const { error } = await supabase.from('bursary_bookmarks').delete().eq('user_id', user.id).eq('fund_id', fundId);
+    if (error) throw error;
+    return res.json({ success: true });
+  } catch (err: any) {
+    console.error('[Bursary] Remove bookmark error:', err);
+    return res.status(500).json({ error: 'Failed to remove bookmark' });
+  }
+});
+
+// GET /api/bursary/bookmarks — List current user's bookmarked funds
+router.get('/bookmarks', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const { data: bookmarks, error } = await supabase
+      .from('bursary_bookmarks')
+      .select('id, fund_id, created_at, fund:bursary_funds!fund_id(*)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const fundRows = (bookmarks || []).map((b: any) => b.fund).filter(Boolean);
+    const providerIds = [...new Set(fundRows.map((f: any) => f.provider_id || f.tenant_id).filter(Boolean))];
+    const tenantIds = [...new Set(fundRows.map((f: any) => f.tenant_id).filter(Boolean))];
+
+    const [{ data: providers }, { data: branding }] = await Promise.all([
+      providerIds.length ? supabase.from('tenants').select('id, name').in('id', providerIds) : Promise.resolve({ data: [] as any[] }),
+      tenantIds.length ? supabase.from('tenant_branding').select('tenant_id, logo_url').in('tenant_id', tenantIds) : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const providerMap = new Map((providers || []).map((p: any) => [p.id, p]));
+    const brandingMap = new Map((branding || []).map((b: any) => [b.tenant_id, b]));
+
+    const flattened = (bookmarks || [])
+      .filter((b: any) => b.fund)
+      .map((b: any) => ({
+        bookmarkId: b.id,
+        bookmarkedAt: b.created_at,
+        fund: flattenFund(b.fund, providerMap.get(b.fund.provider_id || b.fund.tenant_id)?.name ?? null, brandingMap.get(b.fund.tenant_id)?.logo_url ?? null),
+      }));
+
+    return res.json({ bookmarks: flattened });
+  } catch (err: any) {
+    console.error('[Bursary] List bookmarks error:', err);
+    return res.status(500).json({ error: 'Failed to load bookmarks' });
+  }
+});
+
 export default router;
