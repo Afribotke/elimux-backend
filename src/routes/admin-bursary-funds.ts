@@ -14,7 +14,7 @@ router.get('/', adminAuth, async (req, res) => {
 
   let query = supabase
     .from('bursary_funds')
-    .select('id, tenant_id, name, description, fund_type, status, budget, application_window, eligibility_rules, created_at, updated_at, applications:bursary_applications(count)', {
+    .select('id, tenant_id, name, description, fund_type, status, budget, application_window, eligibility_rules, required_documents, created_at, updated_at, applications:bursary_applications(count)', {
       count: 'exact',
     });
 
@@ -51,7 +51,7 @@ router.get('/tenants', adminAuth, async (req, res) => {
 
 // POST /api/admin/bursary-funds
 router.post('/', adminAuth, async (req, res) => {
-  const { tenantId, name, description, fundType, totalAmount, currency, deadline, opensAt, eligibilityRules } = req.body;
+  const { tenantId, name, description, fundType, totalAmount, currency, deadline, opensAt, eligibilityRules, requiredDocuments } = req.body;
 
   if (!tenantId || !name) {
     return res.status(400).json({ error: 'tenantId and name are required' });
@@ -68,6 +68,7 @@ router.post('/', adminAuth, async (req, res) => {
       budget: { total: totalAmount || 0, committed: 0, disbursed: 0, currency: currency || 'KES' },
       application_window: { opens_at: opensAt || null, deadline: deadline || null },
       eligibility_rules: eligibilityRules || {},
+      required_documents: requiredDocuments || [],
     })
     .select()
     .single();
@@ -79,7 +80,7 @@ router.post('/', adminAuth, async (req, res) => {
 // PATCH /api/admin/bursary-funds/:id
 router.patch('/:id', adminAuth, async (req, res) => {
   const { id } = req.params;
-  const { name, description, fundType, status, totalAmount, currency, deadline, opensAt, eligibilityRules } = req.body;
+  const { name, description, fundType, status, totalAmount, currency, deadline, opensAt, eligibilityRules, requiredDocuments } = req.body;
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (name !== undefined) update.name = name;
@@ -87,6 +88,7 @@ router.patch('/:id', adminAuth, async (req, res) => {
   if (fundType !== undefined) update.fund_type = fundType;
   if (status !== undefined) update.status = status;
   if (eligibilityRules !== undefined) update.eligibility_rules = eligibilityRules;
+  if (requiredDocuments !== undefined) update.required_documents = requiredDocuments;
   if (totalAmount !== undefined || currency !== undefined) {
     const { data: existing } = await supabase.from('bursary_funds').select('budget').eq('id', id).single();
     const currentBudget = (existing?.budget as Record<string, unknown>) || {};
