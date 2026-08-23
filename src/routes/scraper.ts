@@ -1,12 +1,11 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
-import { adminAuth } from '../middleware/auth'
+import { adminAuth, universityScraperAuth } from '../middleware/auth'
 import { validateScraperUrl } from '../lib/ssrfGuard'
 import { aiProvider } from '../lib/ai'
 import type { ExtractedProgram } from '../lib/ai/types'
 
 const router = Router()
-router.use(adminAuth) // every /api/admin/scraper/* route is admin-only
 
 // Matches each table's CHECK constraint (found by probing - not reflected in
 // PostgREST's schema, same situation as queued_actions in pwa.ts).
@@ -59,8 +58,11 @@ function stripHtml(html: string): string {
 // POST /api/admin/scraper/run - fetch a URL, extract program listings via AI,
 // diff against existing programs, and file each difference as a
 // program_changes row for human review (nothing here writes to `programs`
-// directly - see the /approve endpoint for that).
-router.post('/run', async (req, res) => {
+// directly - see the /approve endpoint for that). Registered ahead of the
+// adminAuth gate below (same pattern as tveta.ts) with its own narrower
+// universityScraperAuth, so the CI-only UNIVERSITY_SCRAPER_KEY can trigger a
+// scrape without also unlocking every other /api/admin/scraper/* route.
+router.post('/run', universityScraperAuth, async (req, res) => {
   const { institution_id, source_url } = req.body || {}
 
   if (!institution_id || !source_url) {
@@ -257,6 +259,34 @@ router.post('/run', async (req, res) => {
   }
 })
 
+// GET /api/admin/scraper/sources?institution_id= - moved ahead of the
+// adminAuth gate below (same reasoning as POST /run above) so the cron job's
+// "fetch active sources" step can also use UNIVERSITY_SCRAPER_KEY instead of
+// the master ADMIN_KEY. POST /sources (creating a new source) stays behind
+// the full adminAuth further down - only the CI-read path is exempted.
+router.get('/sources', universityScraperAuth, async (req, res) => {
+  try {
+    const { institution_id } = req.query
+
+    let query = supabase
+      .from('scraping_sources')
+      .select('*, institution:institutions(name)')
+      .order('created_at', { ascending: false })
+
+    if (institution_id) query = query.eq('institution_id', institution_id as string)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    res.json({ data: data || [] })
+  } catch (error: any) {
+    console.error('List scraping sources error:', error)
+    res.status(500).json({ error: 'Failed to fetch scraping sources' })
+  }
+})
+
+router.use(adminAuth) // every remaining /api/admin/scraper/* route is admin-only
+
 interface FieldDiff {
   field: string
   oldValue: string
@@ -444,28 +474,6 @@ router.post('/sources', async (req, res) => {
   } catch (error: any) {
     console.error('Create scraping source error:', error)
     res.status(500).json({ error: 'Failed to create scraping source', details: error.message })
-  }
-})
-
-// GET /api/admin/scraper/sources?institution_id=
-router.get('/sources', async (req, res) => {
-  try {
-    const { institution_id } = req.query
-
-    let query = supabase
-      .from('scraping_sources')
-      .select('*, institution:institutions(name)')
-      .order('created_at', { ascending: false })
-
-    if (institution_id) query = query.eq('institution_id', institution_id as string)
-
-    const { data, error } = await query
-    if (error) throw error
-
-    res.json({ data: data || [] })
-  } catch (error: any) {
-    console.error('List scraping sources error:', error)
-    res.status(500).json({ error: 'Failed to fetch scraping sources' })
   }
 })
 

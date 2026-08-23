@@ -102,6 +102,22 @@ export function tvetaScraperAuth(req: Request, res: Response, next: NextFunction
   return res.status(401).json({ error: 'Unauthorized' })
 }
 
+// Same pattern as tvetaScraperAuth above, scoped to the university scraper
+// cron job instead. Accepts ADMIN_KEY or UNIVERSITY_SCRAPER_KEY. Used
+// standalone on POST /api/admin/scraper/run and GET /api/admin/scraper/sources
+// only - not on the rest of /api/admin/scraper/* (jobs, changes, approve/
+// reject, POST /sources), which stay behind the full adminAuth.
+export function universityScraperAuth(req: Request, res: Response, next: NextFunction) {
+  const provided = req.headers['x-admin-key']
+  const valid = [process.env.ADMIN_KEY, process.env.UNIVERSITY_SCRAPER_KEY].filter(Boolean)
+
+  if (typeof provided === 'string' && valid.includes(provided)) {
+    return next()
+  }
+
+  return res.status(401).json({ error: 'Unauthorized' })
+}
+
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const apiKey = req.headers['x-api-key']
   

@@ -25,7 +25,7 @@ jobs:
         run: |
           set -o pipefail
           sources=$(curl -sSf "https://api.elimux.ke/api/admin/scraper/sources" \
-            -H "x-admin-key: ${{ secrets.ADMIN_KEY }}" | jq -c '.data[] | select(.is_active == true)')
+            -H "x-admin-key: ${{ secrets.UNIVERSITY_SCRAPER_KEY }}" | jq -c '.data[] | select(.is_active == true)')
 
           if [ -z "$sources" ]; then
             echo "No active scraping sources - nothing to run."
@@ -39,7 +39,7 @@ jobs:
 
             echo "Running scraper for $name ($url)"
             curl -sS -X POST "https://api.elimux.ke/api/admin/scraper/run" \
-              -H "x-admin-key: ${{ secrets.ADMIN_KEY }}" \
+              -H "x-admin-key: ${{ secrets.UNIVERSITY_SCRAPER_KEY }}" \
               -H "Content-Type: application/json" \
               -d "{\"institution_id\": \"$institution_id\", \"source_url\": \"$url\"}" \
               -w "\nStatus: %{http_code}\n"
