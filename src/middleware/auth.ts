@@ -83,6 +83,25 @@ export async function adminAuth(req: Request, res: Response, next: NextFunction)
   }
 }
 
+// Narrow, CI-only sibling of adminAuth's x-admin-key check - accepts EITHER
+// the shared ADMIN_KEY or the scoped TVETA_SCRAPER_KEY. Deliberately does NOT
+// fall into the JWT/admin-role path adminAuth has, and is used standalone
+// (not via adminAuth) so TVETA_SCRAPER_KEY only unlocks POST /api/tveta/run -
+// not the ~130 other routes gated by adminAuth (Paystack disbursements, user
+// role/delete, institutions, etc). Adding TVETA_SCRAPER_KEY to adminAuth
+// itself would turn it into a second full admin master key, defeating the
+// point of a scoped CI credential.
+export function tvetaScraperAuth(req: Request, res: Response, next: NextFunction) {
+  const provided = req.headers['x-admin-key']
+  const valid = [process.env.ADMIN_KEY, process.env.TVETA_SCRAPER_KEY].filter(Boolean)
+
+  if (typeof provided === 'string' && valid.includes(provided)) {
+    return next()
+  }
+
+  return res.status(401).json({ error: 'Unauthorized' })
+}
+
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const apiKey = req.headers['x-api-key']
   

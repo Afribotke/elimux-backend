@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { supabase } from '../lib/supabase'
-import { adminAuth } from '../middleware/auth'
+import { adminAuth, tvetaScraperAuth } from '../middleware/auth'
 import { runTvetaScrape, checkRobotsTxt } from '../services/tvetaScraper'
 
 const router = Router()
@@ -53,11 +53,12 @@ router.get('/public-search', async (req, res) => {
   }
 })
 
-router.use(adminAuth) // every other /api/tveta/* route is admin-only
-
 // ── POST /api/tveta/run ──
-// Trigger a scrape of the TVETA accreditation registry.
-router.post('/run', async (req, res) => {
+// Trigger a scrape of the TVETA accreditation registry. Registered ahead of
+// the adminAuth gate below (like public-search above) with its own narrower
+// tvetaScraperAuth, so the CI-only TVETA_SCRAPER_KEY can trigger a scrape
+// without also unlocking every other /api/tveta/* admin route.
+router.post('/run', tvetaScraperAuth, async (req, res) => {
   try {
     const robots = await checkRobotsTxt()
     if (!robots.allowed) {
@@ -136,6 +137,8 @@ router.post('/run', async (req, res) => {
     return res.status(500).json({ error: 'Scraper failed', message: err.message })
   }
 })
+
+router.use(adminAuth) // every remaining /api/tveta/* route is admin-only
 
 // ── GET /api/tveta/status ──
 router.get('/status', async (req, res) => {

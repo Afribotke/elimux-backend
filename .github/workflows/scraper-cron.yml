@@ -13,7 +13,7 @@ jobs:
       - name: Trigger TVETA registry scrape
         run: |
           curl -sSf -X POST "https://api.elimux.ke/api/tveta/run" \
-            -H "x-admin-key: ${{ secrets.ADMIN_KEY }}"
+            -H "x-admin-key: ${{ secrets.TVETA_SCRAPER_KEY }}"
 
   scrape-universities:
     runs-on: ubuntu-latest
@@ -23,6 +23,7 @@ jobs:
       # (the same ones managed at /admin/scraper) instead of guessing a body.
       - name: Fetch active scraping sources and run each
         run: |
+          set -o pipefail
           sources=$(curl -sSf "https://api.elimux.ke/api/admin/scraper/sources" \
             -H "x-admin-key: ${{ secrets.ADMIN_KEY }}" | jq -c '.data[] | select(.is_active == true)')
 
