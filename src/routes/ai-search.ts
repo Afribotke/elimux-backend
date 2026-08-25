@@ -280,6 +280,7 @@ router.post('/', async (req, res) => {
     const level = body.level || intent.level
     const maxBudget = body.maxBudget ?? intent.maxBudget
     const keywords = intent.keywords.length > 0 ? intent.keywords : query.split(/\s+/).filter(Boolean)
+    const hasKeywordSignal = keywords.length > 0
 
     // Optional institution-mode filter. Anything other than 'academic'/'skills'
     // is treated as absent (no filter), keeping older clients unaffected.
@@ -308,6 +309,28 @@ router.post('/', async (req, res) => {
     if (maxBudget != null) programsQuery = programsQuery.lte('tuition_fees', maxBudget)
     if (modeTypeIds.length > 0) programsQuery = programsQuery.in('institution.type_id', modeTypeIds)
 
+    // When the query has a subject (keywords) but it didn't resolve to a categoryId (e.g.
+    // "criminology" isn't a seeded category or synonym), category/country/level/budget alone
+    // don't narrow by subject at all - a country-only filter can leave thousands of candidates,
+    // and since this query has no ORDER BY, .limit(50) below grabs an arbitrary 50 of them.
+    // Verified against production data: for "criminology in kenya" the 12 real criminology
+    // programs in Kenya never made it into that arbitrary 50-row slice, so scoring never saw
+    // them and the old code fell back to whatever unrelated programs happened to be in it.
+    // Narrowing by keyword at the SQL level here (name/description ilike) fixes that - the
+    // post-fetch relevance_score filter below still applies as a second pass.
+    if (hasKeywordSignal && !categoryId) {
+      // keywords can be raw user query words (the query.split(/\s+/) fallback above), not just
+      // LLM-extracted terms - strip characters that are syntactically significant in a
+      // PostgREST filter string (`,` separates OR conditions, `()` can group them) before they
+      // go into a hand-built .or() string, so user input can't break or alter the filter.
+      const keywordOr = keywords
+        .map((k) => k.replace(/[,()]/g, '').trim())
+        .filter(Boolean)
+        .flatMap((k) => [`name.ilike.%${k}%`, `description.ilike.%${k}%`])
+        .join(',')
+      if (keywordOr) programsQuery = programsQuery.or(keywordOr)
+    }
+
     let institutionsQuery = supabase
       .from('institutions')
       .select('*, type:institution_types(name, icon), country:countries(name, flag_emoji)', { count: 'exact' })
@@ -326,16 +349,23 @@ router.post('/', async (req, res) => {
     if (programsError) throw programsError
     if (institutionsError) throw institutionsError
 
+    // scoreProgram/scoreInstitution only drive ranking, not filtering - even with the SQL-level
+    // keyword narrowing above, an OR-across-keywords match doesn't guarantee every candidate is
+    // actually relevant (multi-keyword queries), so still drop zero-score rows as a second pass
+    // whenever there's a keyword signal to score against. Pure filter-only browsing (empty
+    // keywords) is untouched - score is 0 for everyone there by design.
     const rankedPrograms = (programsData || [])
       .map((p: any) => {
         const { score, reasons } = scoreProgram(p, keywords, level, maxBudget, countryResolution.name, categoryResolution.name)
         return { ...p, relevance_score: score, match_reasons: reasons }
       })
+      .filter((p: any) => !hasKeywordSignal || p.relevance_score > 0)
       .sort((a, b) => b.relevance_score - a.relevance_score)
       .slice(0, 12)
 
     const rankedInstitutionsRanked = (institutionsData || [])
       .map((i: any) => ({ ...i, _score: scoreInstitution(i, keywords) }))
+      .filter((i: any) => !hasKeywordSignal || i._score > 0)
       .sort((a, b) => b._score - a._score)
       .slice(0, 6)
 
