@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { aiProvider } from '../lib/ai'
 import type { SearchIntent } from '../lib/ai'
 import { getDeviceFingerprint } from '../lib/deviceFingerprint'
+import { extractLocationFromQuery, isLocationTerm } from '../lib/locationExtractor'
 
 const router = Router()
 
@@ -52,6 +53,10 @@ interface AISearchBody {
   // Optional search-mode filter ('academic' | 'skills'). Omitted/null = no filter,
   // so all existing callers behave exactly as before.
   institutionMode?: 'academic' | 'skills' | null
+  // Set by the "Search all of Kenya" clear-location button so a query whose text
+  // still contains a location word (the user hasn't retyped it) doesn't just
+  // re-detect the same location and put the filter right back.
+  ignoreLocation?: boolean
 }
 
 // The LLM returns natural phrasing ("USA", "UK") or a subject synonym ("Computer
@@ -260,16 +265,27 @@ router.post('/', async (req, res) => {
     const interests = body.interests ?? []
     const careerGoal = body.careerGoal ?? null
 
+    // Runs independently of the (possibly cached) LLM intent call below - doesn't
+    // depend on its output, so it goes in the same Promise.all rather than after it.
+    const locationPromise = body.ignoreLocation ? Promise.resolve(null) : extractLocationFromQuery(query)
+
     const cacheKey = getCacheKey(query, interests, careerGoal)
     let intent = getCachedIntent(cacheKey)
-    if (!intent) {
-      intent = await withTimeout(
-        aiProvider.extractSearchIntent({ query, interests, careerGoal }),
-        15000,
-        'AI intent extraction'
-      )
-      setCachedIntent(cacheKey, intent)
-    }
+    const [, location] = await Promise.all([
+      (async () => {
+        if (!intent) {
+          intent = await withTimeout(
+            aiProvider.extractSearchIntent({ query, interests, careerGoal }),
+            15000,
+            'AI intent extraction'
+          )
+          setCachedIntent(cacheKey, intent)
+        }
+      })(),
+      locationPromise,
+    ])
+
+    if (!intent) throw new Error('Intent extraction failed unexpectedly')
 
     const [countryResolution, categoryResolution] = await Promise.all([
       resolveCountryId(intent.country, body.countryId),
@@ -279,7 +295,12 @@ router.post('/', async (req, res) => {
     const categoryId = categoryResolution.id
     const level = body.level || intent.level
     const maxBudget = body.maxBudget ?? intent.maxBudget
-    const keywords = intent.keywords.length > 0 ? intent.keywords : query.split(/\s+/).filter(Boolean)
+    // Drop any bare location words (e.g. "Nairobi") that leaked into the LLM's
+    // keyword list - they're handled by the county filter below instead, and
+    // left in here they'd get ilike'd against program name/description for no
+    // useful match.
+    const rawKeywords = intent.keywords.length > 0 ? intent.keywords : query.split(/\s+/).filter(Boolean)
+    const keywords = rawKeywords.filter((k) => !isLocationTerm(k, location))
     const hasKeywordSignal = keywords.length > 0
 
     // Optional institution-mode filter. Anything other than 'academic'/'skills'
@@ -308,6 +329,10 @@ router.post('/', async (req, res) => {
     if (level) programsQuery = programsQuery.eq('level', level)
     if (maxBudget != null) programsQuery = programsQuery.lte('tuition_fees', maxBudget)
     if (modeTypeIds.length > 0) programsQuery = programsQuery.in('institution.type_id', modeTypeIds)
+    // Kenya county filter. `programs.county` is backfilled from institutions.city
+    // (county-level only for Kenyan rows) - there's no town-level data to filter
+    // on, so a town/constituency alias still narrows to its county, never further.
+    if (location?.county) programsQuery = programsQuery.ilike('county', location.county)
 
     // When the query has a subject (keywords) but it didn't resolve to a categoryId (e.g.
     // "criminology" isn't a seeded category or synonym), category/country/level/budget alone
@@ -338,6 +363,9 @@ router.post('/', async (req, res) => {
 
     if (countryId) institutionsQuery = institutionsQuery.eq('country_id', countryId)
     if (modeTypeIds.length > 0) institutionsQuery = institutionsQuery.in('type_id', modeTypeIds)
+    // institutions.city doubles as the county name for Kenyan rows (verified live -
+    // Nairobi=414, Kiambu=139, etc.) - no dedicated county column exists on this table.
+    if (location?.county) institutionsQuery = institutionsQuery.ilike('city', location.county)
 
     // Independent queries - built up above without executing (Supabase query
     // builders don't hit the network until awaited), then run concurrently
@@ -445,6 +473,7 @@ router.post('/', async (req, res) => {
       success: true,
       data: {
         intent,
+        location_detected: location,
         suggestions: {
           country: countryResolution.suggestion,
           category: categoryResolution.suggestion,
