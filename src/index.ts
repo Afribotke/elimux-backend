@@ -71,6 +71,7 @@ import adminBursaryApplicationsRouter from './routes/admin-bursary-applications'
 import adminBursaryDisbursementsRouter from './routes/admin-bursary-disbursements'
 import bursaryPublicRouter from './routes/bursary-public'
 import bursaryCronRouter from './routes/bursary-cron'
+import crmRouter from './routes/crm'
 import { supabaseConfigOk, supabaseKeyRole } from './lib/supabase'
 import stripePayments from './routes/payments-stripe';
 import mpesaPayments from './routes/payments-mpesa';
@@ -192,6 +193,7 @@ app.use('/api/admin/employer-names', adminEmployerNamesRouter)
 app.use('/api/tveta', tvetaRouter)
 app.use('/api/attachments', attachmentsRouter)
 app.use('/api/nita', nitaRouter)
+app.use('/api/crm', crmRouter)
 app.use('/api/requisitions', requisitionsRouter)
 app.use('/api/user', userExportRouter)
 app.use('/api/user', userDeleteRouter)

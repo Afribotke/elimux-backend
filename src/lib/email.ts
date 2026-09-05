@@ -214,3 +214,363 @@ export function scholarshipRejectedEmailHtml({ studentName, scholarshipTitle, re
 export function scholarshipRejectedEmailSubject(scholarshipTitle: string): string {
   return `Update on your application for ${scholarshipTitle}`
 }
+
+// ── CRM Templated Email (Cycle 160) ──
+// Separate from sendEmail() above deliberately: sendEmail() has 5 existing
+// callers relying on its {to,subject,html} -> boolean signature, and this
+// path needs the Resend message id + failure reason back for crm_messages
+// logging, which a boolean can't carry.
+
+import type { CRMMessageTemplate, CRMContact, CRMContactPerson } from '../types/crm'
+
+interface TemplateVariables {
+  contact_name: string
+  person_name?: string
+  county?: string
+  slug?: string
+  assigned_rep_name?: string
+  elimux_url?: string
+  [key: string]: string | undefined
+}
+
+function renderTemplate(template: string, variables: TemplateVariables): string {
+  let result = template
+  for (const [key, value] of Object.entries(variables)) {
+    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value || '')
+  }
+  return result
+}
+
+function injectTrackingPixel(html: string, messageId: string, baseUrl: string): string {
+  const pixelUrl = `${baseUrl}/api/crm/track-open?id=${messageId}`
+  return html + `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;" />`
+}
+
+function wrapLinks(html: string, messageId: string, baseUrl: string): string {
+  return html.replace(
+    /href="(https?:\/\/[^"]+)"/g,
+    (_match, url) => `href="${baseUrl}/api/crm/track-click?id=${messageId}&url=${encodeURIComponent(url)}"`
+  )
+}
+
+interface CrmEmailResult {
+  success: boolean
+  messageId?: string
+  error?: string
+}
+
+async function sendCrmEmail(to: string, subject: string, html: string, text: string): Promise<CrmEmailResult> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.log(`[EMAIL] RESEND_API_KEY not set — skipping CRM email to ${to} (${subject})`)
+    return { success: false, error: 'RESEND_API_KEY not configured' }
+  }
+
+  try {
+    const res = await fetch(RESEND_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.CRM_FROM_EMAIL || 'ElimuX Partnerships <partnerships@elimux.ke>',
+        to,
+        subject,
+        html,
+        text,
+      }),
+    })
+
+    const data: any = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      console.error(`[EMAIL] CRM send to ${to} failed (${res.status}):`, data)
+      return { success: false, error: data?.message || `Resend API error (${res.status})` }
+    }
+
+    return { success: true, messageId: data?.id }
+  } catch (error: any) {
+    console.error('[EMAIL] CRM send error:', error.message)
+    return { success: false, error: error.message || 'Unknown error' }
+  }
+}
+
+export async function sendTemplatedEmail(
+  template: CRMMessageTemplate,
+  contact: CRMContact,
+  person: CRMContactPerson | null,
+  variables: TemplateVariables,
+  sentBy: string,
+  baseUrl: string,
+  supabaseClient: any // pass Supabase client for logging
+): Promise<CrmEmailResult> {
+  if (!template.channel_email || !template.subject_email || !template.body_html) {
+    return { success: false, error: 'Template does not support email channel' }
+  }
+
+  const toEmail = person?.email || contact.email
+  if (!toEmail) {
+    return { success: false, error: 'No email address available' }
+  }
+
+  const subject = renderTemplate(template.subject_email, variables)
+  let html = renderTemplate(template.body_html, variables)
+  const text = renderTemplate(template.body_text || template.body_html, variables)
+
+  const { data: messageLog, error: logError } = await supabaseClient
+    .from('crm_messages')
+    .insert({
+      contact_id: contact.id,
+      person_id: person?.id || null,
+      template_id: template.id,
+      channel: 'email',
+      subject,
+      body: html,
+      status: 'queued',
+      sent_by: sentBy,
+    })
+    .select('id')
+    .single()
+
+  if (logError || !messageLog) {
+    return { success: false, error: `Failed to create message log: ${logError?.message}` }
+  }
+
+  html = injectTrackingPixel(html, messageLog.id, baseUrl)
+  html = wrapLinks(html, messageLog.id, baseUrl)
+
+  const result = await sendCrmEmail(toEmail, subject, html, text)
+
+  await supabaseClient
+    .from('crm_messages')
+    .update({
+      status: result.success ? 'sent' : 'failed',
+      provider: 'resend',
+      provider_msg_id: result.messageId || null,
+      sent_at: result.success ? new Date().toISOString() : null,
+      failed_at: result.success ? null : new Date().toISOString(),
+      fail_reason: result.error || null,
+    })
+    .eq('id', messageLog.id)
+
+  if (result.success) {
+    await supabaseClient
+      .from('crm_contacts')
+      .update({
+        last_contact_at: new Date().toISOString(),
+        last_contact_via: 'email',
+        contact_count: (contact.contact_count || 0) + 1,
+      })
+      .eq('id', contact.id)
+  }
+
+  return result
+}
+
+// ============================================
+// CRM SMS — Africa's Talking (appended, not replacing existing exports)
+// ============================================
+
+const AT_USERNAME = process.env.AT_USERNAME || process.env.AFRICAS_TALKING_USERNAME || '';
+const AT_API_KEY = process.env.AT_API_KEY || process.env.AFRICAS_TALKING_API_KEY || '';
+const AT_SENDER_ID = process.env.AT_SENDER_ID || process.env.AFRICAS_TALKING_SENDER || 'ELIMUX';
+
+interface SendSmsOptions {
+  to: string;
+  message: string;
+  from?: string;
+}
+
+interface SendSmsResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  costKes?: number;
+}
+
+function normalizePhone(phone: string): string {
+  // Convert to E.164 for Africa's Talking: +254XXXXXXXXX
+  const cleaned = phone.replace(/\s/g, '').replace(/^0/, '+254').replace(/^254/, '+254');
+  if (!cleaned.startsWith('+')) {
+    return '+254' + cleaned;
+  }
+  return cleaned;
+}
+
+/**
+ * WARNING: AT_USERNAME is set to 'sandbox'.
+ * Africa's Talking sandbox does NOT deliver to real phone numbers.
+ * Only use this for testing with simulator-registered numbers.
+ * For real outreach, switch to a production AT account first.
+ */
+export async function sendSms(options: SendSmsOptions): Promise<SendSmsResult> {
+  if (!AT_USERNAME || !AT_API_KEY) {
+    console.warn("Africa's Talking credentials not set — SMS not sent");
+    return { success: false, error: 'AT_USERNAME or AT_API_KEY not configured' };
+  }
+
+  const to = normalizePhone(options.to);
+  const message = options.message;
+  const from = options.from || AT_SENDER_ID;
+
+  // Africa's Talking charges per SMS segment (160 chars for GSM-7, 70 for Unicode)
+  // Approximate cost: KES 0.80 per segment
+  const segments = Math.ceil(message.length / 160);
+  const costKes = segments * 0.80;
+
+  try {
+    const response = await fetch('https://api.africastalking.com/version1/messaging', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'apiKey': AT_API_KEY,
+      },
+      body: new URLSearchParams({
+        username: AT_USERNAME,
+        to: to,
+        message: message,
+        from: from,
+      }).toString(),
+    });
+
+    const data: any = await response.json();
+
+    if (!response.ok || data.SMSMessageData?.Recipients?.[0]?.status !== 'Success') {
+      const errorMsg = data.SMSMessageData?.Recipients?.[0]?.status ||
+                       data.SMSMessageData?.Message ||
+                       "Africa's Talking API error";
+      console.error('SMS send error:', errorMsg);
+      return { success: false, error: errorMsg, costKes: 0 };
+    }
+
+    const recipient = data.SMSMessageData.Recipients[0];
+    return {
+      success: true,
+      messageId: recipient.messageId,
+      costKes,
+    };
+  } catch (error) {
+    console.error('SMS send exception:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown SMS error',
+      costKes: 0,
+    };
+  }
+}
+
+export async function sendTemplatedSms(
+  template: any, // CRMMessageTemplate
+  contact: any, // CRMContact
+  person: any | null, // CRMContactPerson | null
+  variables: TemplateVariables,
+  sentBy: string,
+  supabaseClient: any
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  if (!template.channel_sms || !template.body_sms) {
+    return { success: false, error: 'Template does not support SMS channel' };
+  }
+
+  const toPhone = person?.phone || contact.phone;
+  if (!toPhone) {
+    return { success: false, error: 'No phone number available' };
+  }
+
+  // Render template
+  let body = template.body_sms;
+  for (const [key, value] of Object.entries(variables)) {
+    body = body.replace(new RegExp(`{{${key}}}`, 'g'), value || '');
+  }
+
+  // Create message log
+  const { data: messageLog, error: logError } = await supabaseClient
+    .from('crm_messages')
+    .insert({
+      contact_id: contact.id,
+      person_id: person?.id || null,
+      template_id: template.id,
+      channel: 'sms',
+      body: body,
+      status: 'queued',
+      sent_by: sentBy,
+    })
+    .select('id')
+    .single();
+
+  if (logError || !messageLog) {
+    return { success: false, error: `Failed to create message log: ${logError?.message}` };
+  }
+
+  // Send via Africa's Talking
+  const result = await sendSms({ to: toPhone, message: body });
+
+  // Update log
+  await supabaseClient
+    .from('crm_messages')
+    .update({
+      status: result.success ? 'sent' : 'failed',
+      provider: 'africastalking',
+      provider_msg_id: result.messageId || null,
+      sent_at: result.success ? new Date().toISOString() : null,
+      failed_at: result.success ? null : new Date().toISOString(),
+      fail_reason: result.error || null,
+      cost_kes: result.costKes || 0,
+    })
+    .eq('id', messageLog.id);
+
+  // Update contact stats
+  if (result.success) {
+    await supabaseClient
+      .from('crm_contacts')
+      .update({
+        last_contact_at: new Date().toISOString(),
+        last_contact_via: 'sms',
+        contact_count: (contact.contact_count || 0) + 1,
+      })
+      .eq('id', contact.id);
+  }
+
+  return { success: result.success, messageId: result.messageId, error: result.error };
+}
+
+// Smart channel router: picks best available channel for a contact
+export async function sendTemplatedMessage(
+  template: any,
+  contact: any,
+  person: any | null,
+  variables: TemplateVariables,
+  sentBy: string,
+  baseUrl: string,
+  supabaseClient: any
+): Promise<{ success: boolean; messageId?: string; error?: string; channel?: string }> {
+  // Priority: Email (default for now) → SMS (sandbox-only) → WhatsApp (not yet integrated) → enrichment flag
+
+  // 1. Email — primary channel
+  const email = person?.email || contact.email;
+  if (template.channel_email && email && !contact.unsubscribed_email) {
+    const result = await sendTemplatedEmail(template, contact, person, variables, sentBy, baseUrl, supabaseClient);
+    return { ...result, channel: 'email' };
+  }
+
+  // 2. SMS — sandbox only, not for real outreach yet
+  const phone = person?.phone || contact.phone;
+  if (template.channel_sms && phone && !contact.unsubscribed_sms) {
+    const result = await sendTemplatedSms(template, contact, person, variables, sentBy, supabaseClient);
+    return { ...result, channel: 'sms' };
+  }
+
+  // 3. WhatsApp — Phase 4, not integrated
+  const whatsappNumber = person?.whatsapp || contact.whatsapp_number;
+  if (template.channel_whatsapp && whatsappNumber && !contact.unsubscribed_whatsapp) {
+    return { success: false, error: 'WhatsApp not yet integrated', channel: 'whatsapp' };
+  }
+
+  // Nothing available
+  return {
+    success: false,
+    error: 'No contact channel available. Needs enrichment: add email, phone, or WhatsApp.',
+    channel: 'none',
+  };
+}
