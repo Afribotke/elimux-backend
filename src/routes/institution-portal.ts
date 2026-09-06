@@ -90,6 +90,23 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
+        // === DOMAIN AUTO-VERIFICATION ===
+        const { data: institutionRow } = await supabaseAdmin
+            .from('institutions')
+            .select('website_url')
+            .eq('id', institution_id)
+            .single();
+
+        const claimDomain = user.email?.split('@')[1]?.toLowerCase();
+        const institutionDomain = institutionRow?.website_url
+            ?.toLowerCase()
+            .replace(/^https?:\/\//, '')
+            .replace(/^www\./, '')
+            .split('/')[0];
+
+        const autoApprove = Boolean(claimDomain && institutionDomain && claimDomain === institutionDomain);
+        // === END DOMAIN AUTO-VERIFICATION ===
+
         const { data: account, error: insertError } = await supabaseAdmin
             .from('institution_accounts')
             .insert({
@@ -97,7 +114,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
                 user_id: user.id,
                 contact_name: contact_name || null,
                 email: user.email,
-                status: 'pending'
+                status: autoApprove ? 'active' : 'pending'
             })
             .select()
             .single();
@@ -110,7 +127,10 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
         res.status(201).json({
             success: true,
-            message: `Claim for "${institution.name}" submitted. Pending admin approval.`,
+            autoApproved: autoApprove,
+            message: autoApprove
+                ? `Claim for "${institution.name}" approved - your email domain matches the institution's website. You can sign in now.`
+                : `Claim for "${institution.name}" submitted. Pending admin approval.`,
             data: account
         });
     } catch (error: any) {

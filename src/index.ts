@@ -7,6 +7,7 @@ import cors from 'cors'
 import { adminRateLimiter } from './middleware/rate-limit'
 
 import institutionsRouter from './routes/institutions'
+import employersPublicRouter from './routes/employers-public'
 import programsRouter from './routes/programs'
 import paymentsRouter from './routes/payments'
 import aiSearchRouter from './routes/ai-search'
@@ -136,6 +137,7 @@ app.get('/health', (req, res) => {
 })
 
 app.use('/api/institutions', institutionsRouter)
+app.use('/api/employers-public', employersPublicRouter)
 app.use('/api/programs', programsRouter)
 app.use('/api/payments', paymentsRouter)
 app.use('/api/ai-search', aiSearchRouter)
