@@ -8,7 +8,7 @@ const router = Router();
 // GET /api/crm/contacts — list with filters
 router.get('/contacts', adminAuth, async (req, res) => {
   try {
-    const { entity_type, status, county, assigned_to, search, page = '1', limit = '50' } = req.query;
+    const { entity_type, status, county, assigned_to, country_relevance, search, page = '1', limit = '50' } = req.query;
 
     let query = supabase
       .from('crm_contacts')
@@ -18,6 +18,7 @@ router.get('/contacts', adminAuth, async (req, res) => {
     if (status) query = query.eq('status', status);
     if (county) query = query.eq('county', county);
     if (assigned_to) query = query.eq('assigned_to', assigned_to);
+    if (country_relevance) query = query.eq('country_relevance', country_relevance);
     if (search) query = query.ilike('name', `%${search}%`);
 
     const from = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -164,6 +165,85 @@ router.get('/templates', adminAuth, async (req, res) => {
 
     if (error) throw error;
     res.json(data || []);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+// POST /api/crm/templates — create a template (needed for the admin CRM
+// template-management UI - GET-only until now, no way to write one)
+router.post('/templates', adminAuth, async (req, res) => {
+  try {
+    const {
+      name, category, channel_email, subject_email, body_html, body_text,
+      channel_sms, body_sms, channel_whatsapp, body_whatsapp,
+      target_entity_types, created_by,
+    } = req.body;
+
+    if (!name || !category) {
+      return res.status(400).json({ error: 'name and category are required' });
+    }
+
+    const { data, error } = await supabase
+      .from('crm_message_templates')
+      .insert({
+        name,
+        category,
+        channel_email: !!channel_email,
+        subject_email: subject_email || null,
+        body_html: body_html || null,
+        body_text: body_text || null,
+        channel_sms: !!channel_sms,
+        body_sms: body_sms || null,
+        channel_whatsapp: !!channel_whatsapp,
+        body_whatsapp: body_whatsapp || null,
+        target_entity_types: target_entity_types || null,
+        created_by: created_by || null,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+// PATCH /api/crm/templates/:id — edit a template
+router.patch('/templates/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name, category, channel_email, subject_email, body_html, body_text,
+      channel_sms, body_sms, channel_whatsapp, body_whatsapp,
+      target_entity_types, is_active,
+    } = req.body;
+
+    const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+    if (name !== undefined) updates.name = name;
+    if (category !== undefined) updates.category = category;
+    if (channel_email !== undefined) updates.channel_email = channel_email;
+    if (subject_email !== undefined) updates.subject_email = subject_email || null;
+    if (body_html !== undefined) updates.body_html = body_html || null;
+    if (body_text !== undefined) updates.body_text = body_text || null;
+    if (channel_sms !== undefined) updates.channel_sms = channel_sms;
+    if (body_sms !== undefined) updates.body_sms = body_sms || null;
+    if (channel_whatsapp !== undefined) updates.channel_whatsapp = channel_whatsapp;
+    if (body_whatsapp !== undefined) updates.body_whatsapp = body_whatsapp || null;
+    if (target_entity_types !== undefined) updates.target_entity_types = target_entity_types || null;
+    if (is_active !== undefined) updates.is_active = is_active;
+
+    const { data, error } = await supabase
+      .from('crm_message_templates')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
@@ -651,7 +731,7 @@ router.patch('/contacts/:id/assign', adminAuth, async (req, res) => {
 // GET /api/crm/activities — activity feed with filters
 router.get('/activities', adminAuth, async (req, res) => {
   try {
-    const { user_id, action, entity_type, page = '1', limit = '50' } = req.query;
+    const { user_id, action, entity_type, entity_id, page = '1', limit = '50' } = req.query;
 
     let query = supabase
       .from('crm_activities')
@@ -661,6 +741,7 @@ router.get('/activities', adminAuth, async (req, res) => {
     if (user_id) query = query.eq('user_id', user_id);
     if (action) query = query.eq('action', action);
     if (entity_type) query = query.eq('entity_type', entity_type);
+    if (entity_id) query = query.eq('entity_id', entity_id);
 
     const from = (parseInt(page as string) - 1) * parseInt(limit as string);
     const to = from + parseInt(limit as string) - 1;
@@ -892,6 +973,10 @@ const FALSE_POSITIVE_DOMAINS = new Set([
   // form placeholder text and JS error-tracking beacons embedded in page HTML.
   'youremail.com', 'youremail.coom', 'yourname.com', 'sample.com',
   'sentry.wixpress.com', 'sentry-next.wixpress.com', 'wixpress.com',
+  // Cycle 166 spot-check found these live on parked/expired domains: the
+  // scraper picks up the domain marketplace's own contact address instead of
+  // detecting the site isn't the real company at all.
+  'domainmarket.com', 'brandbucket.com', 'your-domain.com', 'afternic.com', 'hugedomains.com', 'sedo.com',
 ]);
 
 // Also from live testing: Wix/Sentry-style tracking beacons use a 32-char hex
