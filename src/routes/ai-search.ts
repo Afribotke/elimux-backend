@@ -367,15 +367,68 @@ router.post('/', async (req, res) => {
     // Nairobi=414, Kiambu=139, etc.) - no dedicated county column exists on this table.
     if (location?.county) institutionsQuery = institutionsQuery.ilike('city', location.county)
 
+    // Same bug class as the programsQuery keyword fix above, just never applied here: with no
+    // country/type/county filter narrowing the field, this query had nothing to SQL-narrow by at
+    // all - an unordered .limit(50) below grabs an arbitrary 50 of ~11,000 institutions, and a
+    // specific named institution ("University of Nairobi") only gets scored by scoreInstitution()
+    // if it happens to land in that arbitrary slice. Institutions have no categoryId filter to
+    // gate on (unlike programs), so this narrows on any keyword signal.
+    if (hasKeywordSignal) {
+      const institutionKeywordOr = keywords
+        .map((k) => k.replace(/[,()]/g, '').trim())
+        .filter(Boolean)
+        .flatMap((k) => [`name.ilike.%${k}%`, `description.ilike.%${k}%`])
+        .join(',')
+      if (institutionKeywordOr) institutionsQuery = institutionsQuery.or(institutionKeywordOr)
+    }
+
+    // The per-word OR above still isn't enough on its own: verified live against production data
+    // that "University of Nairobi" matches 9,392 of ~11,000 active institutions once split into
+    // "University"/"of"/"Nairobi" (both "University" and "of" are extremely common substrings),
+    // and with no ORDER BY, the exact institution the user typed still has no better than a
+    // coin-flip chance of surviving the .limit(50) cut below - reproduced this directly against
+    // the real DB before trusting the per-word fix alone. A dedicated, tightly-limited query for
+    // the literal phrase the user typed (name ilike the whole query, not word-by-word) guarantees
+    // an exact/near-exact name match always makes it through, merged ahead of the broader
+    // keyword-OR results a few lines down. Only worth running for non-trivial input.
+    const trimmedPhraseQuery = query.replace(/[,()%_]/g, '').trim()
+    let institutionPhraseQuery =
+      trimmedPhraseQuery.length > 2
+        ? supabase
+            .from('institutions')
+            .select('*, type:institution_types(name, icon), country:countries(name, flag_emoji)')
+            .eq('is_active', true)
+            .ilike('name', `%${trimmedPhraseQuery}%`)
+            .limit(10)
+        : null
+    if (institutionPhraseQuery) {
+      if (countryId) institutionPhraseQuery = institutionPhraseQuery.eq('country_id', countryId)
+      if (modeTypeIds.length > 0) institutionPhraseQuery = institutionPhraseQuery.in('type_id', modeTypeIds)
+    }
+
     // Independent queries - built up above without executing (Supabase query
     // builders don't hit the network until awaited), then run concurrently
     // rather than one after another.
     const [
       { data: programsData, count: totalPrograms, error: programsError },
       { data: institutionsData, count: totalInstitutions, error: institutionsError },
-    ] = await Promise.all([programsQuery.limit(50), institutionsQuery.limit(50)])
+      institutionPhraseResult,
+    ] = await Promise.all([
+      programsQuery.limit(50),
+      institutionsQuery.limit(50),
+      institutionPhraseQuery ?? Promise.resolve({ data: [], error: null }),
+    ])
     if (programsError) throw programsError
     if (institutionsError) throw institutionsError
+    if (institutionPhraseResult.error) throw institutionPhraseResult.error
+
+    // Phrase-match results first (deduped), then the broader keyword-OR set - so an exact/near
+    // name match always outranks the noisier per-word candidates once scored below.
+    const phraseIds = new Set((institutionPhraseResult.data || []).map((i: any) => i.id))
+    const mergedInstitutionsData = [
+      ...(institutionPhraseResult.data || []),
+      ...(institutionsData || []).filter((i: any) => !phraseIds.has(i.id)),
+    ]
 
     // scoreProgram/scoreInstitution only drive ranking, not filtering - even with the SQL-level
     // keyword narrowing above, an OR-across-keywords match doesn't guarantee every candidate is
@@ -391,7 +444,7 @@ router.post('/', async (req, res) => {
       .sort((a, b) => b.relevance_score - a.relevance_score)
       .slice(0, 12)
 
-    const rankedInstitutionsRanked = (institutionsData || [])
+    const rankedInstitutionsRanked = mergedInstitutionsData
       .map((i: any) => ({ ...i, _score: scoreInstitution(i, keywords) }))
       .filter((i: any) => !hasKeywordSignal || i._score > 0)
       .sort((a, b) => b._score - a._score)
