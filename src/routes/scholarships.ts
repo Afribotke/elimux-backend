@@ -5,15 +5,31 @@ import { requireUser, UserAuthRequest } from '../middleware/user-auth';
 
 const router = Router();
 
+// scholarship_providers.provider_type values accepted as a list filter. The column
+// has no CHECK yet (later cycle), so this whitelist is the only guard for now.
+const PROVIDER_TYPES = ['foundation', 'corporate', 'government', 'university', 'international', 'other'];
+
 // GET /api/scholarships — list active scholarships with filters (public)
 router.get('/', async (req, res) => {
   try {
-    const { country_id, study_level, discipline, deadline_after, keyword, limit = 20, offset = 0 } = req.query;
+    const { country_id, study_level, discipline, deadline_after, keyword, provider_type, limit = 20, offset = 0 } = req.query;
+
+    if (provider_type && !PROVIDER_TYPES.includes(String(provider_type))) {
+      return res.status(400).json({ error: `provider_type must be one of: ${PROVIDER_TYPES.join(', ')}` });
+    }
+
+    // The provider embed is an INNER join, and only added when filtering by type:
+    // scholarships with no provider_id must keep listing when no type is chosen.
+    const selectClause = provider_type
+      ? '*, institution:institutions(name), country:countries(name), scholarship_provider:scholarship_providers!scholarships_provider_id_fkey!inner(provider_type)'
+      : '*, institution:institutions(name), country:countries(name)';
 
     let query = supabase
       .from('scholarships')
-      .select('*, institution:institutions(name), country:countries(name)', { count: 'exact' })
+      .select(selectClause, { count: 'exact' })
       .eq('status', 'active');
+
+    if (provider_type) query = query.eq('scholarship_provider.provider_type', String(provider_type));
 
     if (country_id) query = query.eq('country_id', country_id);
     if (study_level) query = query.contains('study_levels', [study_level]);

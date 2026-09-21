@@ -4,6 +4,9 @@ import { adminAuth } from '../middleware/auth';
 
 const router = Router();
 
+// Mirrors bursary_funds_category_check (elimux-sql/57_funding_taxonomy_columns.sql).
+const BURSARY_CATEGORIES = ['bursary', 'loan', 'income_share'];
+
 // GET /api/admin/bursary-funds
 // Protected: super admin only
 router.get('/', adminAuth, async (req, res) => {
@@ -51,10 +54,13 @@ router.get('/tenants', adminAuth, async (req, res) => {
 
 // POST /api/admin/bursary-funds
 router.post('/', adminAuth, async (req, res) => {
-  const { tenantId, name, description, fundType, totalAmount, currency, deadline, opensAt, eligibilityRules, requiredDocuments } = req.body;
+  const { tenantId, name, description, fundType, category, totalAmount, currency, deadline, opensAt, eligibilityRules, requiredDocuments } = req.body;
 
   if (!tenantId || !name) {
     return res.status(400).json({ error: 'tenantId and name are required' });
+  }
+  if (category !== undefined && !BURSARY_CATEGORIES.includes(category)) {
+    return res.status(400).json({ error: `category must be one of: ${BURSARY_CATEGORIES.join(', ')}` });
   }
 
   const { data, error } = await supabase
@@ -64,6 +70,9 @@ router.post('/', adminAuth, async (req, res) => {
       name,
       description: description || null,
       fund_type: fundType || 'open',
+      // Only sent when provided, so creating a fund keeps working on a database
+      // where bursary_funds.category has not been added yet (column default applies).
+      ...(category !== undefined ? { category } : {}),
       status: 'draft',
       budget: { total: totalAmount || 0, committed: 0, disbursed: 0, currency: currency || 'KES' },
       application_window: { opens_at: opensAt || null, deadline: deadline || null },
@@ -80,12 +89,17 @@ router.post('/', adminAuth, async (req, res) => {
 // PATCH /api/admin/bursary-funds/:id
 router.patch('/:id', adminAuth, async (req, res) => {
   const { id } = req.params;
-  const { name, description, fundType, status, totalAmount, currency, deadline, opensAt, eligibilityRules, requiredDocuments } = req.body;
+  const { name, description, fundType, category, status, totalAmount, currency, deadline, opensAt, eligibilityRules, requiredDocuments } = req.body;
+
+  if (category !== undefined && !BURSARY_CATEGORIES.includes(category)) {
+    return res.status(400).json({ error: `category must be one of: ${BURSARY_CATEGORIES.join(', ')}` });
+  }
 
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (name !== undefined) update.name = name;
   if (description !== undefined) update.description = description;
   if (fundType !== undefined) update.fund_type = fundType;
+  if (category !== undefined) update.category = category;
   if (status !== undefined) update.status = status;
   if (eligibilityRules !== undefined) update.eligibility_rules = eligibilityRules;
   if (requiredDocuments !== undefined) update.required_documents = requiredDocuments;

@@ -11,6 +11,8 @@ function flattenFund(f: any, providerName: string | null, providerLogo: string |
     name: f.name,
     description: f.description,
     fundType: f.fund_type,
+    // Defaults to 'bursary' so this also behaves before bursary_funds.category exists.
+    category: f.category ?? 'bursary',
     status: f.status,
     totalAmount: f.budget?.total ?? null,
     currency: f.budget?.currency ?? null,
