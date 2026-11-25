@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
+import { hasDbAdminRole } from "../middleware/auth";
 
 const router = Router();
 
@@ -115,15 +116,10 @@ router.patch("/:id/approve", async (req, res) => {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const { data: userData } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    // user_metadata.role removed (user-writable). users.role retained pending review.
-    const role = userData?.role || "student";
-    if (role !== "admin" && role !== "super_admin") {
+    // Admin evidence from admin_users / user_roles only. users.role and
+    // user_metadata.role are NOT trusted (write protection unverified /
+    // user-writable).
+    if (!(await hasDbAdminRole(user))) {
       return res.status(403).json({ error: "Admin access required" });
     }
 

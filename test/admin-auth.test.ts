@@ -13,7 +13,7 @@ import assert from 'node:assert/strict'
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { supabase } = require('../src/lib/supabase')
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { adminAuth, pickDbAdminRole } = require('../src/middleware/auth')
+const { adminAuth, pickDbAdminRole, hasDbAdminRole } = require('../src/middleware/auth')
 
 type Rows = { admin_users?: any; user_roles?: any }
 
@@ -89,6 +89,20 @@ test('x-admin-key path unchanged: correct key passes without any DB lookup', asy
 test('x-admin-key path unchanged: wrong key and no bearer is refused', async () => {
   stub(null)
   assert.deepEqual(await run({ 'x-admin-key': 'wrong' }), { nextCalled: false, status: 401 })
+})
+
+test('hasDbAdminRole reads only admin_users and user_roles - never users or metadata', async () => {
+  // A users row saying admin must not matter: the stub would return it if queried.
+  const calls = stub(null, { users: { role: 'admin' } } as any)
+  const ok = await hasDbAdminRole({ id: 'u6', email: 'e@example.com', user_metadata: { role: 'admin' } } as any)
+  assert.equal(ok, false)
+  assert.deepEqual([...calls].sort(), ['admin_users', 'user_roles'])
+})
+
+test('hasDbAdminRole without an email skips admin_users and checks user_roles only', async () => {
+  const calls = stub(null, { user_roles: { role: 'super_admin' } })
+  assert.equal(await hasDbAdminRole({ id: 'u7' }), true)
+  assert.deepEqual(calls, ['user_roles'])
 })
 
 test('pickDbAdminRole never looks at anything but the two DB rows', () => {
