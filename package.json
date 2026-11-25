@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "dev": "ts-node src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --require ts-node/register/transpile-only --test test/*.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

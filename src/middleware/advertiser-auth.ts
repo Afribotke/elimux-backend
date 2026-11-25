@@ -4,6 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { hasDbAdminRole } from './auth';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -56,7 +57,9 @@ export const advertiserAuth = async (req: AdvertiserAuthRequest, res: Response, 
         }
 
         req.userId = user.id;
-        req.isAdmin = user.user_metadata?.role === 'admin';
+        // DB-backed only (admin_users / user_roles). Never user_metadata,
+        // which the user can write themselves.
+        req.isAdmin = await hasDbAdminRole(user);
 
         if (req.isAdmin) {
             next();
@@ -103,7 +106,7 @@ export const optionalAuth = async (req: AdvertiserAuthRequest, res: Response, ne
             ]) as any;
             if (user) {
                 req.userId = user.id;
-                req.isAdmin = user.user_metadata?.role === 'admin';
+                req.isAdmin = await hasDbAdminRole(user);
 
                 const { data: advertiser } = await supabaseAdmin
                     .from('advertisers')

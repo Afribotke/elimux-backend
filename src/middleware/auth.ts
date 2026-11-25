@@ -1,18 +1,56 @@
 import { Request, Response, NextFunction } from 'express'
-import { createClient } from '@supabase/supabase-js'
+// Shared service-role client (same SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
+// env vars as before). Using the shared instance instead of a private one
+// lets tests stub it.
+import { supabase } from '../lib/supabase'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-)
+// Roles in admin_users / user_roles that count as platform admin. Unchanged
+// from the previous inline check - do not widen without review.
+const DB_ADMIN_ROLES = ['admin', 'super_admin']
+
+/**
+ * pickDbAdminRole - pure decision step, exported for tests.
+ * Priority: active admin_users row, then user_roles row. Nothing else.
+ * user_metadata is NEVER consulted: it is writable by the user themselves
+ * (supabase.auth.updateUser({ data: { role: 'admin' } }) with the public
+ * anon key), so trusting it let any signed-up account mint itself admin.
+ */
+export function pickDbAdminRole(
+  adminUser: { role?: string; is_active?: boolean } | null | undefined,
+  roleRow: { role?: string } | null | undefined
+): string | undefined {
+  return (adminUser && adminUser.is_active !== false ? adminUser.role : undefined) || roleRow?.role || undefined
+}
+
+/**
+ * hasDbAdminRole - DB-backed platform-admin check for an already-verified
+ * Supabase user (caller must have obtained `user` from auth.getUser(token)).
+ * Reads only admin_users (by email) and user_roles (by user_id).
+ */
+export async function hasDbAdminRole(user: { id: string; email?: string | null }): Promise<boolean> {
+  // admin_users has no user_id column - its PK is its own uuid and the
+  // correlation key to an auth user is the UNIQUE email. user_roles does key
+  // on user_id.
+  const [adminRow, roleRow] = await Promise.all([
+    user.email
+      ? supabase.from('admin_users').select('role, is_active').eq('email', user.email).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
+  ])
+  const role = pickDbAdminRole(
+    adminRow.data as { role?: string; is_active?: boolean } | null,
+    roleRow.data as { role?: string } | null
+  )
+  return role !== undefined && DB_ADMIN_ROLES.includes(role)
+}
 
 // Accepts either the shared admin key (x-admin-key, what the admin dashboard
 // sends) or a Supabase JWT belonging to an admin. Always answers 401 on
 // failure so a caller can't tell "no credentials" from "wrong role".
 //
-// Admin-ness is read from admin_users / user_roles / user_metadata only -
-// deliberately NOT from users.role, because PATCH /api/auth/users/:id/role
-// writes that column. Trusting it here would let one bad write mint admins.
+// Admin-ness is read from admin_users / user_roles only - deliberately NOT
+// from users.role (PATCH /api/auth/users/:id/role writes that column) and
+// NOT from user_metadata (user-writable). See hasDbAdminRole above.
 //
 // Note: admin_users and user_roles are both empty in production today, so in
 // practice the x-admin-key branch is the only one that grants access. The JWT
@@ -25,8 +63,9 @@ const supabase = createClient(
  * Checks: EITHER the shared x-admin-key header matching process.env.ADMIN_KEY,
  *   OR a Bearer Supabase JWT belonging to a user whose role - read from
  *   admin_users (by email, if is_active !== false), then user_roles (by
- *   user_id), then user_metadata.role, in that priority order - is 'admin' or
- *   'super_admin'. The JWT lookup is race-timed against an 8s timeout so a
+ *   user_id), in that priority order - is 'admin' or 'super_admin'.
+ *   user_metadata.role is NOT consulted (user-writable; removed in the
+ *   admin-trust hotfix). The JWT lookup is race-timed against an 8s timeout so a
  *   hung Supabase auth call can't hang the request. admin_users/user_roles
  *   are both empty in production today, so in practice only the x-admin-key
  *   branch currently grants access - the JWT branch exists for when those
@@ -60,22 +99,7 @@ export async function adminAuth(req: Request, res: Response, next: NextFunction)
     const { data: { user }, error } = authResult as any
     if (error || !user) return res.status(401).json({ error: 'Unauthorized' })
 
-    // admin_users has no user_id column - its PK is its own uuid and the
-    // correlation key to an auth user is the UNIQUE email. user_roles does key
-    // on user_id.
-    const [adminRow, roleRow] = await Promise.all([
-      user.email
-        ? supabase.from('admin_users').select('role, is_active').eq('email', user.email).maybeSingle()
-        : Promise.resolve({ data: null }),
-      supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
-    ])
-
-    const adminUser = adminRow.data as { role?: string; is_active?: boolean } | null
-    const role =
-      (adminUser && adminUser.is_active !== false ? adminUser.role : undefined) ||
-      roleRow.data?.role ||
-      user.user_metadata?.role
-    if (role === 'admin' || role === 'super_admin') return next()
+    if (await hasDbAdminRole(user)) return next()
 
     return res.status(401).json({ error: 'Unauthorized' })
   } catch {

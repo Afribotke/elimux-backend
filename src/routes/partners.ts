@@ -121,7 +121,8 @@ router.patch("/:id/approve", async (req, res) => {
       .eq("id", user.id)
       .single();
 
-    const role = userData?.role || user.user_metadata?.role || "student";
+    // user_metadata.role removed (user-writable). users.role retained pending review.
+    const role = userData?.role || "student";
     if (role !== "admin" && role !== "super_admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
