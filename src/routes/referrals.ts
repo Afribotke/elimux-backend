@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
+import { hasDbAdminRole } from "../middleware/auth";
 
 const router = Router();
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -57,9 +58,10 @@ router.post("/convert", async (req, res) => {
     if (authError || !user) {
       return res.status(401).json({ error: "Invalid token" });
     }
-    const { data: userData } = await supabase.from("users").select("role").eq("id", user.id).single();
-    const role = userData?.role || user.user_metadata?.role || "student";
-    if (role !== "admin" && role !== "super_admin") {
+    // Admin evidence from admin_users / user_roles only. users.role and
+    // user_metadata.role are NOT trusted (write protection unverified /
+    // user-writable).
+    if (!(await hasDbAdminRole(user))) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
