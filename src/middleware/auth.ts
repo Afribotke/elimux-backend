@@ -9,39 +9,49 @@ import { supabase } from '../lib/supabase'
 const DB_ADMIN_ROLES = ['admin', 'super_admin']
 
 /**
- * pickDbAdminRole - pure decision step, exported for tests.
- * Priority: active admin_users row, then user_roles row. Nothing else.
- * user_metadata is NEVER consulted: it is writable by the user themselves
- * (supabase.auth.updateUser({ data: { role: 'admin' } }) with the public
- * anon key), so trusting it let any signed-up account mint itself admin.
+ * decideDbAdmin - pure decision step, exported for tests.
+ * 1. If an ACTIVE admin_users row exists, its role alone decides (unchanged
+ *    priority: an active admin_users row with a non-admin role is NOT
+ *    rescued by user_roles).
+ * 2. Otherwise, admin iff ANY user_roles row for the user has an admin role.
+ *    (Previously .maybeSingle() errored on 2+ rows and silently denied, e.g.
+ *    a user holding both nita_admin and admin. The accepted role set is
+ *    unchanged, so this cannot admit anyone without an admin/super_admin row.)
+ * user_metadata and users.role are NEVER consulted: metadata is writable by
+ * the user (supabase.auth.updateUser with the anon key) and users.role's
+ * write protection is unverified.
  */
-export function pickDbAdminRole(
+export function decideDbAdmin(
   adminUser: { role?: string; is_active?: boolean } | null | undefined,
-  roleRow: { role?: string } | null | undefined
-): string | undefined {
-  return (adminUser && adminUser.is_active !== false ? adminUser.role : undefined) || roleRow?.role || undefined
+  roleRows: Array<{ role?: string | null }> | null | undefined
+): boolean {
+  if (adminUser && adminUser.is_active !== false && adminUser.role) {
+    return DB_ADMIN_ROLES.includes(adminUser.role)
+  }
+  return (roleRows ?? []).some(r => typeof r?.role === 'string' && DB_ADMIN_ROLES.includes(r.role))
 }
 
 /**
  * hasDbAdminRole - DB-backed platform-admin check for an already-verified
  * Supabase user (caller must have obtained `user` from auth.getUser(token)).
- * Reads only admin_users (by email) and user_roles (by user_id).
+ * Reads only admin_users (by email) and user_roles (by user_id). Any query
+ * error fails closed.
  */
 export async function hasDbAdminRole(user: { id: string; email?: string | null }): Promise<boolean> {
   // admin_users has no user_id column - its PK is its own uuid and the
   // correlation key to an auth user is the UNIQUE email. user_roles does key
-  // on user_id.
-  const [adminRow, roleRow] = await Promise.all([
+  // on user_id and may hold several rows per user.
+  const [adminRes, rolesRes] = await Promise.all([
     user.email
       ? supabase.from('admin_users').select('role, is_active').eq('email', user.email).maybeSingle()
-      : Promise.resolve({ data: null }),
-    supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle(),
+      : Promise.resolve({ data: null, error: null }),
+    supabase.from('user_roles').select('role').eq('user_id', user.id),
   ])
-  const role = pickDbAdminRole(
-    adminRow.data as { role?: string; is_active?: boolean } | null,
-    roleRow.data as { role?: string } | null
+  if ((adminRes as any).error || (rolesRes as any).error) return false
+  return decideDbAdmin(
+    adminRes.data as { role?: string; is_active?: boolean } | null,
+    rolesRes.data as Array<{ role?: string | null }> | null
   )
-  return role !== undefined && DB_ADMIN_ROLES.includes(role)
 }
 
 // Accepts either the shared admin key (x-admin-key, what the admin dashboard

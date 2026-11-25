@@ -13,7 +13,7 @@ import assert from 'node:assert/strict'
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { supabase } = require('../src/lib/supabase')
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { adminAuth, pickDbAdminRole, hasDbAdminRole } = require('../src/middleware/auth')
+const { adminAuth, decideDbAdmin, hasDbAdminRole } = require('../src/middleware/auth')
 
 type Rows = { admin_users?: any; user_roles?: any }
 
@@ -22,10 +22,15 @@ function stub(user: any, rows: Rows = {}) {
   supabase.auth.getUser = async () => ({ data: { user }, error: user ? null : new Error('bad token') })
   supabase.from = (table: string) => {
     calls.push(table)
+    const value = (rows as any)[table] ?? null
     const q: any = {
       select: () => q,
       eq: () => q,
-      maybeSingle: async () => ({ data: (rows as any)[table] ?? null, error: null }),
+      // single-row read (admin_users by unique email)
+      maybeSingle: async () => ({ data: Array.isArray(value) ? value[0] ?? null : value, error: null }),
+      // list read (user_roles by user_id): awaiting the builder yields an array
+      then: (resolve: any, reject: any) =>
+        Promise.resolve({ data: value === null ? [] : Array.isArray(value) ? value : [value], error: null }).then(resolve, reject),
     }
     return q
   }
@@ -105,9 +110,36 @@ test('hasDbAdminRole without an email skips admin_users and checks user_roles on
   assert.deepEqual(calls, ['user_roles'])
 })
 
-test('pickDbAdminRole never looks at anything but the two DB rows', () => {
-  assert.equal(pickDbAdminRole(null, null), undefined)
-  assert.equal(pickDbAdminRole({ role: 'admin', is_active: false }, null), undefined)
-  assert.equal(pickDbAdminRole({ role: 'admin', is_active: false }, { role: 'super_admin' }), 'super_admin')
-  assert.equal(pickDbAdminRole({ role: 'admin' }, { role: 'user' }), 'admin')
+test('decideDbAdmin: active admin_users role decides; else any admin user_roles row', () => {
+  assert.equal(decideDbAdmin(null, null), false)
+  assert.equal(decideDbAdmin(null, []), false)
+  assert.equal(decideDbAdmin({ role: 'admin', is_active: false }, null), false)
+  assert.equal(decideDbAdmin({ role: 'admin', is_active: false }, [{ role: 'super_admin' }]), true)
+  assert.equal(decideDbAdmin({ role: 'admin' }, [{ role: 'user' }]), true)
+  // unchanged priority: an ACTIVE admin_users row with a non-admin role is not rescued by user_roles
+  assert.equal(decideDbAdmin({ role: 'moderator', is_active: true }, [{ role: 'admin' }]), false)
+  // multiple user_roles rows (previously a .maybeSingle() error -> silent deny)
+  assert.equal(decideDbAdmin(null, [{ role: 'nita_admin' }, { role: 'admin' }]), true)
+  // no widening: multiple non-admin rows stay non-admin
+  assert.equal(decideDbAdmin(null, [{ role: 'nita_admin' }, { role: 'elimux_admin' }, { role: 'moderator' }]), false)
+  assert.equal(decideDbAdmin(null, [{ role: null }, {}]), false)
+})
+
+test('hasDbAdminRole handles multiple user_roles rows without widening', async () => {
+  stub(null, { user_roles: [{ role: 'nita_admin' }, { role: 'admin' }] })
+  assert.equal(await hasDbAdminRole({ id: 'u8' }), true)
+  stub(null, { user_roles: [{ role: 'nita_admin' }, { role: 'elimux_admin' }] })
+  assert.equal(await hasDbAdminRole({ id: 'u8' }), false)
+})
+
+test('hasDbAdminRole fails closed on a query error', async () => {
+  supabase.from = (_t: string) => {
+    const q: any = {
+      select: () => q, eq: () => q,
+      maybeSingle: async () => ({ data: null, error: null }),
+      then: (resolve: any) => Promise.resolve({ data: [{ role: 'admin' }], error: { code: 'XX000' } }).then(resolve),
+    }
+    return q
+  }
+  assert.equal(await hasDbAdminRole({ id: 'u9', email: 'f@example.com' }), false)
 })
