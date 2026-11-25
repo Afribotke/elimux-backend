@@ -70,9 +70,15 @@ export class ConflictError extends Error {}
 export interface AttachmentStore {
   getAttachment(id: string): Promise<AttachmentRow | null>
   listAttachments(scope: ListScope): Promise<AttachmentRow[]>
+  /** Eligible = row with user_id, caller's institution_id, status 'eligible',
+   *  attachment_status 'not_placed'. */
   isEligibleStudent(studentUserId: string, institutionId: string): Promise<boolean>
+  /** Student already has a 'pending' or 'active' placement (any institution). */
+  hasOpenPlacement(studentUserId: string): Promise<boolean>
   listEligibleStudents(institutionId: string): Promise<Array<Record<string, unknown>>>
-  employerExists(employerId: string): Promise<boolean>
+  /** Same rule as the employer-assignment dropdown (GET /api/employers in
+   *  internships.ts): is_active = true AND verification_status = 'approved'. */
+  isApprovedEmployer(employerId: string): Promise<boolean>
   insertAttachment(row: AttachmentInsert): Promise<AttachmentRow>
   /** Conditional update: applies only if the row still has expectedStatus. */
   updateAttachmentIfStatus(id: string, expectedStatus: string, patch: AttachmentPatch): Promise<AttachmentRow | null>
@@ -131,7 +137,19 @@ export function createSupabaseAttachmentStore(db: SupabaseClient): AttachmentSto
     async isEligibleStudent(studentUserId, institutionId) {
       const rows = check(
         await db.from('attachment_eligible_students').select('id')
-          .eq('user_id', studentUserId).eq('institution_id', institutionId).limit(1)
+          .eq('user_id', studentUserId)
+          .eq('institution_id', institutionId)
+          .eq('status', 'eligible')
+          .eq('attachment_status', 'not_placed')
+          .limit(1)
+      )
+      return (rows ?? []).length > 0
+    },
+
+    async hasOpenPlacement(studentUserId) {
+      const rows = check(
+        await db.from('attachments').select('id')
+          .eq('student_id', studentUserId).in('status', ['pending', 'active']).limit(1)
       )
       return (rows ?? []).length > 0
     },
@@ -146,8 +164,11 @@ export function createSupabaseAttachmentStore(db: SupabaseClient): AttachmentSto
       ) ?? []
     },
 
-    async employerExists(employerId) {
-      const rows = check(await db.from('employers').select('id').eq('id', employerId).limit(1))
+    async isApprovedEmployer(employerId) {
+      const rows = check(
+        await db.from('employers').select('id')
+          .eq('id', employerId).eq('is_active', true).eq('verification_status', 'approved').limit(1)
+      )
       return (rows ?? []).length > 0
     },
 

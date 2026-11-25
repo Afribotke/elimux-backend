@@ -26,8 +26,11 @@ const U = {
   empOwnerA: id(10), empTeamA: id(11), empViewerA: id(12), empOwnerB: id(13), empInactiveA: id(14),
   instA: id(20), instB: id(21), instPending: id(22), instMulti: id(23),
   admin: id(30), metaAdmin: id(31), stranger: id(32), multiRoleAdmin: id(33),
+  studentA3Fresh: id(40), studentA4Ineligible: id(41), studentA5Placed: id(42), studentA6FinishedEarlier: id(43),
 }
 const IA = id(100), IB = id(101), EA = id(200), EB = id(201)
+// Employer approval states (rule: is_active = true AND verification_status = 'approved')
+const E_PENDING = id(210), E_UNDER_REVIEW = id(211), E_REJECTED = id(212), E_INACTIVE = id(213), E_NULL_STATUS = id(214)
 const ATT = { a1Active: id(300), a2Pending: id(301), b1Completed: id(302), a1Completed: id(303) }
 const TODAY = '2026-11-25'
 
@@ -36,6 +39,7 @@ let attachments: Row[] = []
 let logbook: Row[] = []
 let evaluations: Row[] = []
 let eligible: Row[] = []
+let employers: Row[] = []
 let failNextQuery = false
 
 function seed() {
@@ -54,7 +58,23 @@ function seed() {
     { id: id(401), user_id: U.studentA2, institution_id: IA, student_name: 'A2', status: 'eligible', attachment_status: 'not_placed' },
     { id: id(402), user_id: id(5), institution_id: IA, student_name: 'Placed', status: 'eligible', attachment_status: 'completed' },
     { id: id(403), user_id: U.studentB1, institution_id: IB, student_name: 'B1', status: 'eligible', attachment_status: 'not_placed' },
+    { id: id(404), user_id: U.studentA3Fresh, institution_id: IA, student_name: 'A3', status: 'eligible', attachment_status: 'not_placed' },
+    { id: id(405), user_id: U.studentA4Ineligible, institution_id: IA, student_name: 'A4', status: 'ineligible', attachment_status: 'not_placed' },
+    { id: id(406), user_id: U.studentA5Placed, institution_id: IA, student_name: 'A5', status: 'eligible', attachment_status: 'accepted' },
+    // eligible + not_placed, but with an earlier COMPLETED placement only -> may be placed again
+    { id: id(407), user_id: U.studentA6FinishedEarlier, institution_id: IA, student_name: 'A6', status: 'eligible', attachment_status: 'not_placed' },
   ]
+  employers = [
+    { id: EA, is_active: true, verification_status: 'approved' },
+    { id: EB, is_active: true, verification_status: 'approved' },
+    { id: E_PENDING, is_active: true, verification_status: 'pending' },
+    { id: E_UNDER_REVIEW, is_active: true, verification_status: 'under_review' },
+    { id: E_REJECTED, is_active: true, verification_status: 'rejected' },
+    { id: E_INACTIVE, is_active: false, verification_status: 'approved' },
+    { id: E_NULL_STATUS, is_active: true, verification_status: null },
+  ]
+  attachments.push({ ...base, id: id(304), student_id: U.studentA6FinishedEarlier, employer_id: EA, university_id: IA,
+    status: 'completed', start_date: '2025-01-01', end_date: '2025-03-31' })
   failNextQuery = false
 }
 
@@ -70,11 +90,14 @@ const store = {
       (scope.employerIds ?? []).includes(a.employer_id) ||
       (scope.institutionIds ?? []).includes(a.university_id)).map(a => ({ ...a }))
   },
-  async isEligibleStudent(uid: string, inst: string) { return eligible.some(e => e.user_id === uid && e.institution_id === inst) },
+  async isEligibleStudent(uid: string, inst: string) {
+    return eligible.some(e => e.user_id === uid && e.institution_id === inst && e.status === 'eligible' && e.attachment_status === 'not_placed')
+  },
+  async hasOpenPlacement(uid: string) { return attachments.some(a => a.student_id === uid && ['pending', 'active'].includes(a.status)) },
   async listEligibleStudents(inst: string) {
     return eligible.filter(e => e.institution_id === inst && e.status === 'eligible' && e.attachment_status === 'not_placed')
   },
-  async employerExists(eid: string) { return [EA, EB].includes(eid) },
+  async isApprovedEmployer(eid: string) { return employers.some(e => e.id === eid && e.is_active === true && e.verification_status === 'approved') },
   async insertAttachment(row: Row) { const r = { id: id(900 + attachments.length), evaluation_score: null, certificate_issued: false, certificate_url: null, ...row }; attachments.push(r); return { ...r } },
   async updateAttachmentIfStatus(aid: string, expected: string, patch: Row) {
     const r = attachments.find(a => a.id === aid && a.status === expected)
@@ -184,13 +207,13 @@ test('GET / is scoped per actor (cross-user and cross-tenant)', async () => {
   const ids = async (u: string) => ((await call(u, 'GET', '/')).body.data as Row[]).map(r => r.id).sort()
   assert.deepEqual(await ids(U.studentA1), [ATT.a1Active, ATT.a1Completed].sort())
   assert.deepEqual(await ids(U.studentA2), [ATT.a2Pending])
-  assert.deepEqual(await ids(U.empOwnerA), [ATT.a1Active, ATT.a2Pending, ATT.a1Completed].sort())
+  assert.deepEqual(await ids(U.empOwnerA), [ATT.a1Active, ATT.a2Pending, ATT.a1Completed, id(304)].sort())
   assert.deepEqual(await ids(U.empOwnerB), [ATT.b1Completed])
-  assert.deepEqual(await ids(U.instA), [ATT.a1Active, ATT.a2Pending, ATT.a1Completed].sort())
+  assert.deepEqual(await ids(U.instA), [ATT.a1Active, ATT.a2Pending, ATT.a1Completed, id(304)].sort())
   assert.deepEqual(await ids(U.instB), [ATT.b1Completed])
   assert.deepEqual(await ids(U.stranger), [])
   assert.deepEqual(await ids(U.metaAdmin), [])
-  assert.equal((await ids(U.admin)).length, 4)
+  assert.equal((await ids(U.admin)).length, 5)
 })
 
 // ---------------- update: PUT /:id ----------------
@@ -405,7 +428,7 @@ test('evaluation GET - related parties only', async () => {
 })
 
 // ---------------- create ----------------
-const newPlacement = { student_id: U.studentA1, employer_id: EA, department: '', supervisor_name: 'Jane',
+const newPlacement = { student_id: U.studentA3Fresh, employer_id: EA, department: '', supervisor_name: 'Jane',
   supervisor_email: '', supervisor_phone: '', start_date: '2027-01-10', end_date: '2027-04-10' }
 
 test('POST / - institution creates a PENDING placement bound to its own institution', async () => {
@@ -428,24 +451,71 @@ test('POST / - ownership/status fields in the body are rejected (400)', async ()
 
 test('POST / - cross-tenant student is not eligible (400); unknown employer 400; bad dates 400', async () => {
   assert.equal((await call(U.instA, 'POST', '/', { ...newPlacement, student_id: U.studentB1 })).status, 400)
-  assert.equal((await call(U.instA, 'POST', '/', { ...newPlacement, employer_id: id(299) })).status, 400)
   assert.equal((await call(U.instA, 'POST', '/', { ...newPlacement, end_date: '2027-01-01' })).status, 400)
   assert.equal((await call(U.instA, 'POST', '/', { ...newPlacement, student_id: 'abc' })).status, 400)
-  assert.equal(attachments.length, 4)
+  assert.equal(attachments.length, 5)
 })
 
 test('POST / - non-institution callers (incl. pending account, admin) are 403', async () => {
   for (const u of [U.studentA1, U.empOwnerA, U.instPending, U.admin, U.metaAdmin, U.stranger]) {
     assert.equal((await call(u, 'POST', '/', newPlacement)).status, 403, u)
   }
-  assert.equal(attachments.length, 4)
+  assert.equal(attachments.length, 5)
+})
+
+test('POST / - student eligibility is strict: status, attachment_status, institution (400, no write)', async () => {
+  const cases: Array<[string, string]> = [
+    [U.studentA4Ineligible, "status != 'eligible'"],
+    [U.studentA5Placed, "attachment_status != 'not_placed'"],
+    [U.studentB1, 'belongs to another institution'],
+    [id(4999), 'not on any eligible list'],
+  ]
+  for (const [sid, why] of cases) {
+    const r = await call(U.instA, 'POST', '/', { ...newPlacement, student_id: sid })
+    assert.equal(r.status, 400, why)
+    assert.deepEqual(r.body, { error: 'Student is not eligible for attachment at this institution' }, why)
+  }
+  assert.equal(attachments.length, 5)
+})
+
+test('POST / - one open placement per student: existing pending or active -> 409', async () => {
+  // studentA1 has an ACTIVE placement; studentA2 has a PENDING one. Both rows are eligible + not_placed.
+  for (const sid of [U.studentA1, U.studentA2]) {
+    const r = await call(U.instA, 'POST', '/', { ...newPlacement, student_id: sid })
+    assert.equal(r.status, 409, sid)
+    assert.deepEqual(r.body, { error: 'Student already has a pending or active placement' })
+  }
+  assert.equal(attachments.length, 5)
+  // a student whose only placement is COMPLETED may be placed again
+  assert.equal((await call(U.instA, 'POST', '/', { ...newPlacement, student_id: U.studentA6FinishedEarlier })).status, 201)
+  // and once that new placement exists, a second create is refused
+  assert.equal((await call(U.instA, 'POST', '/', { ...newPlacement, student_id: U.studentA6FinishedEarlier })).status, 409)
+})
+
+test('POST / - employer must be approved AND active; every other state -> 400 (same message)', async () => {
+  const states: Array<[string, string]> = [
+    [id(299), 'nonexistent'],
+    [E_PENDING, 'pending'],
+    [E_UNDER_REVIEW, 'under_review'],
+    [E_REJECTED, 'rejected'],
+    [E_INACTIVE, 'approved but is_active = false (suspended/deactivated)'],
+    [E_NULL_STATUS, 'verification_status null'],
+  ]
+  for (const [eid, why] of states) {
+    const r = await call(U.instA, 'POST', '/', { ...newPlacement, employer_id: eid })
+    assert.equal(r.status, 400, why)
+    assert.deepEqual(r.body, { error: 'Employer is not an approved, active employer' }, why)
+  }
+  assert.equal(attachments.length, 5)
+  const ok = await call(U.instA, 'POST', '/', { ...newPlacement, employer_id: EB })
+  assert.equal(ok.status, 201, 'approved + active employer (any approved employer, not only local ones)')
 })
 
 // ---------------- eligible students ----------------
 test('GET /eligible-students - own institution, not_placed only; others 403; ambiguous 409', async () => {
   const a = await call(U.instA, 'GET', '/eligible-students')
   assert.equal(a.status, 200)
-  assert.deepEqual(a.body.data.map((s: Row) => s.student_name).sort(), ['A1', 'A2'])
+  assert.deepEqual(a.body.data.map((s: Row) => s.student_name).sort(), ['A1', 'A2', 'A3', 'A6'])
   const b = await call(U.instB, 'GET', '/eligible-students')
   assert.deepEqual(b.body.data.map((s: Row) => s.student_name), ['B1'])
   for (const u of [U.studentA1, U.empOwnerA, U.instPending, U.admin, U.stranger]) {
@@ -454,7 +524,7 @@ test('GET /eligible-students - own institution, not_placed only; others 403; amb
   assert.equal((await call(U.instMulti, 'GET', '/eligible-students')).status, 409)
   // query params cannot pick another institution
   const spoof = await call(U.instA, 'GET', `/eligible-students?institution_id=${IB}`)
-  assert.deepEqual(spoof.body.data.map((s: Row) => s.student_name).sort(), ['A1', 'A2'])
+  assert.deepEqual(spoof.body.data.map((s: Row) => s.student_name).sort(), ['A1', 'A2', 'A3', 'A6'])
 })
 
 // ---------------- errors ----------------

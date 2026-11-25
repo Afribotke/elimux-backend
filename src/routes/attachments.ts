@@ -5,6 +5,7 @@
 //   GET    /                    own      own employer    own inst.    all
 //   GET    /eligible-students   -        -               own inst.    -
 //   POST   /                    -        -               own inst.    -
+//          (eligible+not_placed student, no open placement, approved employer)
 //   GET    /:id                 ✓        ✓               ✓            ✓
 //   PUT    /:id                 403      403             ✓ (FSM)      ✓ (FSM)
 //   DELETE /:id                 403      403             pending only pending only
@@ -148,10 +149,23 @@ export function createAttachmentsRouter(deps: AttachmentsRouterDeps): Router {
     const actor = await actorFor(req)
     const institutionId = singleInstitution(actor)
     const b = parse<any>(createAttachmentSchema, req.body)
+    // Student: must be on THIS institution's eligible list, status 'eligible',
+    // attachment_status 'not_placed' - one message for every failure reason
+    // so the response doesn't reveal other institutions' students.
     if (!(await store.isEligibleStudent(b.student_id, institutionId))) {
       throw new HttpError(400, 'Student is not eligible for attachment at this institution')
     }
-    if (!(await store.employerExists(b.employer_id))) throw new HttpError(400, 'Employer not found')
+    // Founder rule: at most one pending/active placement per student.
+    // (Not race-proof without a DB constraint - SQL changes not yet approved.)
+    if (await store.hasOpenPlacement(b.student_id)) {
+      throw new HttpError(409, 'Student already has a pending or active placement')
+    }
+    // Employer: same rule as the assignment dropdown (GET /api/employers):
+    // is_active = true AND verification_status = 'approved'. Nonexistent and
+    // unapproved employers get the same 400 so IDs can't be probed.
+    if (!(await store.isApprovedEmployer(b.employer_id))) {
+      throw new HttpError(400, 'Employer is not an approved, active employer')
+    }
     const data = await store.insertAttachment({
       student_id: b.student_id,
       university_id: institutionId,
