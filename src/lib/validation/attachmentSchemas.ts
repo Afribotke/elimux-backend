@@ -73,7 +73,8 @@ export const logbookEntrySchema = z
     tasks_completed: z.string().trim().min(1, 'tasks_completed is required').max(5000),
     skills_learned: optText(5000),
     challenges_faced: optText(5000),
-    hours_worked: z.preprocess(emptyToNull, z.number().min(0).max(24).nullable().optional()),
+    // logbook_entries.hours_worked is INTEGER in the live DB (confirmed 2026-11-26).
+    hours_worked: z.preprocess(emptyToNull, z.number().int().min(0).max(24).nullable().optional()),
   })
   .strict()
 

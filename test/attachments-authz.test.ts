@@ -360,6 +360,19 @@ test('logbook POST - validation: dates, hours, required text, unknown fields', a
   assert.equal(logbook.length, 0)
 })
 
+test('logbook POST - hours_worked must be a whole number (live column is INTEGER)', async () => {
+  const bad = await call(U.studentA1, 'POST', `/${ATT.a1Active}/logbook`, { ...entry, hours_worked: 7.5 })
+  assert.equal(bad.status, 400)
+  assert.equal(bad.body.error, 'Invalid request body')
+  assert.equal(bad.body.details[0].field, 'hours_worked')
+  assert.ok(!bad.raw.includes('7.5'), 'submitted value must not be echoed')
+  assert.equal(logbook.length, 0)
+  const ok = await call(U.studentA1, 'POST', `/${ATT.a1Active}/logbook`, { ...entry, hours_worked: 7 })
+  assert.equal(ok.status, 201)
+  assert.equal(logbook.length, 1)
+  assert.equal(logbook[0].hours_worked, 7)
+})
+
 test('logbook GET - related parties read; others 404', async () => {
   logbook.push({ id: id(601), attachment_id: ATT.a1Active, entry_date: '2026-10-01' })
   for (const u of [U.studentA1, U.empTeamA, U.empViewerA, U.instA, U.admin]) {
