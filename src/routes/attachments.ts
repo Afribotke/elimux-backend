@@ -156,7 +156,8 @@ export function createAttachmentsRouter(deps: AttachmentsRouterDeps): Router {
       throw new HttpError(400, 'Student is not eligible for attachment at this institution')
     }
     // Founder rule: at most one pending/active placement per student.
-    // (Not race-proof without a DB constraint - SQL changes not yet approved.)
+    // Fast-path check; the insert below also maps the DB unique violation
+    // (draft index 62) to the same 409, so concurrent creates can't both win.
     if (await store.hasOpenPlacement(b.student_id)) {
       throw new HttpError(409, 'Student already has a pending or active placement')
     }
@@ -166,18 +167,25 @@ export function createAttachmentsRouter(deps: AttachmentsRouterDeps): Router {
     if (!(await store.isApprovedEmployer(b.employer_id))) {
       throw new HttpError(400, 'Employer is not an approved, active employer')
     }
-    const data = await store.insertAttachment({
-      student_id: b.student_id,
-      university_id: institutionId,
-      employer_id: b.employer_id,
-      department: b.department ?? null,
-      supervisor_name: b.supervisor_name ?? null,
-      supervisor_email: b.supervisor_email ?? null,
-      supervisor_phone: b.supervisor_phone ?? null,
-      start_date: b.start_date,
-      end_date: b.end_date ?? null,
-      status: 'pending',
-    })
+    let data: AttachmentRow
+    try {
+      data = await store.insertAttachment({
+        student_id: b.student_id,
+        university_id: institutionId,
+        employer_id: b.employer_id,
+        department: b.department ?? null,
+        supervisor_name: b.supervisor_name ?? null,
+        supervisor_email: b.supervisor_email ?? null,
+        supervisor_phone: b.supervisor_phone ?? null,
+        start_date: b.start_date,
+        end_date: b.end_date ?? null,
+        status: 'pending',
+      })
+    } catch (e) {
+      // L-06: the DB unique index (draft 62) closes the check-then-insert race.
+      if (e instanceof ConflictError) throw new HttpError(409, 'Student already has a pending or active placement')
+      throw e
+    }
     res.status(201).json({ data })
   }))
 

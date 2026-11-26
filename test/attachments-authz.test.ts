@@ -76,7 +76,12 @@ function seed() {
   attachments.push({ ...base, id: id(304), student_id: U.studentA6FinishedEarlier, employer_id: EA, university_id: IA,
     status: 'completed', start_date: '2025-01-01', end_date: '2025-03-31' })
   failNextQuery = false
+  insertFault = null
 }
+
+// L-06: simulate the DB unique index firing on insert (a concurrent create
+// that the hasOpenPlacement pre-check could not see), or any other DB error.
+let insertFault: 'conflict' | 'other' | null = null
 
 const maybeFail = () => { if (failNextQuery) { failNextQuery = false; throw new Error('pg: relation "secret_internal_table" does not exist') } }
 
@@ -98,7 +103,10 @@ const store = {
     return eligible.filter(e => e.institution_id === inst && e.status === 'eligible' && e.attachment_status === 'not_placed')
   },
   async isApprovedEmployer(eid: string) { return employers.some(e => e.id === eid && e.is_active === true && e.verification_status === 'approved') },
-  async insertAttachment(row: Row) { const r = { id: id(900 + attachments.length), evaluation_score: null, certificate_issued: false, certificate_url: null, ...row }; attachments.push(r); return { ...r } },
+  async insertAttachment(row: Row) {
+    if (insertFault === 'conflict') throw new ConflictError('open placement already exists')
+    if (insertFault === 'other') throw new Error('store query failed: 08006')
+    const r = { id: id(900 + attachments.length), evaluation_score: null, certificate_issued: false, certificate_url: null, ...row }; attachments.push(r); return { ...r } },
   async updateAttachmentIfStatus(aid: string, expected: string, patch: Row) {
     const r = attachments.find(a => a.id === aid && a.status === expected)
     if (!r) return null
@@ -503,6 +511,23 @@ test('POST / - one open placement per student: existing pending or active -> 409
   assert.equal((await call(U.instA, 'POST', '/', { ...newPlacement, student_id: U.studentA6FinishedEarlier })).status, 201)
   // and once that new placement exists, a second create is refused
   assert.equal((await call(U.instA, 'POST', '/', { ...newPlacement, student_id: U.studentA6FinishedEarlier })).status, 409)
+})
+
+test('POST / - L-06 race: DB unique violation on insert -> same 409, nothing written', async () => {
+  // pre-check passes (A3 has no open placement) but the insert hits the unique index
+  insertFault = 'conflict'
+  const before = snapshot()
+  const r = await call(U.instA, 'POST', '/', { ...newPlacement, student_id: U.studentA3Fresh })
+  assert.equal(r.status, 409)
+  assert.deepEqual(r.body, { error: 'Student already has a pending or active placement' })
+  assert.equal(snapshot(), before)
+})
+
+test('POST / - non-conflict insert failure is NOT reported as 409 and leaks nothing', async () => {
+  insertFault = 'other'
+  const r = await call(U.instA, 'POST', '/', { ...newPlacement, student_id: U.studentA3Fresh })
+  assert.equal(r.status, 500)
+  assert.doesNotMatch(r.raw, /08006|store query|placement/)
 })
 
 test('POST / - employer must be approved AND active; every other state -> 400 (same message)', async () => {

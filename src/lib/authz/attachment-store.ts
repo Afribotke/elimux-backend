@@ -79,6 +79,7 @@ export interface AttachmentStore {
   /** Same rule as the employer-assignment dropdown (GET /api/employers in
    *  internships.ts): is_active = true AND verification_status = 'approved'. */
   isApprovedEmployer(employerId: string): Promise<boolean>
+  /** Throws ConflictError on unique violation (student already has an open placement). */
   insertAttachment(row: AttachmentInsert): Promise<AttachmentRow>
   /** Conditional update: applies only if the row still has expectedStatus. */
   updateAttachmentIfStatus(id: string, expectedStatus: string, patch: AttachmentPatch): Promise<AttachmentRow | null>
@@ -173,7 +174,12 @@ export function createSupabaseAttachmentStore(db: SupabaseClient): AttachmentSto
     },
 
     async insertAttachment(row) {
-      return check(await db.from('attachments').insert(row).select(ATTACHMENT_SELECT).single()) as unknown as AttachmentRow
+      const res = await db.from('attachments').insert(row).select(ATTACHMENT_SELECT).single()
+      // L-06: a unique violation means the student already has an open
+      // placement (the race the hasOpenPlacement pre-check can't close; draft
+      // index 62 enforces it in the DB). Must ship before 62 is applied.
+      if (res.error?.code === '23505') throw new ConflictError('open placement already exists')
+      return check(res) as unknown as AttachmentRow
     },
 
     async updateAttachmentIfStatus(id, expectedStatus, patch) {
