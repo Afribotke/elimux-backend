@@ -1,0 +1,47 @@
+name: CI
+
+# Backend CI: typecheck + unit tests only. No deploy; uses no repository secret values.
+#   - typecheck: tsc --noEmit
+#   - tests:     node --test (ts-node), Supabase stubbed in-process / in-memory
+#                stores, dummy env set by the tests themselves; no network.
+# Railway deploys via its own Git integration; nothing here deploys.
+# The scheduled workflows (keep-alive.yml, scraper-cron.yml) are unrelated
+# and untouched.
+
+on:
+  pull_request:          # every PR, including stacked PRs whose base is not main
+  push:
+    branches: [main]
+
+permissions:
+  contents: read         # read-only token; this workflow writes nothing
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: typecheck + tests (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies (lockfile, no install scripts)
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
