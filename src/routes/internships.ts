@@ -17,6 +17,7 @@ import { supabase } from '../lib/supabase';
 import { adminAuth } from '../middleware/auth';
 import { requireUser, UserAuthRequest } from '../middleware/user-auth';
 import { employerAuth, requireEmployerManage, EmployerAuthRequest } from '../middleware/employer-auth';
+import { logbookRetired } from './retired-logbook';
 
 const router = Router();
 
@@ -639,75 +640,13 @@ router.get('/students/me', requireUser, async (req: UserAuthRequest, res: Respon
   }
 });
 
-// POST /students/logbook — create a logbook entry for the caller's own profile
-router.post('/students/logbook', requireUser, async (req: UserAuthRequest, res: Response): Promise<void> => {
-  try {
-    const { data: profile } = await supabase
-      .from('student_profiles')
-      .select('id')
-      .eq('user_id', req.userId)
-      .single();
-
-    if (!profile) {
-      res.status(404).json({ success: false, error: 'Complete your student profile first' });
-      return;
-    }
-
-    const b = req.body || {};
-    if (!b.entry_date || !b.tasks_completed) {
-      res.status(400).json({ success: false, error: 'entry_date and tasks_completed are required' });
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('logbook_entries')
-      .insert({
-        student_id: profile.id,
-        internship_id: b.internship_id || null,
-        entry_date: b.entry_date,
-        week_number: b.week_number || null,
-        tasks_completed: b.tasks_completed,
-        skills_learned: b.skills_learned || null,
-        challenges_faced: b.challenges_faced || null,
-        supervisor_name: b.supervisor_name || null,
-        hours_worked: b.hours_worked || null,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.status(201).json({ success: true, data });
-  } catch (err: any) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-// GET /students/me/logbook — own logbook entries
-router.get('/students/me/logbook', requireUser, async (req: UserAuthRequest, res: Response): Promise<void> => {
-  try {
-    const { data: profile } = await supabase
-      .from('student_profiles')
-      .select('id')
-      .eq('user_id', req.userId)
-      .single();
-
-    if (!profile) {
-      res.json({ success: true, data: [] });
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('logbook_entries')
-      .select('*')
-      .eq('student_id', profile.id)
-      .order('entry_date', { ascending: false });
-
-    if (error) throw error;
-    res.json({ success: true, data: data || [] });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+// L-04: the two legacy logbook routes below wrote/read logbook_entries by
+// student_profiles.id with no placement (attachment) check. They had zero
+// callers. Logbook access now lives only on the placement-scoped,
+// authorization-checked routes in attachments.ts. Answer 410 Gone (no auth,
+// no DB access) so any stale client fails loudly instead of silently.
+router.post('/students/logbook', logbookRetired);
+router.get('/students/me/logbook', logbookRetired);
 
 // ============================================
 // PUBLIC ENDPOINTS
